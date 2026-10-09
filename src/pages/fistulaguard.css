@@ -1,0 +1,107 @@
+.fistulaguard-workspace {
+  --signal-viewport: #101624;
+  --signal-panel: #171f30;
+  --signal-line: #34415c;
+  --signal-text: #e9eef7;
+  --signal-muted: #a6b1c4;
+  --signal-grid: #29354a;
+  --signal-axis: #93a2bb;
+}
+
+.fistula-control-strip {
+  position: sticky;
+  top: 64px;
+  z-index: 10;
+  background: color-mix(in srgb, var(--background) 95%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.fistula-signal-viewport {
+  border-color: var(--signal-line);
+  background: var(--signal-viewport);
+  color: var(--signal-text);
+}
+
+.fistula-signal-viewport [data-slot="card-description"] {
+  color: var(--signal-muted);
+}
+
+.fistula-viewport-header [data-slot="card-title"] {
+  color: var(--signal-text);
+}
+
+.fistula-kicker,
+.fistula-axis-notes,
+.fistula-trace-footer {
+  color: var(--signal-muted);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.fistula-kicker {
+  font-weight: 650;
+  letter-spacing: 0.09em;
+}
+
+.fistula-axis-notes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  font-family: var(--font-measurement);
+  font-size: 0.6875rem;
+}
+
+.fistula-waveform-chart {
+  height: 340px !important;
+  overflow: hidden;
+  border: 1px solid var(--signal-line);
+  border-radius: 0.5rem;
+  background: var(--signal-panel);
+}
+
+.fistula-waveform-chart .signal-trace-uplot {
+  padding: 0.25rem 0.5rem;
+}
+
+.fistula-waveform-chart .uplot,
+.fistula-waveform-chart .u-wrap {
+  color: var(--signal-axis);
+}
+
+.fistula-waveform-chart .u-title {
+  color: var(--signal-text);
+}
+
+.fistula-trace-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding-top: 0.625rem;
+}
+
+.fistula-trace-footer > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.fistula-trace-footer i {
+  width: 0.5rem;
+  height: 0.5rem;
+  flex: 0 0 auto;
+  border-radius: 9999px;
+}
+
+@media (max-width: 640px) {
+  .fistula-control-strip {
+    top: 56px;
+  }
+
+  .fistula-waveform-chart {
+    height: 300px !important;
+  }
+
+  .fistula-trace-footer {
+    flex-direction: column;
+  }
+}
