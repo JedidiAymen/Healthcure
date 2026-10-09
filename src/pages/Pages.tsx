@@ -69,7 +69,6 @@ const FistulaViewer = lazy(() =>
 );
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
   CardFooter,
@@ -77,7 +76,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -1050,6 +1049,21 @@ export function DomainWorkspace({ module }: { module: ModuleId }) {
 
 export function Models() {
   const { data, loading, error } = useApi(queryKeys.models, api.models, [] as ModelRecord[]);
+  const [moduleFilter, setModuleFilter] = useState<"all" | ModelRecord["module"]>("all");
+  const [selectedModelId, setSelectedModelId] = useState("");
+  const visibleModels = useMemo(
+    () => data.filter((model) => moduleFilter === "all" || model.module === moduleFilter),
+    [data, moduleFilter],
+  );
+  const selectedModel = visibleModels.find((model) => model.id === selectedModelId) ?? visibleModels[0];
+  const readyCount = data.filter((model) => model.readiness === "ready").length;
+  const gatedCount = data.length - readyCount;
+  const modelWorkspace = selectedModel ? `/studio/${selectedModel.module}/cases/current` : "/studio/cases";
+  const moduleLabels: Record<ModelRecord["module"], string> = {
+    surgivision: "SurgiVision",
+    dosetwin: "DoseTwin",
+    fistulaguard: "FistulaGuard",
+  };
   return (
     <>
       <Header
@@ -1057,70 +1071,58 @@ export function Models() {
         title="Model lab"
         description="Readiness is specific to each operation, checkpoint, runtime and compatible source dataset."
       />
-      <div className="status-banner subdued">
-        <div className="banner-mark">
-          <Microscope size={18} />
-        </div>
-        <div>
-          <strong>Model execution follows its source and checkpoint gates</strong>
-          <p>
-            CVS-AdaptNet has completed a real split evaluation. Single-frame
-            runs remain locked until independent checkpoint identity and terms
-            are confirmed.
-          </p>
-        </div>
-      </div>
+      <Alert className="mb-4 border-primary/25 bg-primary/5 [&>svg]:mt-0.5">
+        <Microscope />
+        <AlertTitle>Model execution follows source and checkpoint gates</AlertTitle>
+        <AlertDescription>CVS-AdaptNet completed a real split evaluation. Single-frame runs remain locked until its checkpoint identity and specific terms are independently confirmed.</AlertDescription>
+      </Alert>
       {error ? (
         <Alert variant="destructive"><CircleAlert/><AlertTitle>Model registry is unavailable</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>
       ) : (
-        <div className="model-list">
-          {data.map((model) => (
-            <Card className="model-card" size="sm" key={model.id}>
-              <CardHeader className="model-card-header">
-                <CardTitle className="model-card-title">
-                  <span className="model-symbol" aria-hidden="true"><FlaskConical size={18} /></span>
-                  {model.name}
-                </CardTitle>
-                <CardAction>
-                  <Badge
-                    variant="outline"
-                    className={`model-readiness ${model.readiness === "ready" ? "is-ready" : "is-blocked"}`}
-                  >
-                    {model.readiness.replaceAll("-", " ")}
-                  </Badge>
-                </CardAction>
-                <CardDescription>{model.details}</CardDescription>
+        <>
+          <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <div className="rounded-lg border border-border bg-card px-3 py-2.5"><span className="text-[11px] uppercase tracking-wide text-muted-foreground">Catalogued methods</span><strong className="mt-1 block text-xl tabular-nums">{loading ? "—" : data.length}</strong></div>
+            <div className="rounded-lg border border-border bg-card px-3 py-2.5"><span className="text-[11px] uppercase tracking-wide text-muted-foreground">Ready to execute</span><strong className="mt-1 block text-xl tabular-nums text-primary">{loading ? "—" : readyCount}</strong></div>
+            <div className="col-span-2 rounded-lg border border-border bg-card px-3 py-2.5 sm:col-span-1"><span className="text-[11px] uppercase tracking-wide text-muted-foreground">Need a verified gate</span><strong className="mt-1 block text-xl tabular-nums">{loading ? "—" : gatedCount}</strong></div>
+          </div>
+          <ToggleGroup multiple={false} value={[moduleFilter]} onValueChange={(value) => { if (value[0]) setModuleFilter(value[0] as typeof moduleFilter); }} aria-label="Filter model methods by research workspace" className="mb-4 flex h-auto flex-wrap justify-start gap-1 rounded-lg border border-border bg-muted/35 p-1">
+            <ToggleGroupItem value="all" aria-label="All methods" className="h-8 px-3">All methods</ToggleGroupItem>
+            <ToggleGroupItem value="surgivision" aria-label="SurgiVision methods" className="h-8 px-3">SurgiVision</ToggleGroupItem>
+            <ToggleGroupItem value="dosetwin" aria-label="DoseTwin methods" className="h-8 px-3">DoseTwin</ToggleGroupItem>
+            <ToggleGroupItem value="fistulaguard" aria-label="FistulaGuard methods" className="h-8 px-3">FistulaGuard</ToggleGroupItem>
+          </ToggleGroup>
+          <div className="grid min-w-0 items-start gap-3 lg:grid-cols-[minmax(17rem,.85fr)_minmax(0,1.35fr)]">
+            <Card size="sm" className="min-w-0 overflow-hidden">
+              <CardHeader className="border-b border-border px-4 py-3">
+                <div className="text-xs font-medium text-muted-foreground">METHOD CATALOG</div>
+                <CardTitle className="text-base">{visibleModels.length} source-linked methods</CardTitle>
+                <CardDescription>Choose a method to inspect its provenance and execution gate.</CardDescription>
               </CardHeader>
-              <CardContent className="model-card-content">
-                <dl className="model-provenance">
-                  <div><dt>Source revision</dt><dd><code>{model.source_revision}</code></dd></div>
-                  <div><dt>License</dt><dd>{model.source_license}</dd></div>
-                </dl>
-                <div className="model-ops" aria-label="Supported operations">
-                  {model.operation_ids.map((op) => (
-                    <Badge variant="secondary" key={op}>{op}</Badge>
-                  ))}
-                </div>
-              </CardContent>
-              <CardFooter className="model-card-footer">
-                <a href={model.upstream_url} target="_blank" rel="noreferrer">
-                  Upstream repository or paper <ExternalLink size={12} />
-                </a>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={model.id !== "cvs-adaptnet" || model.readiness !== "ready"}
-                  title={model.id === "cvs-adaptnet" ? model.details : "Requires a verified local adapter and checkpoint"}
-                  render={model.id === "cvs-adaptnet" && model.readiness === "ready" ? <Link to="/studio/surgivision/cases/current" /> : undefined}
-                >
-                  {model.readiness === "ready" ? <FlaskConical data-icon="inline-start" /> : <LockKeyhole data-icon="inline-start" />}
-                  {model.readiness === "ready" ? "Open frame and run" : "Execution blocked"}
-                </Button>
-              </CardFooter>
+              <nav aria-label="Research methods" className="grid divide-y divide-border">
+                {visibleModels.map((model) => (
+                  <button type="button" aria-pressed={selectedModel?.id === model.id} key={model.id} onClick={() => setSelectedModelId(model.id)} className={`grid min-w-0 gap-2 px-4 py-3 text-left transition-colors hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring ${selectedModel?.id === model.id ? "bg-primary/5" : "bg-card"}`}>
+                    <span className="flex min-w-0 items-start justify-between gap-3"><strong className="min-w-0 text-sm font-semibold leading-5 text-foreground">{model.name}</strong><Badge variant="outline" className="shrink-0 text-[10px]">{model.readiness.replaceAll("-", " ")}</Badge></span>
+                    <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground"><span>{moduleLabels[model.module]}</span><span aria-hidden="true">·</span><span>{model.operation_ids.length} registered {model.operation_ids.length === 1 ? "operation" : "operations"}</span></span>
+                  </button>
+                ))}
+                {loading && <div className="grid gap-2 p-4"><Skeleton className="h-12 w-full"/><Skeleton className="h-12 w-full"/><Skeleton className="h-12 w-full"/></div>}
+                {!loading && visibleModels.length === 0 && <div className="p-4 text-sm text-muted-foreground">No methods are registered for this workspace.</div>}
+              </nav>
             </Card>
-          ))}
-          {loading && <Skeleton className="h-28 w-full" />}
-        </div>
+            {selectedModel ? <Card size="sm" className="min-w-0 overflow-hidden">
+              <CardHeader className="gap-3 border-b border-border bg-muted/20 px-4 py-4 sm:px-5">
+                <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-xs font-medium uppercase tracking-wide text-primary">{moduleLabels[selectedModel.module]} · method record</span><Badge variant="outline" className={selectedModel.readiness === "ready" ? "border-primary/40 bg-primary/5 text-primary" : "border-warning/40 bg-warning/10 text-warning"}>{selectedModel.readiness.replaceAll("-", " ")}</Badge></div>
+                <div><CardTitle className="text-xl tracking-tight sm:text-2xl">{selectedModel.name}</CardTitle><CardDescription className="mt-2 max-w-3xl text-sm leading-6 text-foreground/80">{selectedModel.details}</CardDescription></div>
+                <div className="flex flex-wrap items-center gap-2 pt-1"><Link to={modelWorkspace} className={buttonVariants({variant:"outline",size:"sm"})}><Microscope data-icon="inline-start"/>Inspect source workspace</Link><a className="inline-flex min-h-8 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-primary underline-offset-4 hover:underline" href={selectedModel.upstream_url} target="_blank" rel="noreferrer">Upstream method <ExternalLink size={13}/></a></div>
+              </CardHeader>
+              <CardContent className="grid gap-4 px-4 py-4 sm:px-5">
+                <section aria-labelledby="method-provenance-title"><h2 id="method-provenance-title" className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Provenance and terms</h2><dl className="grid gap-2 sm:grid-cols-2"><div className="min-w-0 rounded-md border border-border px-3 py-2"><dt className="text-[11px] text-muted-foreground">Pinned source revision</dt><dd className="mt-1 break-all font-mono text-xs text-foreground">{selectedModel.source_revision}</dd></div><div className="min-w-0 rounded-md border border-border px-3 py-2"><dt className="text-[11px] text-muted-foreground">License / use terms</dt><dd className="mt-1 text-xs leading-5 text-foreground">{selectedModel.source_license}</dd></div></dl></section>
+                <section aria-labelledby="method-operations-title"><h2 id="method-operations-title" className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Registered operations</h2><div className="flex flex-wrap gap-1.5">{selectedModel.operation_ids.map((operation) => <Badge variant="secondary" key={operation}>{operation}</Badge>)}</div></section>
+                <div className={`flex items-start gap-2 rounded-md border px-3 py-2.5 text-xs leading-5 ${selectedModel.readiness === "ready" ? "border-primary/30 bg-primary/5" : "border-warning/30 bg-warning/5"}`}><LockKeyhole aria-hidden="true" className="mt-0.5 size-4 shrink-0"/><div><strong className="font-semibold">{selectedModel.readiness === "ready" ? "Execution checks passed" : "Execution remains gated"}</strong><p className="mt-0.5 text-muted-foreground">{selectedModel.readiness === "blocked" ? selectedModel.details : selectedModel.readiness === "ready" ? "The model registry marks this operation ready; inspect the selected source and its run controls before use." : "This method remains visible for research planning. The registry does not report it as ready for execution."}</p></div></div>
+              </CardContent>
+            </Card> : <Card size="sm" className="min-h-64"><CardContent className="grid min-h-64 place-content-center text-center text-sm text-muted-foreground">{loading ? "Loading model registry…" : "No method is available for this filter."}</CardContent></Card>}
+          </div>
+        </>
       )}
     </>
   );

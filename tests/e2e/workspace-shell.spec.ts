@@ -52,3 +52,32 @@ test('educator lesson editor loads as a real route and switches its phone panes'
   await expect(page.locator('.lesson-live-preview')).not.toContainText('Evidence use')
   expect(errors).toEqual([])
 })
+
+test('model lab filters source-linked methods and explains an execution gate', async ({ page }) => {
+  await page.route('**/api/v1/models', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify([
+      {
+        id: 'cvs-adaptnet', module: 'surgivision', name: 'CVS-AdaptNet',
+        operation_ids: ['cvs.inference'], upstream_url: 'https://example.test/cvs',
+        source_revision: 'revision-cvs', source_license: 'Checkpoint terms require review',
+        readiness: 'blocked', details: 'Independent checkpoint identity is required before inference.',
+      },
+      {
+        id: 'openkbp-baseline', module: 'dosetwin', name: 'OpenKBP prediction baseline',
+        operation_ids: ['dose.prediction'], upstream_url: 'https://example.test/openkbp',
+        source_revision: 'revision-openkbp', source_license: 'Dataset terms require review',
+        readiness: 'unverified', details: 'Prediction weights and runtime are not verified.',
+      },
+    ]),
+  }))
+
+  await page.goto('/studio/models')
+  await expect(page.getByText('2 source-linked methods')).toBeVisible()
+  await page.getByRole('button', { name: 'DoseTwin methods' }).click()
+  await expect(page.getByRole('button', { name: /OpenKBP prediction baseline/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /CVS-AdaptNet/ })).toHaveCount(0)
+  await expect(page.getByText('Prediction weights and runtime are not verified.')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Inspect source workspace' })).toHaveAttribute('href', '/studio/dosetwin/cases/current')
+})
