@@ -1,0 +1,26 @@
+{
+  "productArchitecture": "proposed",
+  "releaseState": "not-locked",
+  "cases": [
+    {
+      "id": "openkbp:validation:pt_201",
+      "source": "https://github.com/ababier/open-kbp",
+      "metadataInspected": true,
+      "fullLocalCaseDownloaded": false,
+      "benchmarkMetricParityVerified": false
+    },
+    {
+      "id": "endoscapes:sample",
+      "source": "https://github.com/CAMMA-public/Endoscapes",
+      "metadataInspected": true,
+      "sampleMediaDownloaded": false,
+      "modelInferenceVerified": false
+    },
+    {
+      "id": "fisav:sample",
+      "source": "https://www.nature.com/articles/s41597-026-08242-8",
+      "paperVerified": true,
+      "rawDataVerified": false
+    }
+  ]
+}

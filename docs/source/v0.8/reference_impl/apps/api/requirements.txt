@@ -1,0 +1,5 @@
+# Environment versions used to execute this reference harness here, not a claim of upstream model compatibility.
+fastapi==0.128.2
+pydantic==2.13.5
+uvicorn==0.48.0
+numpy==2.3.5

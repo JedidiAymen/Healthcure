@@ -1,0 +1,25 @@
+{
+  "_exampleOnly": true,
+  "attemptId": "illustrative-attempt-001",
+  "challengeId": "M-DOSE-001",
+  "challengeVersion": 1,
+  "state": "draft",
+  "revision": 0,
+  "viewer": {
+    "caseId": "example-openkbp-case-id-not-a-real-patient",
+    "module": "dosetwin",
+    "visibleArtifacts": [{
+      "artifactId": "example-ct-viewer-asset",
+      "origin": "raw",
+      "kind": "dose-volume-preview",
+      "uri": "asset://redacted-placeholder"
+    }]
+  },
+  "allowedCapabilityIds": ["ct.slice.navigate", "dose.dvh.inspect", "dose.prediction.compare"],
+  "blocks": [
+    {"type": "instruction", "id": "intro", "text": "Explore two already available model dose predictions."},
+    {"type": "observation", "id": "location", "kind": "dose_voxel", "prompt": "Locate a notable dose difference."},
+    {"type": "numeric_measurement", "id": "difference", "unit": "Gy", "prompt": "Record a measured value with units."}
+  ],
+  "draftObservations": []
+}

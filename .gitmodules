@@ -1,0 +1,3 @@
+[submodule "references/upstream/CVS-AdaptNet"]
+	path = references/upstream/CVS-AdaptNet
+	url = https://github.com/CAMMA-public/CVS-AdaptNet.git

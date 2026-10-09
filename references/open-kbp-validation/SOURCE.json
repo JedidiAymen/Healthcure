@@ -1,0 +1,47 @@
+{
+  "repository": "https://github.com/ababier/open-kbp",
+  "commit": "ce625e62f3b04203f22bd9d1634f3e8fb0245e46",
+  "purpose": "Pinned reference evaluator and its required loader sources for local numeric verification only.",
+  "files": [
+    {
+      "file": "LICENSE",
+      "bytes": 1069,
+      "sha1": "b19abf7cfcd86ebf8343c3481ecfa8744f8fada9",
+      "sha256": "4cbaae7814d2b8cf143186562304da9ddd60d9381a18cc68517bea570bbe3825"
+    },
+    {
+      "file": "provided_code/batch.py",
+      "bytes": 1687,
+      "sha1": "4afc174f1f944dc2edac1f5c94a097e149077de9",
+      "sha256": "b67ec52e494bc668c06dfbf388490e1ec54ebcff65d1bcd00818186f1b8581a1"
+    },
+    {
+      "file": "provided_code/data_loader.py",
+      "bytes": 5556,
+      "sha1": "2a17897fa9b370b3acb0c7e737e46f3415cb9026",
+      "sha256": "495f62c6bf6c4f764eff73b50af2e7ab441a3b0ef19e4bc7d1f3c68a25972cee"
+    },
+    {
+      "file": "provided_code/data_shapes.py",
+      "bytes": 1419,
+      "sha1": "88b9d23b3a7785a4d0a3b977f3f325a421aeab7d",
+      "sha256": "c33be10b67490e5233f2efd8252ce1a03f7ffe4c2992ed26347602dc021d7946"
+    },
+    {
+      "file": "provided_code/dose_evaluation_class.py",
+      "bytes": 5946,
+      "sha1": "5571907290074e30dd54a16068895305f6d1e746",
+      "sha256": "b364f3f0e8766b4710c8b20dc91af8f119baee071d06b339c312342f63592048"
+    },
+    {
+      "file": "provided_code/utils.py",
+      "bytes": 2060,
+      "sha1": "ac2b9c44e38bc1c034bb8be3c81198dc623cf1fc",
+      "sha256": "c2584e289c167de68a579c4924c9c9eec652e28603dbafded1486b438565a5c9"
+    }
+  ],
+  "integration_package_shim": {
+    "file": "provided_code/__init__.py",
+    "purpose": "Local minimal package shim. Omits upstream network/training imports so evaluation can run without TensorFlow. The actual loader/evaluator modules remain byte-identical to the pinned source commit."
+  }
+}

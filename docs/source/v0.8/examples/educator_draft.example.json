@@ -1,0 +1,20 @@
+{
+  "_exampleOnly": true,
+  "draftId": "illustrative-draft-001",
+  "version": 1,
+  "state": "draft",
+  "module": "surgivision",
+  "evidenceCaseId": "example-surg-case-id-not-a-real-case",
+  "authorId": "example-educator",
+  "title": "Locate anatomical evidence",
+  "learningObjectives": ["Identify visible anatomical landmarks", "State when image evidence is insufficient"],
+  "sourceArtifactIds": ["placeholder-image-asset-id"],
+  "blocks": [
+    {"type": "instruction", "id": "intro", "text": "Inspect the frame before viewing expert annotations."},
+    {"type": "evidence_viewer", "id": "viewer", "capabilities": ["frame.zoom", "frame.region.select"]},
+    {"type": "observation", "id": "answer", "kind": "frame_region"},
+    {"type": "evidence_reveal", "id": "review", "releasePolicy": "after_submit"}
+  ],
+  "rubric": {"status": "design-proposal", "requiresInstructorReview": true},
+  "publicationEligibility": "not_ready_placeholder_artifacts"
+}

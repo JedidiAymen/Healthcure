@@ -1,0 +1,99 @@
+{
+  "dataset": "OpenKBP",
+  "dataset_release": "2020 AAPM Grand Challenge dataset",
+  "partition": "validation-pats",
+  "case_id": "pt_201",
+  "upstream_repository": "https://github.com/ababier/open-kbp",
+  "upstream_commit": "ce625e62f3b04203f22bd9d1634f3e8fb0245e46",
+  "upstream_path": "provided-data/validation-pats/pt_201",
+  "case_directory": "data/openkbp/pt_201 (local-only; excluded from Git)",
+  "acquired_at_utc": "2026-10-09T01:17:50.207566+00:00",
+  "asset_rights": "The upstream data tree is publicly accessible at this pinned revision. The repository's MIT license is not treated as a separate dataset license. Retain source citation; local research/education use only; no redistribution. Confirm use/display terms before any external publication or commercial use.",
+  "reference_kind": "OpenKBP benchmark reference dose; not a delivered clinical plan",
+  "files": [
+    {
+      "file": "Brainstem.csv",
+      "bytes": 3165,
+      "git_blob_sha1": "823bc9f592829c3793a7f5018dce8765d75fa60e",
+      "sha256": "70e7f65a2d3fcc21887b1247817823014db8cf39b01daf5330e45a7adacc2263"
+    },
+    {
+      "file": "Esophagus.csv",
+      "bytes": 1203,
+      "git_blob_sha1": "2b510ef9dd02d5c16ec623699691bf131d72a3c6",
+      "sha256": "c05d4ea3bcc420b30916003faee60d1a202abbc9d5eb6d7dad1bd821803a8dff"
+    },
+    {
+      "file": "Larynx.csv",
+      "bytes": 1790,
+      "git_blob_sha1": "514fe2bb3d7700f953824801918d44eb22a667ad",
+      "sha256": "f8c0fe6d3ca95a63179ec693e39be7d06f6a2e9ff3a6d564f2daf1c63a7c0688"
+    },
+    {
+      "file": "LeftParotid.csv",
+      "bytes": 2157,
+      "git_blob_sha1": "c6408e4cc68d17b2d0ebd178e2f8c67249ddba47",
+      "sha256": "e95d70a8981b50ca01899129903795e5024e990da259f8c522a64f4ab05cc9a5"
+    },
+    {
+      "file": "Mandible.csv",
+      "bytes": 6998,
+      "git_blob_sha1": "8d7564f7221dd56bcba2757150fce660c2fe9cf7",
+      "sha256": "075205f10a1cf33ef7c67b50783cd565b2cad974fa0543c299bd8eba5349bbf5"
+    },
+    {
+      "file": "PTV56.csv",
+      "bytes": 4310,
+      "git_blob_sha1": "435d5eb07bb1bac85642b62f434a8be3bf633f16",
+      "sha256": "b6b55393914c583acace8f536cff896ebd7d1613d02d1da4971951f3772e6771"
+    },
+    {
+      "file": "PTV63.csv",
+      "bytes": 9003,
+      "git_blob_sha1": "263f686d3f9816b7f42dba9c7bbe4df9e9bbd00f",
+      "sha256": "ac6458a35b1ba3d2e137da85e654c6de553c9f2faedf31ef2ae9aa2e39010225"
+    },
+    {
+      "file": "PTV70.csv",
+      "bytes": 87964,
+      "git_blob_sha1": "afc920bf75dd2fae6943a8faebfdf88b8d095c75",
+      "sha256": "074893ff1ba7ea9de7c08e4acd725688e53c064db2cee0574a23b899367adbc3"
+    },
+    {
+      "file": "RightParotid.csv",
+      "bytes": 2157,
+      "git_blob_sha1": "f4fe090657790c32f2ae76fc400c1c88d11f2dcf",
+      "sha256": "b449f681969b5efa0bccf656729c94ff5015889136bffcba71878c8318ed3f5a"
+    },
+    {
+      "file": "SpinalCord.csv",
+      "bytes": 2544,
+      "git_blob_sha1": "f0260c5a008da8ce8db47973c20cd4d944135ad9",
+      "sha256": "b0387456af28aea5e7282acca2b405f7b50cde5e415da2e8478d77bb3185961a"
+    },
+    {
+      "file": "ct.csv",
+      "bytes": 2637903,
+      "git_blob_sha1": "de28270b650de5233def5cf2c773aac752666880",
+      "sha256": "eeb669e94ea2e4080cb2989c1c42b2401d1ee9379d88e6cdf33a99fee692f59c"
+    },
+    {
+      "file": "dose.csv",
+      "bytes": 1645992,
+      "git_blob_sha1": "93d55c6fe5fa3ef9a321777b0066a32c11c1cc8c",
+      "sha256": "e81b8422833420322f9b43ab4c27ea433f591a6b1463265552d9864a540d1ffb"
+    },
+    {
+      "file": "possible_dose_mask.csv",
+      "bytes": 1020892,
+      "git_blob_sha1": "ae5adf88cbc278e889ad785b0ee80ec27b8cc651",
+      "sha256": "1e7204cb0af17de89ebf6bed37bbf5f045ef4138d72e4ebe2ad60911f7bb46cc"
+    },
+    {
+      "file": "voxel_dimensions.csv",
+      "bytes": 75,
+      "git_blob_sha1": "933a4f109c4bea6249a2c546108ebfef088c49da",
+      "sha256": "e8746bb5f4a83dda6eaf0ad67bbc0f3d07e7da59a097652f4cee8192469ebed7"
+    }
+  ]
+}

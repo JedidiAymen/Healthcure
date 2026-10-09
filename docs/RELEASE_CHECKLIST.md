@@ -1,0 +1,63 @@
+# Local demo release checklist
+
+Updated 2026-10-09. This is a local-demo checklist. MEDFORGE is **not v1.0 locked** and is not approved for public or clinical deployment.
+
+## Verified in this checkout
+
+- [x] A clean frontend install succeeds with `npm ci`; every direct dependency is pinned in `package.json` and `package-lock.json`. `npm run lint` and `npm run build` pass after the clean install.
+- [x] React/Vite/TypeScript production build passes.
+- [x] Current API suite passes: **30 tests**, including role denial, immutable publications, hidden learner answers, delayed reference release, source-bound evidence, opt-in XP/achievement preferences, no XP award after opt-out, latest-grade progress aggregation, durable grade retry receipts, changed-payload key conflicts, authorization before receipt replay, educator assignment retrieval, persisted CVS run provenance, OpenKBP malformed-index/value/grid errors, and student denial for the SurgiVision coverage endpoint. Authentic `pt_201` still passes all 23 official evaluator metric checks. Latest run: `python3 -m pytest -q apps/api/tests`.
+- [x] `npm run lint` passes using ESLint flat config, TypeScript and React Hooks rules; `npm run build` passes.
+- [x] Pydantic API schemas export the implemented OpenAPI contract and generated frontend schema types are current: `npm run contracts:check`.
+- [x] Reference checks pass: 34 required SQLite tables and foreign-key enforcement; 18 API contracts; generated OpenAPI; TypeScript selection contract.
+- [x] OpenKBP `pt_201` source files match upstream blob IDs; 23 official evaluator metric comparisons recorded.
+- [x] Endoscapes sampled images and annotations are checksum-verified; viewer tested on two distinct real frames.
+- [x] CVS label coverage audit verifies all 1,933 checksum-matched images and all three split annotation hashes; API smoke confirms the coverage path, and students are blocked from the aggregate reference endpoint.
+- [x] FiSaV cohort file hashes and archive CRC are checked; all 59 local recordings appear in the registry.
+- [x] Current local browser shows 1,993 source records and loads the real DoseTwin case with linked planes, ROI/DVH data and provenance.
+- [x] Keyboard-accessible research search opens from `Ctrl+K`/`⌘K`, searches verified case IDs and dataset/specialty names, and opens the filtered case registry with the query preserved; verified `pt_201` navigation and all 1,933 Endoscapes matches.
+- [x] Model Lab renders all seven registered sources as shadcn Cards with revision/license provenance and execution gates.
+- [x] Temporary isolated educator/student review completed on authentic Endoscapes `4_26200`: learner-safe publication, delayed reveal, cohort assignment, viewer evidence selection, educator rubric grading and post-review reference display.
+- [x] Temporary isolated FiSaV learning review completed on `pat001`: source waveform and PSD, PZT2 evidence selection for 0–10 s, student submission, criterion-based educator grade and released debrief. Temporary database and accounts were removed.
+- [x] Student pathway API and desktop screen review: all three source-bounded paths load, and authentic FiSaV `pat001` appears only in the learner's assigned Physiological Signals path. Regression coverage verifies cohort filtering, source attribution, and not-started / in-progress / awaiting-review / reviewed transitions; no competency or completion claim is inferred.
+- [x] `scripts/start_local.sh` cold-starts API and Vite on loopback using a fresh temporary database; the full source smoke checked health, all three data-backed modules and 16 app routes, then both services were stopped cleanly. This is a local cold-start check, not a network-isolated install test.
+- [x] Root `RUN_LOCAL.md` documents setup, source acquisition, optional local learning-account provisioning, loopback offline-demo launch and preflight; README links to the guide. The guide does not claim a clean offline dependency install was exercised.
+- [x] `npm run doctor -- --output docs/evidence/machine-readiness.json` records current machine, runtime, isolated CVS worker and data manifests; all 14 OpenKBP files, 1,933 Endoscapes image/annotation files and 59 FiSaV CSVs are present.
+- [x] `npm run smoke:local` validates loopback health, all three data-backed API paths and all 19 SPA app-shell routes, including the three Academy pathway deep links, without writing data. Fresh run: 1,933 SurgiVision, 1 DoseTwin and 59 FiSaV source records; OpenKBP source planes/DVHs, Endoscapes annotation/image, and FiSaV measurement/hash checks passed. This route/source smoke does not replace phone/tablet visual review or full keyboard traversal of the new pathway screens.
+- [x] DoseTwin DVH and FiSaV waveform/PSD include generated shadcn Table data companions with the plotted values, source/method context and hashes. `npm run lint`, `npm run build`, `npm run smoke:local` and `npm run contracts:check` pass after the integration; pinned top-level dependencies are clean.
+- [x] FiSaV includes a source-derived time-frequency view for the chosen recording/channel/window, with disclosed Hann-window/hop settings, bounded matrix dimensions, source timestamps and hash, relative dB color labeling, and the plotted matrix in a shadcn Table. API tests and a fresh isolated source smoke verify its data path.
+- [x] FiSaV selected and comparison windows accept precise fractional seconds; API coverage confirms that a 0.2345 s start feeds the same 5,000 source samples into waveform, PSD, spectrogram and feature calculations. Numeric/slider keyboard interaction still needs the pending browser review.
+- [x] Saved FiSaV comparisons appear in the shared paginated Reports index and export as JSON with source DOI/license/hash, both windows, measured features and limitations; API pagination, difference units and pure export provenance are covered by tests.
+- [x] Professional SurgiVision can export selected-frame annotation evidence with exact split, source hashes, COCO coordinates/masks, CVS values and their annotator-mean meaning. The artifact includes CC BY-NC-SA attribution/limitations, excludes the source image, and the export action is hidden in learner mode; a pure export test checks these fields.
+- [x] Source audit confirms application flows use the installed shadcn/Base Nova field, input, textarea, select, table, button, alert and card components. The only native input/table/button tags found by the TSX scan are inside the corresponding shadcn component sources. Select item metadata follows the Base UI collection API.
+- [x] `npm run test` passes the 8 Vitest saved-view preference parser tests (case/frame/record scoping, value bounds and legacy pan defaults). Interactive restore behavior remains under the separate browser-review gate below.
+- [x] Latest real-source recheck: `python3 scripts/crosscheck_openkbp_pt201.py` passes 23 official metrics (max absolute difference 0.0000076471 Gy), and `npm run audit:endoscapes-cvs` verifies all 1,933 annotated frames and split counts.
+- [x] API is loopback-only; current health response identifies it as a local reference harness and not public-deployment ready.
+- [x] No pretrained model output or fake clinical result is seeded.
+- [x] CVS-AdaptNet single-frame API adapter persists a source-bound run and is visibly blocked while checkpoint checksum and checkpoint-specific terms remain unresolved.
+
+## Required before calling the local education pathway fully reviewed
+
+- [x] Sign in as temporary educator and student accounts in separate isolated browser sessions; inspect learner-safe lesson, assignment, and criterion-scored review on an authentic Endoscapes frame.
+- [x] Confirm through the student projection and browser review that rubric/reference stay hidden before grading, then the authorized debrief and six Endoscapes source annotations appear after grade.
+- [x] Exercise XP off by default, opt-in, award-on-review, opt-out display, and preserved reviewed scores/debrief access (`test_local_learning_sessions_enforce_provisioned_roles_and_revocation`).
+- [x] Exercise activity achievements off by default, opt-in before review, single badge award, opt-out display, and preserved private ledger (`test_local_learning_sessions_enforce_provisioned_roles_and_revocation`).
+- [x] Confirm next-activity state tracks a new, saved, pending-review, and fully reviewed assignment; export a versioned participation record with reviewed scores and no free-text observations (`test_local_learning_sessions_enforce_provisioned_roles_and_revocation`).
+- [x] Review Academy and Educator screens at laptop (1280px), tablet (768px) and phone (390px) widths. Fixed a squeezed Academy phone banner and educator editor overflow at tablet width; confirmed visible keyboard focus and the global reduced-motion CSS rule.
+- [ ] Review the new Progress recommendation, populated rubric-history chart and participation-export control at laptop, tablet and phone widths; check the criterion selector, chart keyboard inspection and values table. Phone (390×844) and tablet (768×1024) bounds are verified with the current learner preview, but no educator-reviewed grade is present, so chart/selector/keyboard behavior has not yet been reviewed with populated history.
+- [ ] Review the new Academy pathway index and path detail at tablet and phone widths; inspect keyboard focus through path selection and assigned lesson navigation. The index, path detail, assigned-lesson row and their 390×844/768×1024 bounds are reviewed; visible focus was confirmed on the assigned lesson link. Complete keyboard traversal and path-selection focus checks remain open.
+- [x] Save a local-only `pt_201` DoseTwin screenshot with three real axis planes and its DVH in the validation report; external display remains gated by dataset-rights review.
+- [x] Review the real FistulaGuard waveform workspace at laptop (1280px), tablet (768px) and phone (390px) widths; the measured waveform and PSD stack without page-level horizontal overflow.
+- [x] Review the latest shadcn ChartContainer/tooltip integration on DoseTwin and FistulaGuard, plus the FiSaV time-frequency heatmap, at laptop (1280px), tablet (768px), and phone (390px) widths. Verified responsive page bounds and visible source/limitation labels; used arrow keys to inspect DoseTwin DVH and FistulaGuard PSD tooltips. Confirmed the FiSaV heatmap and accessible tab/data-table controls at all three widths.
+
+## Required before an external demo
+
+- [ ] Rights reviewer records permission for the intended Endoscapes and OpenKBP display and audience. Current OpenKBP dataset rights are not established; Endoscapes requires scope-specific non-commercial attribution review.
+- [ ] Confirm FiSaV attribution and the planned educational context; keep its excluded demographics workbook excluded.
+- [ ] Review rendered attribution and dataset limitations at demo breakpoints. DoseTwin now includes an OpenKBP code-vs-data-rights notice and pinned-source link; Endoscapes and FiSaV source citations exist in their viewers, but this complete UI requirement still needs interactive visual verification.
+- [ ] Do not expose the API beyond loopback; general research routes do not have production RBAC.
+- [ ] Keep all absent model/solver capability states visible and make no clinical or model-performance claims.
+
+## Release decision
+
+The source-backed local research views are usable for continued development. A public/demo release and the signed-in learning release remain pending the unchecked gates above. Architecture/source status remains provisional as described in `docs/source/v0.8/22_ARCHITECTURE_LOCK_GATES_AND_OPEN_DECISIONS.md`.

@@ -1,0 +1,194 @@
+{
+  "status": "PASS",
+  "case_id": "pt_201",
+  "case_directory": "data/openkbp/pt_201 (local-only; excluded from Git)",
+  "source_commit": "ce625e62f3b04203f22bd9d1634f3e8fb0245e46",
+  "source_manifest": "docs/openkbp-pt201-manifest.json",
+  "official_evaluator": "references/open-kbp-validation/provided_code/dose_evaluation_class.py",
+  "official_same_dose_scores": {
+    "dose_score": 0.0,
+    "dvh_score": 0.0
+  },
+  "comparisons": [
+    {
+      "roi": "Brainstem",
+      "metric": "mean",
+      "medforge_gy": 10.87064,
+      "official_gy": 10.87064,
+      "absolute_difference_gy": 1.025641026330959e-06
+    },
+    {
+      "roi": "Brainstem",
+      "metric": "D_0.1_cc",
+      "medforge_gy": 48.02876,
+      "official_gy": 48.02876,
+      "absolute_difference_gy": 2.165242179330562e-06
+    },
+    {
+      "roi": "SpinalCord",
+      "metric": "mean",
+      "medforge_gy": 21.8935,
+      "official_gy": 21.8935,
+      "absolute_difference_gy": 3.5460992897640153e-06
+    },
+    {
+      "roi": "SpinalCord",
+      "metric": "D_0.1_cc",
+      "medforge_gy": 46.85965,
+      "official_gy": 46.85965,
+      "absolute_difference_gy": 1.0638297780474204e-06
+    },
+    {
+      "roi": "RightParotid",
+      "metric": "mean",
+      "medforge_gy": 50.81564,
+      "official_gy": 50.81564,
+      "absolute_difference_gy": 7.843137197482974e-07
+    },
+    {
+      "roi": "RightParotid",
+      "metric": "D_0.1_cc",
+      "medforge_gy": 69.82849,
+      "official_gy": 69.82848,
+      "absolute_difference_gy": 7.647058822612962e-06
+    },
+    {
+      "roi": "LeftParotid",
+      "metric": "mean",
+      "medforge_gy": 43.80883,
+      "official_gy": 43.80883,
+      "absolute_difference_gy": 2.9323308297080075e-06
+    },
+    {
+      "roi": "LeftParotid",
+      "metric": "D_0.1_cc",
+      "medforge_gy": 67.61609,
+      "official_gy": 67.61609,
+      "absolute_difference_gy": 2.2556390888439637e-07
+    },
+    {
+      "roi": "Esophagus",
+      "metric": "mean",
+      "medforge_gy": 20.9613,
+      "official_gy": 20.9613,
+      "absolute_difference_gy": 7.518796998340349e-07
+    },
+    {
+      "roi": "Esophagus",
+      "metric": "D_0.1_cc",
+      "medforge_gy": 60.11652,
+      "official_gy": 60.11652,
+      "absolute_difference_gy": 1.203007514050114e-06
+    },
+    {
+      "roi": "Larynx",
+      "metric": "mean",
+      "medforge_gy": 59.74397,
+      "official_gy": 59.74397,
+      "absolute_difference_gy": 3.0941704096676403e-06
+    },
+    {
+      "roi": "Larynx",
+      "metric": "D_0.1_cc",
+      "medforge_gy": 69.87308,
+      "official_gy": 69.87308,
+      "absolute_difference_gy": 3.766816135453155e-06
+    },
+    {
+      "roi": "Mandible",
+      "metric": "mean",
+      "medforge_gy": 54.63074,
+      "official_gy": 54.63074,
+      "absolute_difference_gy": 2.745995359987319e-07
+    },
+    {
+      "roi": "Mandible",
+      "metric": "D_0.1_cc",
+      "medforge_gy": 68.25729,
+      "official_gy": 68.25729,
+      "absolute_difference_gy": 6.178489684316446e-07
+    },
+    {
+      "roi": "PTV56",
+      "metric": "D_95",
+      "medforge_gy": 55.10155,
+      "official_gy": 55.10155,
+      "absolute_difference_gy": 0.0
+    },
+    {
+      "roi": "PTV56",
+      "metric": "D_99",
+      "medforge_gy": 52.729,
+      "official_gy": 52.729,
+      "absolute_difference_gy": 0.0
+    },
+    {
+      "roi": "PTV56",
+      "metric": "D_1",
+      "medforge_gy": 68.57838,
+      "official_gy": 68.57838,
+      "absolute_difference_gy": 0.0
+    },
+    {
+      "roi": "PTV63",
+      "metric": "D_95",
+      "medforge_gy": 59.3215,
+      "official_gy": 59.3215,
+      "absolute_difference_gy": 0.0
+    },
+    {
+      "roi": "PTV63",
+      "metric": "D_99",
+      "medforge_gy": 57.7972,
+      "official_gy": 57.7972,
+      "absolute_difference_gy": 0.0
+    },
+    {
+      "roi": "PTV63",
+      "metric": "D_1",
+      "medforge_gy": 69.0363,
+      "official_gy": 69.0363,
+      "absolute_difference_gy": 0.0
+    },
+    {
+      "roi": "PTV70",
+      "metric": "D_95",
+      "medforge_gy": 64.5135,
+      "official_gy": 64.5135,
+      "absolute_difference_gy": 1.4210854715202004e-14
+    },
+    {
+      "roi": "PTV70",
+      "metric": "D_99",
+      "medforge_gy": 61.93805,
+      "official_gy": 61.93805,
+      "absolute_difference_gy": 0.0
+    },
+    {
+      "roi": "PTV70",
+      "metric": "D_1",
+      "medforge_gy": 71.3813,
+      "official_gy": 71.3813,
+      "absolute_difference_gy": 1.4210854715202004e-14
+    }
+  ],
+  "comparison_count": 23,
+  "max_absolute_difference_gy": 7.647058822612962e-06,
+  "grid_shape": [
+    128,
+    128,
+    128
+  ],
+  "spacing_mm": [
+    5.422,
+    5.422,
+    3.0
+  ],
+  "dose_sha256": "e81b8422833420322f9b43ab4c27ea433f591a6b1463265552d9864a540d1ffb",
+  "limitations": [
+    "This checks numerical agreement with the published benchmark evaluator on one validation case.",
+    "It does not verify model prediction quality, treatment validity, DICOM orientation, or clinical use.",
+    "Same-dose evaluator scores are a code-path sanity check, not a model result."
+  ],
+  "output": "docs/openkbp-pt201-validation.json"
+}

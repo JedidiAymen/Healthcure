@@ -1,0 +1,12 @@
+{
+  "disclaimer": "Sample layout only; measurements/layout have not been usability tested.",
+  "version": 1,
+  "module": "surgivision",
+  "layoutPreset": "analyze",
+  "sidebarCollapsed": false,
+  "inspectorOpen": true,
+  "bottomDock": "timeline",
+  "selectedTab": "anatomy",
+  "panels": ["mainViewer", "evidenceInspector", "timeline"],
+  "sourceCaseId": null
+}

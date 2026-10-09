@@ -1,0 +1,4 @@
+# Official CUDA 11.8 PyTorch wheels for CPython 3.10, Linux x86_64.
+# Wheel hashes are published by download.pytorch.org/whl/cu118.
+torch @ https://download-r2.pytorch.org/whl/cu118/torch-2.1.0%2Bcu118-cp310-cp310-linux_x86_64.whl#sha256=a81b554184492005543ddc32e96469f9369d778dedd195d73bda9bed407d6589
+torchvision @ https://download-r2.pytorch.org/whl/cu118/torchvision-0.16.0%2Bcu118-cp310-cp310-linux_x86_64.whl#sha256=033712f65d45afe806676c4129dfe601ad1321d9e092df62b15847c02d4061dc

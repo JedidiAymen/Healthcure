@@ -1,0 +1,8 @@
+# Pinned non-PyTorch dependencies for the isolated CVS-AdaptNet runtime.
+numpy==1.26.4
+mmengine==0.7.0
+transformers==4.30.2
+Pillow==10.4.0
+ftfy==6.3.1
+regex==2024.11.6
+tqdm==4.67.1
