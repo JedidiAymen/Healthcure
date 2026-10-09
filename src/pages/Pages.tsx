@@ -281,158 +281,66 @@ function EmptySource({ module }: { module: ModuleId }) {
 
 export function Home() {
   const cases = useApi(queryKeys.cases, api.cases, [] as CaseRecord[]);
-  const sourceInventory = [
-    { id: "surgivision", measure: "annotated frames" },
-    { id: "dosetwin", measure: "benchmark cases" },
-    { id: "fistulaguard", measure: "signal recordings" },
+  const areas = [
+    { id: "surgivision", name: "SurgiVision", discipline: "Surgical vision research", source: "Endoscapes", measure: "annotated frames" },
+    { id: "dosetwin", name: "DoseTwin", discipline: "Radiation oncology & physics", source: "OpenKBP", measure: "benchmark case" },
+    { id: "fistulaguard", name: "FistulaGuard", discipline: "Nephrology & access care", source: "FiSaV", measure: "signal recordings" },
   ] as const;
   return (
-    <main className="grid gap-10 pb-8">
-      <section className="grid items-stretch gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
-        <div className="flex flex-col justify-center gap-5 py-2 lg:py-8">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span className="size-2 rounded-full bg-primary" />
-            MEDFORGE · clinical research workspace
-          </div>
-          <div className="max-w-2xl space-y-4">
-            <h1 className="text-4xl leading-[1.08] font-semibold tracking-[-0.045em] text-foreground sm:text-5xl">
-              Evidence review for clinicians and medical researchers.
+    <main className="home-page grid gap-10 pb-8">
+      <section className="home-hero grid items-stretch gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.82fr)]">
+        <div className="flex min-w-0 flex-col justify-center gap-6 py-2 xl:py-8">
+          <Badge variant="outline" className="w-fit gap-2 rounded-md border-primary/25 bg-card px-3 py-1.5 font-medium text-primary">
+            <Stethoscope data-icon="inline-start" /> Research tools for clinical teams
+          </Badge>
+          <div className="max-w-[720px] space-y-4">
+            <h1 className="home-title text-4xl leading-[1.04] font-semibold tracking-[-0.045em] text-foreground sm:text-5xl xl:text-[56px]">
+              Clinical research, grounded in evidence.
             </h1>
-            <p className="max-w-xl text-base leading-7 text-muted-foreground">
-              Inspect surgical frames, radiotherapy benchmark volumes, and measured vascular-access signals with their sources and limits in view.
+            <p className="max-w-[590px] text-base leading-7 text-muted-foreground">
+              Explore source-verified surgical imagery, radiotherapy benchmark volumes, and measured vascular-access signals in tools built for scientific inspection.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <Button render={<Link to="/studio" />} nativeButton={false} size="lg">
-              Enter Professional Studio <ArrowRight data-icon="inline-end" />
+            <Button render={<Link to="/studio" />} nativeButton={false} size="lg" className="h-11 rounded-[10px] px-5">
+              Open Professional Studio <ArrowRight data-icon="inline-end" />
             </Button>
-            <span className="text-sm text-muted-foreground">Research and education use</span>
+            <span className="inline-flex items-center gap-2 text-sm text-muted-foreground"><ShieldCheck className="size-4 text-primary"/> Source and limits stay visible</span>
+          </div>
+          <div className="grid max-w-[640px] grid-cols-3 border-t border-border pt-4">
+            {areas.map((area) => {
+              const count = cases.data.filter((record) => record.module === area.id).length;
+              return <div className="grid content-start gap-1 border-r border-border pr-3 pl-3 first:pl-0 last:border-0" key={area.id}>
+                <span className="text-xs leading-snug text-muted-foreground">{area.name}</span>
+                <b className="font-mono text-xl font-medium tracking-tight text-foreground">{cases.loading ? "—" : count.toLocaleString()}</b>
+                <small className="text-[11px] leading-snug text-muted-foreground">{area.measure}</small>
+              </div>;
+            })}
           </div>
         </div>
-
-        <Card className="self-stretch border-sidebar-border bg-sidebar/60">
-          <CardHeader className="border-b border-border/70">
-            <div className="flex items-start justify-between gap-4">
-              <div className="space-y-1">
-                <CardTitle className="text-base">Verified source inventory</CardTitle>
-                <CardDescription>Local research material available in this workspace</CardDescription>
-              </div>
-              <Badge variant="outline" className="shrink-0">3 separate datasets</Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-2">
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead>Research area</TableHead>
-                  <TableHead className="text-right">Available</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sourceInventory.map(({ id, measure }) => {
-                  const moduleId = id as ModuleId;
-                  const m = specialtyData[moduleId];
-                  const count = cases.data.filter((item) => item.module === id).length;
-                  return (
-                    <TableRow key={id}>
-                      <TableCell>
-                        <Link className="font-medium text-foreground hover:text-primary focus-visible:rounded-sm" to={`/studio/${id}/cases/current`}>
-                          {m.name}
-                        </Link>
-                        <div className="mt-1 text-xs text-muted-foreground">{m.source} · {measure}</div>
-                      </TableCell>
-                      <TableCell className="text-right font-medium tabular-nums">
-                        {cases.loading ? "—" : count.toLocaleString()}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-            {cases.error ? (
-              <p role="status" className="mt-3 text-sm text-destructive">Local case registry is unavailable: {cases.error}</p>
-            ) : (
-              <p className="mt-3 text-xs leading-5 text-muted-foreground">
-                Each specialty keeps its own source, units, and evidence boundaries.
-              </p>
-            )}
-          </CardContent>
-          <CardFooter className="border-t border-border/70">
-            <Button render={<Link to="/studio/cases" />} nativeButton={false} variant="ghost" size="sm" className="px-0 text-primary">
-              Browse the case registry <ArrowRight data-icon="inline-end" />
-            </Button>
-          </CardFooter>
-        </Card>
+        <figure className="home-clinical-image relative m-0 min-h-[280px] overflow-hidden rounded-xl border border-border bg-muted sm:min-h-[340px] xl:min-h-[400px]">
+          <img src={radiologyReviewImage} alt="A radiologist discussing chest images with clinical colleagues" className="absolute inset-0 size-full object-cover" />
+          <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-[#111827]/85 via-[#111827]/5 to-transparent" />
+          <figcaption className="absolute inset-x-0 bottom-0 flex flex-wrap items-end justify-between gap-4 p-5 text-white sm:p-6">
+            <span className="grid gap-1"><span className="text-xs font-medium uppercase tracking-[.16em] text-white/75">Clinical context</span><span className="max-w-sm text-lg font-medium leading-snug">Tools shaped around the questions research teams investigate.</span></span>
+            <span className="rounded-md border border-white/30 bg-black/25 px-2.5 py-1.5 text-xs backdrop-blur-sm">Illustrative clinical image</span>
+          </figcaption>
+        </figure>
       </section>
 
-      <section className="grid gap-4">
-        <div className="flex flex-col gap-1 border-b border-border pb-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h2 className="text-xl font-semibold tracking-tight">Choose your workspace</h2>
-            <p className="mt-1 text-sm text-muted-foreground">The same verified evidence, shaped for different responsibilities.</p>
-          </div>
-        </div>
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(300px,0.8fr)]">
-          <Card className="border-primary/40 bg-primary/[0.035]">
-            <CardHeader className="gap-3">
-              <Badge variant="outline" className="w-fit border-primary/40 text-primary">For clinicians &amp; researchers</Badge>
-              <div className="flex items-start gap-3">
-                <span className="grid size-10 shrink-0 place-items-center rounded-md bg-primary/10 text-primary"><Microscope aria-hidden="true" /></span>
-                <div className="space-y-1">
-                  <CardTitle>Professional Studio</CardTitle>
-                  <CardDescription>Open source cases, inspect measurements, compare compatible evidence, and prepare provenance reports.</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-3">
-              <div className="border-t border-border/70 pt-2">Frame and annotation review</div>
-              <div className="border-t border-border/70 pt-2">Dose and structure analysis</div>
-              <div className="border-t border-border/70 pt-2">Measured signal comparison</div>
-            </CardContent>
-            <CardFooter>
-              <Button render={<Link to="/studio" />} nativeButton={false}>
-                Open Professional Studio <ArrowRight data-icon="inline-end" />
-              </Button>
-            </CardFooter>
-          </Card>
+      <StudioDepartmentAtlas cases={cases.data} />
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-            <Card className="h-full">
-              <CardHeader className="gap-3">
-                <Badge variant="secondary" className="w-fit">For medical educators</Badge>
-                <div className="flex items-start gap-3">
-                  <span className="grid size-9 shrink-0 place-items-center rounded-md bg-secondary text-secondary-foreground"><BookOpenCheck aria-hidden="true" /></span>
-                  <div className="space-y-1">
-                    <CardTitle className="text-base">Educator Studio</CardTitle>
-                    <CardDescription>Build source-backed lessons and review learner evidence with a manual rubric.</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardFooter className="mt-auto">
-                <Button render={<Link to="/educator" />} nativeButton={false} variant="outline" size="sm">
-                  Open educator tools <ArrowRight data-icon="inline-end" />
-                </Button>
-              </CardFooter>
-            </Card>
-            <Card className="h-full">
-              <CardHeader className="gap-3">
-                <Badge variant="secondary" className="w-fit">For students &amp; trainees</Badge>
-                <div className="flex items-start gap-3">
-                  <span className="grid size-9 shrink-0 place-items-center rounded-md bg-secondary text-secondary-foreground"><GraduationCap aria-hidden="true" /></span>
-                  <div className="space-y-1">
-                    <CardTitle className="text-base">Student Academy</CardTitle>
-                    <CardDescription>Investigate assigned research cases and receive educator-reviewed feedback.</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardFooter className="mt-auto">
-                <Button render={<Link to="/academy" />} nativeButton={false} variant="outline" size="sm">
-                  Open Student Academy <ArrowRight data-icon="inline-end" />
-                </Button>
-              </CardFooter>
-            </Card>
-          </div>
-        </div>
+      <section aria-label="Other MEDFORGE workspaces" className="grid gap-4 border-t border-border pt-7 md:grid-cols-2">
+        <Link to="/academy" className="home-role-link group flex min-h-24 items-center gap-4 rounded-xl border border-border bg-card px-5 py-4 transition-colors hover:border-primary/35">
+          <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-[#DFF4F8] text-[#23576b]"><GraduationCap aria-hidden="true"/></span>
+          <span className="grid flex-1 gap-1"><b className="font-medium text-foreground">Student Academy</b><small className="text-sm leading-5 text-muted-foreground">Learn through source-backed medical investigations.</small></span>
+          <ArrowRight aria-hidden="true" className="size-4 text-muted-foreground transition-transform group-hover:translate-x-1"/>
+        </Link>
+        <Link to="/educator" className="home-role-link group flex min-h-24 items-center gap-4 rounded-xl border border-border bg-card px-5 py-4 transition-colors hover:border-primary/35">
+          <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-[#edf1f8] text-primary"><BookOpenCheck aria-hidden="true"/></span>
+          <span className="grid flex-1 gap-1"><b className="font-medium text-foreground">Educator Studio</b><small className="text-sm leading-5 text-muted-foreground">Build evidence-centered lessons and review submissions.</small></span>
+          <ArrowRight aria-hidden="true" className="size-4 text-muted-foreground transition-transform group-hover:translate-x-1"/>
+        </Link>
       </section>
     </main>
   );

@@ -1,4 +1,9 @@
 @import "tailwindcss";
+@import "@fontsource-variable/inter/wght.css";
+@import "@fontsource-variable/plus-jakarta-sans/wght.css";
+@import "@fontsource/ibm-plex-mono/latin-400.css";
+@import "@fontsource/ibm-plex-mono/latin-500.css";
+@import "@fontsource/ibm-plex-mono/latin-600.css";
 
 @theme inline {
   --color-background: var(--background);
@@ -99,3 +104,159 @@
 @media(max-width:760px){.workspace-card-grid{grid-template-columns:1fr}}
 
 /* DoseTwin controls use the same Base Nova tokens as its cards. */
+
+/* Approved MEDFORGE Cobalt / Porcelain role surfaces. These are semantic
+   shadcn/Base Nova tokens; calibrated image and plot palettes stay separate. */
+:root {
+  color-scheme: light;
+  --med-brand: #3955e6;
+  --med-brand-active: #3552d7;
+  --med-brand-hover: #2d45c1;
+  --med-focus: #8498ff;
+  --med-coral: #ff806c;
+  --med-gold: #f3c961;
+  --med-success: #187d5b;
+  --med-warning: #9c5e16;
+  --med-danger: #c53947;
+  --bg: #f3f5fa;
+  --surface: #fff;
+  --surface-2: #f8fafd;
+  --surface-3: #edf1f8;
+  --ink: #161c2e;
+  --sub: #667085;
+  --dim: #8993a5;
+  --line: #e0e5f0;
+  --teal: #3552d7;
+  --teal-light: #8498ff;
+  --warning: #9c5e16;
+  --blue: #3955e6;
+  --violet: #6f55bd;
+  --green: #187d5b;
+  --background: #f3f5fa;
+  --foreground: #161c2e;
+  --card: #fff;
+  --card-foreground: #161c2e;
+  --primary: #3552d7;
+  --primary-foreground: #fff;
+  --secondary: #eef1f9;
+  --secondary-foreground: #28314c;
+  --muted: #f1f3f8;
+  --muted-foreground: #667085;
+  --border: #e0e5f0;
+  --sidebar: #f8fafd;
+  --sidebar-foreground: #34405c;
+  --sidebar-accent: #edf0ff;
+  --sidebar-accent-foreground: #263da8;
+  --sidebar-border: #e0e5f0;
+  --sidebar-ring: #8498ff;
+  --radius: 12px;
+  --font-body: "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-academy-display: "Plus Jakarta Sans Variable", "Inter Variable", sans-serif;
+  --font-measurement: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+  font-family: var(--font-body);
+}
+
+:root:has(.medforge-shell[data-workspace="professional"]) {
+  --bg: #f3f5fa;
+  --background: #f3f5fa;
+  --sidebar: #f8fafd;
+}
+
+:root:has(.medforge-shell[data-workspace="academy"]) {
+  --bg: #fff8ed;
+  --background: #fff8ed;
+  --foreground: #1d2740;
+  --ink: #1d2740;
+  --sub: #626d7f;
+  --muted-foreground: #626d7f;
+  --border: #e8ded2;
+  --card: #fff;
+  --card-foreground: #1d2740;
+  --sidebar: #f4ede2;
+  --sidebar-foreground: #34405c;
+  --sidebar-border: #e8ded2;
+  --sidebar-accent: #ebe4da;
+  --sidebar-accent-foreground: #263da8;
+}
+
+:root:has(.medforge-shell[data-workspace="educator"]) {
+  --bg: #f6f8fc;
+  --background: #f6f8fc;
+  --foreground: #1d2740;
+  --ink: #1d2740;
+  --sub: #667085;
+  --muted-foreground: #667085;
+  --border: #e0e5f0;
+  --card: #fff;
+  --card-foreground: #1d2740;
+  --sidebar: #edf1f8;
+  --sidebar-foreground: #34405c;
+  --sidebar-border: #e0e5f0;
+  --sidebar-accent: #e5eafb;
+  --sidebar-accent-foreground: #263da8;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.medforge-sidebar {
+  border-color: var(--sidebar-border);
+  background: var(--sidebar);
+  color: var(--sidebar-foreground);
+}
+
+.medforge-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.medforge-sidebar [data-active="true"] {
+  background: var(--sidebar-accent);
+  color: var(--sidebar-accent-foreground);
+}
+
+.medforge-content {
+  min-width: 0;
+}
+
+.source-badge {
+  border-color: var(--border);
+  color: var(--muted-foreground);
+  background: var(--card);
+}
+
+.source-badge.ready {
+  border-color: color-mix(in srgb, var(--med-success) 30%, var(--border));
+  color: var(--med-success);
+  background: color-mix(in srgb, var(--med-success) 7%, var(--card));
+}
+
+.source-badge.blocked {
+  border-color: color-mix(in srgb, var(--med-warning) 32%, var(--border));
+  color: var(--med-warning);
+  background: color-mix(in srgb, var(--med-warning) 7%, var(--card));
+}
+
+.source-badge.planned {
+  border-color: var(--border);
+  color: var(--muted-foreground);
+  background: var(--muted);
+}
+
+.bg-primary.text-primary-foreground {
+  color: var(--primary-foreground);
+}
+
+.role-gate-mark {
+  border-color: color-mix(in srgb, var(--primary) 22%, var(--border));
+  background: color-mix(in srgb, var(--primary) 8%, var(--card));
+  color: var(--primary);
+}
+
+@media (max-width: 767px) {
+  .medforge-toolbar { padding-inline: 12px; }
+  .medforge-content { padding-inline: 16px; }
+}

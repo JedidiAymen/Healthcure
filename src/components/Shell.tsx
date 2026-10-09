@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Suspense, useEffect, useMemo, useState } from 'react'
-import { Activity, AudioLines, BookOpenCheck, Boxes, FileText, FlaskConical, GraduationCap, Layers3, Microscope, Radio, ScanLine, Search, ShieldCheck, Stethoscope } from 'lucide-react'
+import { Activity, AudioLines, BookOpenCheck, Boxes, ClipboardCheck, FileText, FlaskConical, GraduationCap, Layers3, Microscope, Radio, ScanLine, Search, ShieldCheck, Stethoscope, Trophy } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -49,6 +49,7 @@ function MedforgeMark() {
 export function Shell() {
   const location = useLocation()
   const navigate = useNavigate()
+  const workspace = location.pathname.startsWith('/academy') ? 'academy' : location.pathname.startsWith('/educator') ? 'educator' : 'professional'
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchText, setSearchText] = useState('')
   const sourceCases = useQuery({
@@ -57,7 +58,11 @@ export function Shell() {
     enabled: searchOpen,
   })
   const title = location.pathname === '/' ? 'Clinical research workbench' : location.pathname.startsWith('/academy') ? 'Student Academy' : location.pathname.startsWith('/educator') ? 'Educator studio' : specialties.find((s) => location.pathname.includes(s.label.toLowerCase()))?.label ?? navigation.find((n) => location.pathname === n.to)?.label ?? 'Professional studio'
-  const learning = [{ label: 'Student Academy', to: '/academy', icon: GraduationCap }, { label: 'Educator studio', to: '/educator', icon: BookOpenCheck }]
+  const learning = workspace === 'academy'
+    ? [{ label: 'Learning paths', to: '/academy', icon: GraduationCap }, { label: 'Progress & awards', to: '/academy/progress', icon: Trophy }]
+    : [{ label: 'Lesson library', to: '/educator', icon: BookOpenCheck }, { label: 'Assignments', to: '/educator/assignments', icon: ClipboardCheck }, { label: 'Submissions', to: '/educator/submissions', icon: FileText }]
+  const roleLabel = workspace === 'academy' ? 'Student Academy' : workspace === 'educator' ? 'Educator Studio' : 'Professional Studio'
+  const roleDestination = workspace === 'academy' ? '/academy' : workspace === 'educator' ? '/educator' : '/studio'
   const normalizedSearch = searchText.trim().toLocaleLowerCase()
   const matchingCases = useMemo(() => {
     if (normalizedSearch.length < 2) return []
@@ -89,32 +94,37 @@ export function Shell() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
 
-  return <SidebarProvider className="min-h-svh bg-background" defaultOpen style={{ '--sidebar-width': '16rem', '--sidebar-width-icon': '3rem' } as React.CSSProperties}>
-    <Sidebar collapsible="icon" className="medforge-sidebar">
+  return <SidebarProvider data-workspace={workspace} className="medforge-shell min-h-svh bg-background" defaultOpen style={{ '--sidebar-width': '14rem', '--sidebar-width-icon': '3rem' } as React.CSSProperties}>
+    <Sidebar collapsible="icon" className="medforge-sidebar" data-workspace={workspace}>
       <SidebarHeader className="px-2 pt-3 pb-2">
         <SidebarMenu><SidebarMenuItem><SidebarMenuButton size="lg" render={<NavLink to="/" aria-label="MEDFORGE home" />} tooltip="MEDFORGE home"><span className="grid size-8 shrink-0 place-items-center rounded-md bg-primary/10 text-primary"><MedforgeMark/></span><span className="font-semibold tracking-wide">MEDFORGE</span></SidebarMenuButton></SidebarMenuItem></SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup>
+        {workspace === 'professional' && <SidebarGroup>
           <SidebarGroupLabel>Professional Studio</SidebarGroupLabel>
           <SidebarGroupContent><SidebarMenu>{navigation.map(({ label, to, icon: Icon, end }) => <SidebarMenuItem key={to}><SidebarMenuButton render={<NavLink to={to} end={end} />} isActive={location.pathname === to || (!end && location.pathname.startsWith(`${to}/`))} tooltip={label}><Icon/><span>{label}</span></SidebarMenuButton></SidebarMenuItem>)}</SidebarMenu></SidebarGroupContent>
-        </SidebarGroup>
-        <SidebarGroup>
+        </SidebarGroup>}
+        {workspace === 'professional' && <SidebarGroup>
           <SidebarGroupLabel>Clinical specialties</SidebarGroupLabel>
-          <SidebarGroupContent><SidebarMenu>{specialties.map(({ label, audience, to, icon: Icon }) => <SidebarMenuItem key={label}><SidebarMenuButton className="h-11" render={<NavLink to={to} />} isActive={location.pathname.startsWith(`/studio/${label.toLowerCase()}`)} tooltip={`${audience} · ${label}`}><Icon/><span className="grid min-w-0 gap-0.5 leading-tight"><span>{audience}</span><span className="text-[10px] font-normal text-muted-foreground">{label}</span></span></SidebarMenuButton></SidebarMenuItem>)}</SidebarMenu></SidebarGroupContent>
-        </SidebarGroup>
-        <SidebarSeparator />
-        <SidebarGroup>
-          <SidebarGroupLabel>Learning</SidebarGroupLabel>
+          <SidebarGroupContent><SidebarMenu>{specialties.map(({ label, audience, to, icon: Icon }) => <SidebarMenuItem key={label}><SidebarMenuButton className="h-11" render={<NavLink to={to} />} isActive={location.pathname.startsWith(`/studio/${label.toLowerCase()}`)} tooltip={`${audience} · ${label}`}><Icon/><span className="grid min-w-0 gap-0.5 leading-tight"><span className="truncate">{audience}</span><span className="text-[10px] font-normal text-muted-foreground">{label}</span></span></SidebarMenuButton></SidebarMenuItem>)}</SidebarMenu></SidebarGroupContent>
+        </SidebarGroup>}
+        {workspace === 'professional' && <SidebarSeparator />}
+        {workspace !== 'professional' && <SidebarGroup>
+          <SidebarGroupLabel>{workspace === 'academy' ? 'Your learning' : 'Teaching'}</SidebarGroupLabel>
           <SidebarGroupContent><SidebarMenu>{learning.map(({ label, to, icon: Icon }) => <SidebarMenuItem key={to}><SidebarMenuButton render={<NavLink to={to} />} isActive={location.pathname === to || location.pathname.startsWith(`${to}/`)} tooltip={label}><Icon/><span>{label}</span></SidebarMenuButton></SidebarMenuItem>)}</SidebarMenu></SidebarGroupContent>
-        </SidebarGroup>
+        </SidebarGroup>}
+        {workspace !== 'professional' && <SidebarGroup>
+          <SidebarGroupLabel>Switch workspace</SidebarGroupLabel>
+          <SidebarGroupContent><SidebarMenu><SidebarMenuItem><SidebarMenuButton render={<NavLink to="/studio" />} tooltip="Professional Studio"><Microscope/><span>Professional Studio</span></SidebarMenuButton></SidebarMenuItem>{workspace === 'academy' ? <SidebarMenuItem><SidebarMenuButton render={<NavLink to="/educator" />} tooltip="Educator Studio"><BookOpenCheck/><span>Educator Studio</span></SidebarMenuButton></SidebarMenuItem> : <SidebarMenuItem><SidebarMenuButton render={<NavLink to="/academy" />} tooltip="Student Academy"><GraduationCap/><span>Student Academy</span></SidebarMenuButton></SidebarMenuItem>}</SidebarMenu></SidebarGroupContent>
+        </SidebarGroup>}
       </SidebarContent>
       <SidebarFooter className="p-2"><SidebarMenu><SidebarMenuItem><SidebarMenuButton size="sm" tooltip="Research & education only" className="text-muted-foreground"><ShieldCheck/><span>Research &amp; education</span></SidebarMenuButton></SidebarMenuItem></SidebarMenu></SidebarFooter>
     </Sidebar>
     <SidebarInset className="flex min-h-svh min-w-0 flex-col bg-background">
-      <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-sidebar-border bg-background px-3 sm:px-6 lg:px-8">
+      <header className="medforge-toolbar flex h-[60px] shrink-0 items-center justify-between gap-3 border-b border-border bg-card px-3 sm:px-6 lg:px-8">
         <div className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground sm:gap-3"><SidebarTrigger aria-label="Toggle navigation"/><span className="hidden sm:inline">MEDFORGE</span><span aria-hidden="true" className="hidden text-border sm:inline">/</span><b className="truncate font-medium text-foreground">{title}</b></div>
         <div className="flex shrink-0 items-center gap-2">
+          <Button render={<NavLink to={roleDestination} />} nativeButton={false} variant="outline" size="sm" className="hidden max-w-40 truncate sm:inline-flex">{roleLabel}</Button>
           <Button variant="outline" size="sm" className="w-8 px-0 sm:w-auto sm:justify-start sm:px-2.5" aria-label="Find a research case or workspace" onClick={() => { setSearchText(''); setSearchOpen(true) }}>
             <Search data-icon="inline-start" />
             <span className="hidden sm:inline">Find case or workspace</span>
@@ -180,7 +190,7 @@ export function Shell() {
           <span className="hidden shrink-0 sm:inline"><kbd className="rounded border border-border px-1">↑</kbd> <kbd className="rounded border border-border px-1">↓</kbd> move <kbd className="ml-2 rounded border border-border px-1">Enter</kbd> open <kbd className="ml-2 rounded border border-border px-1">Esc</kbd> close</span>
         </div>
       </CommandDialog>
-      <div className="mx-auto flex w-full max-w-[1160px] flex-1 flex-col px-4 py-6 pb-12 sm:px-6 lg:px-8 xl:py-8"><Suspense fallback={<div className="grid gap-4" role="status" aria-label="Loading workspace"><Skeleton className="h-4 w-28"/><Skeleton className="h-9 w-64"/><Skeleton className="h-4 w-96 max-w-full"/><div className="mt-4 grid gap-3 md:grid-cols-3"><Skeleton className="h-40"/><Skeleton className="h-40"/><Skeleton className="h-40"/></div></div>}><Outlet /></Suspense></div>
+      <div className={`medforge-content mx-auto flex w-full flex-1 flex-col px-4 py-5 pb-12 sm:px-6 lg:px-8 ${workspace === 'professional' ? 'max-w-none' : 'max-w-[1160px]'} xl:py-7`}><Suspense fallback={<div className="grid gap-4" role="status" aria-label="Loading workspace"><Skeleton className="h-4 w-28"/><Skeleton className="h-9 w-64"/><Skeleton className="h-4 w-96 max-w-full"/><div className="mt-4 grid gap-3 md:grid-cols-3"><Skeleton className="h-40"/><Skeleton className="h-40"/><Skeleton className="h-40"/></div></div>}><Outlet /></Suspense></div>
       <footer className="flex flex-wrap items-center gap-2 border-t border-sidebar-border px-4 py-3 text-xs leading-5 text-muted-foreground sm:px-6 lg:px-8"><ShieldCheck aria-hidden="true" className="size-4 text-primary"/> MEDFORGE is for research and education. It is not for patient diagnosis or treatment decisions.</footer>
     </SidebarInset>
   </SidebarProvider>

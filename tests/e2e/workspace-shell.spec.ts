@@ -13,7 +13,7 @@ test('home exposes the MEDFORGE app shell and role workspaces', async ({ page })
 test('small phone viewport keeps the app shell within the screen', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: /evidence review for clinicians/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /clinical research, grounded in evidence/i })).toBeVisible()
   const pageWidth = await page.evaluate(() => document.documentElement.scrollWidth)
   expect(pageWidth).toBeLessThanOrEqual(390)
 })
