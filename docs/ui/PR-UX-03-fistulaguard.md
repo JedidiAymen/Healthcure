@@ -2,7 +2,7 @@
 
 ## Status
 
-**PARTIAL — visual redesign implemented; final full build and interaction review are pending the concurrent SurgiVision edit.**
+**PASS FOR THE FISTULAGUARD SLICE — the UX-03 SurgiVision milestone remains separately reviewed.**
 
 ## What changed
 
@@ -39,14 +39,18 @@ Screenshots and browser report are private, ignored review artifacts under `.loc
 
 At all four sizes the route returned HTTP 200, rendered the real uPlot trace, produced no uncaught browser errors, and had no document-level horizontal overflow. The 1440px and 390px captures were visually inspected.
 
+The running application interaction check selected a 10-second `raw PZT3` window at 5.1234 seconds and a 5-second `raw PZT2` window at 7.3333 seconds; exact selected time ranges appeared beside the measured trace. A same-record comparison was saved, remained listed after a page reload, and was available again after reopening the comparison panel. Switching to `pat002` changed the visible recording header and SHA-256 to `6c211580f3889b8516dd26976ba2d4aef43bd96bfb0158d0e02e55985416cb77` (distinct from `pat001` above). No uncaught browser error occurred.
+
 ## Checks actually run
 
-- `npm run typecheck` — passed before the concurrent SurgiVision edit.
-- `npm run lint` — passed before the concurrent SurgiVision edit.
-- `npm test` — 4 files, 17 tests passed before the concurrent SurgiVision edit.
-- Four-viewport Playwright browser capture — completed; all routes returned 200 with zero page errors and zero horizontal overflow.
+- `npm run typecheck` — passed on the integrated branch after concurrent Academy/educator edits stabilized.
+- `npm run lint` — passed on the integrated branch.
+- `npm test` — 4 files, 17 tests passed.
+- `npm run build` — passed; FistulaViewer route chunk is 85.55 kB (31.83 kB gzip) and its scoped CSS is 3.34 kB (1.27 kB gzip).
+- `npm run test:e2e -- --workers=1` — 2 passed.
+- Four-viewport actual-app browser capture and the FistulaGuard interaction check described above — passed with zero page errors.
 
-`npm run build` was attempted while the concurrent SurgiVision edit was syntactically incomplete and stopped on JSX parse errors in `src/pages/SurgiViewer.tsx` (lines 185–186), outside this scope. After SurgiVision stabilized, a fresh `npx eslint src/pages/FistulaViewer.tsx` passed; the full-project typecheck is currently blocked by an unused `Trophy` import in the concurrent Academy edit at `src/pages/Pages.tsx:31`. The later interaction attempt encountered the resulting Vite overlay. Full build, E2E, and signal interaction checks should be rerun when that shared Academy edit is stable. No FistulaViewer TypeScript or lint error was reported.
+An earlier build attempt collided with in-progress SurgiVision JSX, and an intermediate full lint was blocked by an unused Academy import; both were resolved by their respective concurrent edits before the final checks listed above. No FistulaViewer TypeScript or lint error was reported.
 
 ## Scientific and privacy boundaries
 
