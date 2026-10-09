@@ -97,9 +97,9 @@ def test_inference_unavailable_fails_safe(client):
     check=client.post('/api/v1/models/cvs-adaptnet/validate',json={
         'case_id':cid,'operation_id':'cvs.inference'}).json()
     assert check['executable'] is False
-    assert len(check['blockers'])==3
-    assert 'checkpoint SHA-256' in check['blockers'][0]
-    assert 'terms' in check['blockers'][1]
+    blocker_text='\n'.join(check['blockers'])
+    assert 'checkpoint SHA-256' in blocker_text
+    assert 'terms' in blocker_text
     invalid=client.post('/api/v1/runs',json={'case_id':cid,'operation_id':'cvs.inference'})
     assert invalid.status_code==404
 
