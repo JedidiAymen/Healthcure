@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api, type StudentLearningPath as LearningPath, type StudentLearningPathLesson } from "@/lib/api";
 import { queryKeys } from "@/lib/query-client";
+import "./academy.css";
 
 const discipline = {
   surgivision: { name: "Surgical teams", source: "Endoscapes", Icon: Stethoscope, tone: "border-l-sky-700" },
@@ -24,27 +25,16 @@ const statePresentation = {
   reviewed: { label: "Reviewed", variant: "outline" as const, Icon: Check },
 };
 
-function LessonRow({ lesson }: { lesson: StudentLearningPathLesson }) {
+function LessonRow({ lesson, index }: { lesson: StudentLearningPathLesson; index: number }) {
   const status = statePresentation[lesson.state];
   const StatusIcon = status.Icon;
   return (
-    <li className="grid gap-3 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-      <div className="min-w-0">
-        <Link
-          to={`/academy/missions/${encodeURIComponent(lesson.assignment_id)}`}
-          className="inline-flex max-w-full items-center gap-2 rounded-sm font-medium text-foreground underline-offset-4 hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
-        >
-          <span className="min-w-0 break-words">{lesson.title}</span>
-          <ArrowRight aria-hidden="true" className="shrink-0" />
-        </Link>
-        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-          <span>{lesson.case_label}</span><span aria-hidden="true">/</span><span>Lesson version {lesson.version}</span>
-          {lesson.due_at && <><span aria-hidden="true">/</span><span>Due {new Date(lesson.due_at).toLocaleDateString()}</span></>}
-        </div>
+    <li className="academy-lesson-stop">
+      <span className="academy-lesson-marker" aria-hidden="true">{lesson.state === "reviewed" ? <StatusIcon/> : index + 1}</span>
+      <div className="academy-lesson-detail">
+        <div className="academy-lesson-copy"><span className="academy-lesson-state"><StatusIcon aria-hidden="true"/>{status.label}</span><h3>{lesson.title}</h3><p>{lesson.case_label} <span aria-hidden="true">·</span> Lesson version {lesson.version}{lesson.due_at && <> <span aria-hidden="true">·</span> Due {new Date(lesson.due_at).toLocaleDateString()}</>}</p></div>
+        <Button render={<Link to={`/academy/missions/${encodeURIComponent(lesson.assignment_id)}`}/>} nativeButton={false} variant={lesson.state === "in_progress" ? "default" : "outline"} className="academy-lesson-action">{lesson.state === "in_progress" ? "Continue investigation" : lesson.state === "submitted" || lesson.state === "reviewed" ? "View feedback" : "Start investigation"}<ArrowRight data-icon="inline-end"/></Button>
       </div>
-      <Badge variant={status.variant} className="w-fit">
-        <StatusIcon data-icon="inline-start" />{status.label}
-      </Badge>
     </li>
   );
 }
@@ -61,7 +51,7 @@ function AssignedLessons({ path }: { path: LearningPath }) {
       </Empty>
     );
   }
-  return <ul className="divide-y">{path.lessons.map((lesson) => <LessonRow key={lesson.assignment_id} lesson={lesson} />)}</ul>;
+  return <ol className="academy-lesson-route">{path.lessons.map((lesson, index) => <LessonRow key={lesson.assignment_id} lesson={lesson} index={index} />)}</ol>;
 }
 
 function PathContent({ path }: { path: LearningPath }) {
@@ -69,22 +59,22 @@ function PathContent({ path }: { path: LearningPath }) {
   const FieldIcon = field.Icon;
   const notStarted = path.assigned_count - path.in_progress_count - path.submitted_count - path.reviewed_count;
   return (
-    <>
+    <main className="academy-path-page">
       <div className="mb-5">
         <Button render={<Link to="/academy" />} nativeButton={false} variant="ghost" size="sm" className="-ml-3">
           <ArrowLeft data-icon="inline-start" />All pathways
         </Button>
       </div>
-      <header className="mb-7 grid gap-4 border-b pb-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+      <header className="academy-path-hero">
         <div className="max-w-3xl">
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <Badge variant="outline"><FieldIcon data-icon="inline-start" />{field.name}</Badge>
             <span className="text-sm text-muted-foreground">Source: {field.source}</span>
           </div>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">{path.title}</h1>
+          <h1>{path.title}</h1>
           <p className="mt-3 max-w-2xl text-base leading-7 text-muted-foreground">{path.description}</p>
         </div>
-        <div className="grid min-w-56 grid-cols-2 gap-x-5 gap-y-2 border-l-2 border-primary/50 pl-4 text-sm">
+        <div className="academy-path-counts">
           <span className="text-muted-foreground">Assigned lessons</span><span className="text-right font-medium tabular-nums">{path.assigned_count}</span>
           <span className="text-muted-foreground">In progress</span><span className="text-right font-medium tabular-nums">{path.in_progress_count}</span>
           <span className="text-muted-foreground">Awaiting review</span><span className="text-right font-medium tabular-nums">{path.submitted_count}</span>
@@ -92,8 +82,8 @@ function PathContent({ path }: { path: LearningPath }) {
         </div>
       </header>
 
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(260px,0.75fr)]">
-        <Card className={`border-l-4 ${field.tone}`}>
+      <div className="academy-path-layout">
+        <Card className="academy-path-lessons">
           <CardHeader>
             <CardTitle>Assigned lessons</CardTitle>
             <CardDescription>Only work released to your cohort is shown. A review marks educator feedback on an assignment, not mastery of a clinical skill.</CardDescription>
@@ -104,7 +94,7 @@ function PathContent({ path }: { path: LearningPath }) {
           {path.lessons.length > 0 && <CardFooter className="text-sm text-muted-foreground">{notStarted} not started / {path.reviewed_count} reviewed</CardFooter>}
         </Card>
 
-        <div className="grid gap-4">
+        <div className="academy-path-notes">
           <Card>
             <CardHeader>
               <CardTitle>What you will practice</CardTitle>
@@ -136,7 +126,7 @@ function PathContent({ path }: { path: LearningPath }) {
           )}
         </div>
       </div>
-    </>
+    </main>
   );
 }
 

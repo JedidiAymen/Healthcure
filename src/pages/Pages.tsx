@@ -2,8 +2,6 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient, type QueryKey } from "@tanstack/react-query";
-import { LazyMotion, MotionConfig } from "motion/react";
-import * as m from "motion/react-m";
 import {
   Activity,
   ArrowRight,
@@ -28,7 +26,6 @@ import {
   ShieldCheck,
   Sparkles,
   Stethoscope,
-  Trophy,
   Upload,
   Workflow,
   X,
@@ -94,13 +91,11 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AchievementBadge } from "@/components/ui/achievement-badge";
 import { PointsBadge } from "@/components/ui/points-badge";
+import "./academy.css";
 import { queryKeys } from "@/lib/query-client";
 import { renderDoseSlicePixels } from "@/lib/dose-visualization";
 import clinicalTeamImage from "../assets/clinical-team.jpg";
 import radiologyReviewImage from "../assets/radiology-team.jpg";
-
-const loadAcademyMotionFeatures = () =>
-  import("@/lib/academy-motion").then((featureModule) => featureModule.default);
 
 const specialtyData = {
   surgivision: {
@@ -1739,73 +1734,74 @@ export function Academy() {
     fistulaguard: { label: "Nephrology and access care", source: "FiSaV measured signals", tone: "border-l-teal-700" },
   } as const;
   const nextActivity = progress.data.next_activity;
+  const firstAssigned = challenges.data.find((challenge) => challenge.state !== "reviewed") ?? challenges.data[0];
   const academyAction = nextActivity
-    ? { to: `/academy/missions/${encodeURIComponent(nextActivity.assignment_id)}`, label: nextActivity.state === "resume" ? "Continue lesson" : nextActivity.state === "awaiting_review" ? "Check submitted work" : "Start assigned lesson" }
-    : { to: "/academy/paths/surgical-evidence", label: "Explore learning paths" };
+    ? { to: `/academy/missions/${encodeURIComponent(nextActivity.assignment_id)}`, label: nextActivity.state === "resume" ? "Continue investigation" : nextActivity.state === "awaiting_review" ? "View educator feedback" : "Begin investigation" }
+    : firstAssigned
+      ? { to: `/academy/missions/${encodeURIComponent(firstAssigned.assignment_id)}`, label: firstAssigned.state === "in_progress" ? "Continue investigation" : firstAssigned.state === "submitted" || firstAssigned.state === "reviewed" ? "View educator feedback" : "Begin investigation" }
+      : paths.data.find((path) => path.lessons.length > 0)
+        ? { to: `/academy/paths/${encodeURIComponent(paths.data.find((path) => path.lessons.length > 0)!.path_id)}`, label: "Explore your learning paths" }
+        : { to: "#academy-pathways", label: "Explore learning paths" };
+  const featuredPath = paths.data.find((path) => path.lessons.some((lesson) => lesson.state === "in_progress"))
+    ?? paths.data.find((path) => path.lessons.length > 0)
+    ?? paths.data[0];
   return (
-    <MotionConfig reducedMotion="user">
-      <LazyMotion features={loadAcademyMotionFeatures}>
-      <Header
-        eyebrow="Student academy"
-        title="Learn to read the evidence"
-        description="Guided investigation rewards careful observation and justified uncertainty, never a medical diagnosis."
-        action={<Button render={<Link to={academyAction.to}/>} nativeButton={false}>{academyAction.label}<ArrowRight data-icon="inline-end"/></Button>}
-      />
-      <m.div
-        className="academy-banner"
-        initial={{ opacity: 0, y: 6 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.24, ease: "easeOut" }}
-      >
-        <div className="academy-symbol">
-          <GraduationCap size={22} />
+      <main className="academy-home">
+      <section className="academy-welcome" aria-labelledby="academy-title">
+        <div className="academy-welcome-copy">
+          <p className="academy-kicker"><GraduationCap aria-hidden="true"/> Student Academy</p>
+          <h1 id="academy-title">Learn to read the evidence.</h1>
+          <p className="academy-intro">Follow a real research source, notice what it can show, and explain what remains uncertain. Your educator reviews every investigation.</p>
+          <div className="academy-welcome-actions">
+            <Button render={<Link to={academyAction.to}/>} nativeButton={false} size="lg">{academyAction.label}<ArrowRight data-icon="inline-end"/></Button>
+            <span className="academy-assignment-note">{challenges.loading ? "Checking cohort assignments…" : challenges.data.length ? `${challenges.data.length} released ${challenges.data.length === 1 ? "investigation" : "investigations"}` : "No investigation has been assigned yet"}</span>
+          </div>
+          {!challenges.loading && !challenges.error && challenges.data.length === 0 && <p className="academy-welcome-empty">Your pathways explain what each source contains. Lessons appear here only after your educator assigns them.</p>}
         </div>
-        <div><strong>Evidence first, answers after</strong><p>Only lessons assigned to your cohort appear here. Educator reference material stays private until review.</p></div>
-        <SourceBadge kind={challenges.data.length ? "ready" : "planned"}>{challenges.data.length ? `${challenges.data.length} assigned` : "No assignments yet"}</SourceBadge>
-      </m.div>
-      <section id="academy-pathways" aria-label="Learning pathways">
+        {featuredPath?.lessons[0]?.case_id ? <div className="academy-feature-evidence">
+          <div className="academy-feature-image"><AcademyPathPreview path={featuredPath}/></div>
+          <div className="academy-feature-caption"><span>Source in focus</span><strong>{pathDetails[featuredPath.module].label}</strong><small>{pathDetails[featuredPath.module].source}</small></div>
+          <span className="academy-feature-mark" aria-hidden="true"><Microscope/></span>
+        </div> : <figure className="academy-welcome-illustration"><img src={clinicalTeamImage} alt="Illustrative portrait of a medical research team; not scientific evidence"/><figcaption>Learning with real research sources, with an educator’s guidance.</figcaption></figure>}
+      </section>
+      <div className="academy-guidance-line"><ShieldCheck aria-hidden="true"/><p><strong>Evidence first, answers after.</strong> Reference material stays private until your educator reviews your work. A reviewed lesson records feedback; it does not certify clinical skill.</p></div>
+      <section id="academy-pathways" className="academy-journey" aria-labelledby="academy-pathways-title">
+        <header className="academy-section-heading">
+          <div><p className="academy-kicker">Choose a source</p><h2 id="academy-pathways-title">Your learning paths</h2><p>Each path follows one research collection and its own evidence limits.</p></div>
+          <span className="academy-path-count">{paths.loading ? "Loading paths" : `${paths.data.length} ${paths.data.length === 1 ? "path" : "paths"}`}</span>
+        </header>
         {paths.error ? (
           <Alert variant="destructive"><CircleAlert/><AlertTitle>Learning pathways could not load</AlertTitle><AlertDescription>{paths.error}</AlertDescription></Alert>
         ) : (
-          <Card className="overflow-hidden py-0">
-            <CardHeader className="px-4 pt-4 sm:px-5">
-              <CardTitle>Learning pathways</CardTitle>
-              <CardDescription>Study by evidence domain. Each path stays with its own source, units and limits; only cohort assignments open as lessons.</CardDescription>
-            </CardHeader>
-            <CardContent className="p-0">
+          <div className="academy-path-list">
               {paths.loading ? (
-                <div className="grid gap-2 p-4"><Skeleton className="h-16"/><Skeleton className="h-16"/><Skeleton className="h-16"/></div>
+                <div className="grid gap-2 py-4"><Skeleton className="h-24"/><Skeleton className="h-24"/><Skeleton className="h-24"/></div>
               ) : paths.data.length === 0 ? (
-                <Empty className="min-h-40 rounded-none border-0"><EmptyHeader><EmptyMedia variant="icon"><BookOpenCheck/></EmptyMedia><EmptyTitle>No learning pathways available</EmptyTitle><EmptyDescription>Published pathways will appear here when they are available.</EmptyDescription></EmptyHeader></Empty>
-              ) : paths.data.map((path) => {
+                <Empty className="min-h-40 rounded-none border-0"><EmptyHeader><EmptyMedia variant="icon"><BookOpenCheck/></EmptyMedia><EmptyTitle>No learning pathways available</EmptyTitle><EmptyDescription>Published pathways will appear here when they are available to your account.</EmptyDescription></EmptyHeader></Empty>
+              ) : paths.data.map((path, index) => {
                 const detail = pathDetails[path.module];
-                const waiting = path.submitted_count;
-                const reviewed = path.reviewed_count;
+                const activeLesson = path.lessons.find((lesson) => lesson.state === "in_progress") ?? path.lessons.find((lesson) => lesson.state === "not_started");
+                const pathState = activeLesson ? activeLesson.state === "in_progress" ? "In progress" : "Assigned" : path.assigned_count ? path.submitted_count ? "Awaiting review" : "Reviewed" : "Not assigned";
+                const PathIcon = path.module === "surgivision" ? Stethoscope : path.module === "dosetwin" ? Activity : Radio;
                 return (
                   <Link
                     key={path.path_id}
                     to={`/academy/paths/${encodeURIComponent(path.path_id)}`}
-                    className={`group grid gap-3 border-l-4 border-b px-4 py-4 last:border-b-0 hover:bg-muted/40 focus-visible:relative focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring lg:grid-cols-[minmax(0,1.2fr)_minmax(180px,1fr)_auto] lg:items-center sm:px-5 ${detail.tone}`}
+                    className="academy-path-row"
                   >
-                    <div className="flex min-w-0 items-start gap-3">
-                      <AcademyPathPreview path={path}/>
-                      <span className="grid min-w-0 gap-1"><span className="font-medium text-foreground group-hover:text-primary">{detail.label}</span><span className="break-words text-sm text-muted-foreground">{path.title} / {detail.source}</span></span>
-                    </div>
-                    <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-                      <span className="font-medium tabular-nums text-foreground">{path.assigned_count}</span>{path.assigned_count === 1 ? "assigned lesson" : "assigned lessons"}
-                      <span aria-hidden="true" className="text-border">|</span><span>{reviewed} reviewed</span>
-                      {waiting > 0 && <><span aria-hidden="true" className="text-border">|</span><span>{waiting} awaiting review</span></>}
-                    </span>
-                    <span className="inline-flex items-center gap-2 text-sm font-medium text-primary">Open path <ArrowRight aria-hidden="true"/></span>
+                    <span className="academy-path-sequence" aria-hidden="true">{index + 1}</span>
+                    <span className="academy-path-evidence"><AcademyPathPreview path={path}/><span className="academy-path-source"><span><PathIcon aria-hidden="true"/>{detail.label}</span><small>{detail.source}</small></span></span>
+                    <span className="academy-path-content"><strong>{path.title}</strong><span>{path.description}</span><small>{path.objectives[0]}</small></span>
+                    <span className="academy-path-state"><span className={`academy-state-dot ${activeLesson ? "is-active" : path.assigned_count ? "is-reviewed" : ""}`} aria-hidden="true"/>{pathState}<small>{path.assigned_count ? `${path.assigned_count} assigned · ${path.reviewed_count} reviewed` : "Lessons appear when assigned"}</small></span>
+                    <span className="academy-path-open">View path <ArrowRight aria-hidden="true"/></span>
                   </Link>
                 );
               })}
-            </CardContent>
-          </Card>
+          </div>
         )}
       </section>
-      <div className="academy-columns">
-        <Card className="learning-panel">
+      <div className="academy-lower-grid">
+        <Card className="learning-panel academy-assigned">
           <CardHeader className="panel-section-head">
             <div>
               <div className="eyebrow">Released coursework</div>
@@ -1823,7 +1819,7 @@ export function Academy() {
             })}</div> : <Empty className="min-h-52 rounded-lg border border-dashed"><EmptyHeader><EmptyMedia variant="icon"><BookOpenCheck/></EmptyMedia><EmptyTitle>{challenges.loading ? "Loading assigned lessons" : "No lessons assigned yet"}</EmptyTitle><EmptyDescription>{challenges.loading ? "Checking your cohort assignments." : "Your educator’s published lessons will appear here when they assign them to your cohort."}</EmptyDescription></EmptyHeader></Empty>}
           </CardContent>
         </Card>
-        <Card className="learning-aside">
+        <Card className="learning-aside academy-recognition">
           <CardHeader>
             <div className="eyebrow">Your progress</div>
             <CardTitle>
@@ -1843,8 +1839,8 @@ export function Academy() {
               {progress.data.achievements_enabled && progress.data.achievements.length > 0 ? (
                 <div role="list" aria-label="Earned activity awards" className="grid gap-2">
                   {progress.data.achievements.map((achievement) => <div role="listitem" key={achievement.key} className="grid gap-1">
-                    <Badge variant="secondary" className="w-fit"><Trophy data-icon="inline-start"/>{achievement.title}</Badge>
-                    <p className="text-xs leading-5 text-muted-foreground">{achievement.description} Earned {new Date(achievement.earned_at).toLocaleDateString()}.</p>
+                    <AchievementBadge badgeSize="sm" achievement={{id: achievement.key, name: achievement.title, trigger: "api", achievedAt: achievement.earned_at}} className="academy-earned-badge"/>
+                    <p className="text-xs leading-5 text-muted-foreground">{achievement.description} Recorded {new Date(achievement.earned_at).toLocaleDateString()}.</p>
                   </div>)}
                 </div>
               ) : progress.data.achievements_enabled ? <p className="text-xs leading-5 text-muted-foreground">No award yet. Recognition follows an educator-reviewed investigation.</p> : <p className="text-xs leading-5 text-muted-foreground">Private recognition stays off unless you opt in.</p>}
@@ -1856,8 +1852,7 @@ export function Academy() {
           </CardContent>
         </Card>
       </div>
-      </LazyMotion>
-    </MotionConfig>
+      </main>
   );
 }
 export function Mission() {
