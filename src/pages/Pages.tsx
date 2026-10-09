@@ -1781,7 +1781,7 @@ export function Academy() {
               ) : paths.data.map((path, index) => {
                 const detail = pathDetails[path.module];
                 const activeLesson = path.lessons.find((lesson) => lesson.state === "in_progress") ?? path.lessons.find((lesson) => lesson.state === "not_started");
-                const pathState = activeLesson ? activeLesson.state === "in_progress" ? "In progress" : "Assigned" : path.assigned_count ? path.submitted_count ? "Awaiting review" : "Reviewed" : "Not assigned";
+                const pathState = activeLesson ? activeLesson.state === "in_progress" ? "In progress" : "Assigned" : path.assigned_count ? path.submitted_count ? "Awaiting review" : "Reviewed" : "Available";
                 const PathIcon = path.module === "surgivision" ? Stethoscope : path.module === "dosetwin" ? Activity : Radio;
                 return (
                   <Link
@@ -1792,7 +1792,7 @@ export function Academy() {
                     <span className="academy-path-sequence" aria-hidden="true">{index + 1}</span>
                     <span className="academy-path-evidence"><AcademyPathPreview path={path}/><span className="academy-path-source"><span><PathIcon aria-hidden="true"/>{detail.label}</span><small>{detail.source}</small></span></span>
                     <span className="academy-path-content"><strong>{path.title}</strong><span>{path.description}</span><small>{path.objectives[0]}</small></span>
-                    <span className="academy-path-state"><span className={`academy-state-dot ${activeLesson ? "is-active" : path.assigned_count ? "is-reviewed" : ""}`} aria-hidden="true"/>{pathState}<small>{path.assigned_count ? `${path.assigned_count} assigned · ${path.reviewed_count} reviewed` : "Lessons appear when assigned"}</small></span>
+                    <span className="academy-path-state"><span className={`academy-state-dot ${activeLesson ? "is-active" : path.assigned_count ? "is-reviewed" : ""}`} aria-hidden="true"/>{pathState}<small>{path.assigned_count ? `${path.assigned_count} assigned · ${path.reviewed_count} reviewed` : "Explore the source overview; lessons appear when assigned"}</small></span>
                     <span className="academy-path-open">View path <ArrowRight aria-hidden="true"/></span>
                   </Link>
                 );
@@ -1839,7 +1839,7 @@ export function Academy() {
               {progress.data.achievements_enabled && progress.data.achievements.length > 0 ? (
                 <div role="list" aria-label="Earned activity awards" className="grid gap-2">
                   {progress.data.achievements.map((achievement) => <div role="listitem" key={achievement.key} className="grid gap-1">
-                    <AchievementBadge badgeSize="sm" achievement={{id: achievement.key, name: achievement.title, trigger: "api", achievedAt: achievement.earned_at}} className="academy-earned-badge"/>
+                    <AchievementBadge badgeSize="sm" role="presentation" achievement={{id: achievement.key, name: achievement.title, trigger: "api", achievedAt: achievement.earned_at}} className="academy-earned-badge"/>
                     <p className="text-xs leading-5 text-muted-foreground">{achievement.description} Recorded {new Date(achievement.earned_at).toLocaleDateString()}.</p>
                   </div>)}
                 </div>
