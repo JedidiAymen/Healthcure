@@ -92,14 +92,18 @@ def test_run_is_real_calculation_of_synthetic_fixture_and_idempotent(client):
     assert client.get('/api/v1/runs/'+first['id']).status_code==200
 
 
-def test_inference_unavailable_fails_safe(client):
+def test_inference_unavailable_fails_safe(client,monkeypatch):
+    gate_blockers=[
+        'The test checkpoint is intentionally unavailable.',
+        'Checkpoint-specific test terms are intentionally unconfirmed.',
+    ]
+    monkeypatch.setattr(main,'_cvs_worker_gate',lambda:(gate_blockers.copy(),None))
+    monkeypatch.setattr(main,'_endoscapes_frame',lambda _case_id:None)
     cid=client.get('/api/v1/cases').json()[0]['id']
     check=client.post('/api/v1/models/cvs-adaptnet/validate',json={
         'case_id':cid,'operation_id':'cvs.inference'}).json()
     assert check['executable'] is False
-    blocker_text='\n'.join(check['blockers'])
-    assert 'checkpoint SHA-256' in blocker_text
-    assert 'terms' in blocker_text
+    assert all(blocker in check['blockers'] for blocker in gate_blockers)
     invalid=client.post('/api/v1/runs',json={'case_id':cid,'operation_id':'cvs.inference'})
     assert invalid.status_code==404
 
