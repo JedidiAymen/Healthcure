@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { configDefaults, defineConfig } from 'vitest/config'
 import path from 'node:path'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
@@ -15,4 +15,7 @@ export default defineConfig({
   resolve: { alias: { '@': path.resolve(import.meta.dirname, './src') } },
   server: { host: '127.0.0.1', proxy: apiProxy },
   preview: { host: '127.0.0.1', proxy: apiProxy },
+  test: {
+    exclude: [...configDefaults.exclude, 'tests/e2e/**'],
+  },
 })

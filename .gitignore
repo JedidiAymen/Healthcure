@@ -19,3 +19,6 @@ __pycache__/
 *.nii.gz
 docs/evidence/
 references/upstream/SurgVLP/
+.local-review/
+playwright-report/
+test-results/

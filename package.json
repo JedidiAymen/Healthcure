@@ -7,6 +7,8 @@
     "dev": "vite --host 127.0.0.1",
     "lint": "eslint src vite.config.ts eslint.config.js",
     "test": "vitest run",
+    "test:e2e": "playwright test",
+    "capture:ui-review": "node scripts/capture_ui_review.mjs",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --pretty false",
     "contracts:generate": "python3 scripts/export_openapi.py && openapi-typescript contracts/openapi-implemented.json -o packages/contracts/generated-api.ts",
@@ -36,6 +38,7 @@
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@playwright/test": "1.64.0",
     "@tailwindcss/vite": "4.3.3",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",

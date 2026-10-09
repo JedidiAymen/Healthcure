@@ -62,7 +62,7 @@ def main() -> int:
     result = {
         "status": "PASS",
         "case_id": "pt_201",
-        "case_directory": str(CASE),
+        "case_directory": "data/openkbp/pt_201 (local-only; excluded from Git)",
         "source_commit": "ce625e62f3b04203f22bd9d1634f3e8fb0245e46",
         "source_manifest": "docs/openkbp-pt201-manifest.json",
         "official_evaluator": "references/open-kbp-validation/provided_code/dose_evaluation_class.py",
