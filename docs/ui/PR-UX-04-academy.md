@@ -1,6 +1,6 @@
 # UX-04 Academy: home and specialty path
 
-**Status: PARTIAL.** This review covers the Student Academy home and path-detail presentation. Educator Studio and mission-stepper changes remain separate work.
+**Status: Implemented for review.** The Academy home and specialty path use the signed-in student's actual local API state. This preview has no assigned lesson, XP, or award, so those empty states remain visible.
 
 ## What changed
 
@@ -25,24 +25,15 @@
 
 ## Checks run
 
-- npx eslint src/pages/Pages.tsx src/pages/StudentLearningPath.tsx — passed.
-- npx tsc -b --pretty false — passed.
-- npm run build — passed. Academy route stylesheet: 13.89 KB raw / 3.05 KB gzip; no new runtime package.
-- Local Playwright screenshot capture on the running application at http://127.0.0.1:15176/academy — 1440×900, 1280×800, 768×1024, and 390×844; all had zero horizontal overflow and zero page exceptions.
+- `npx eslint src/pages/Pages.tsx src/pages/StudentLearningPath.tsx` — passed.
+- `npm run typecheck` — passed.
+- `npm run build` — passed. Academy route stylesheet: 13.89 KB raw / 3.05 KB gzip; no new runtime package.
+- Authenticated local Playwright review at 1440×900, 1280×800, 768×1024, and 390×844 — Academy home and Surgical Evidence path had zero horizontal overflow and zero page exceptions.
 
-## Visual-review limitation
+## Actual application captures
 
-The local review database has no provisioned student account or cohort. The Academy route therefore displays the real student sign-in gate; the Academy APIs return AUTH_REQUIRED in this session. The captured screenshots document that actual protected state, not an authenticated pathway. No fixture assignment or award was fabricated to fill the screen. Capture paths, stored outside Git:
+Authenticated home and path captures are in `.local-review/UX-04/final/student-{1440x900,1280x800,768x1024,390x844}.png` and `.local-review/UX-04/final/student-path-{1440x900,1280x800,768x1024,390x844}.png`. They are excluded from Git because they show local application data.
 
-- .local-review/UX-04/academy-1440x900.png
-- .local-review/UX-04/academy-1280x800.png
-- .local-review/UX-04/academy-768x1024.png
-- .local-review/UX-04/academy-390x844.png
+## Current local state
 
-Before sign-off, capture authenticated Academy home and one real published assignment path at these four viewports, using an operator-provisioned local student/cohort.
-
-## Remaining UX-04 work
-
-- Authenticated path/mission screenshots and keyboard review with an actual student account and published assignment.
-- Educator three-zone builder, source-safe preview, publication, assignment, and grading review.
-- Broader end-to-end educator-to-student validation remains subject to an authorized local cohort.
+The local student account is in an isolated temporary preview database. It has no released cohort assignment, XP, or achievements, so the home and path show no investigation assigned and no published lessons. The path explains the real dataset, learning objectives, and evidence limitations without creating a fictional lesson. A deep link requires signing in again because this app keeps the session token in browser-tab memory; navigate to the path from Academy after signing in.

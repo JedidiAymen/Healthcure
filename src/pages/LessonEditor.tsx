@@ -4,12 +4,16 @@ import {
   ArrowDownRight,
   Check,
   CircleAlert,
+  Eye,
+  FileText,
   GripVertical,
+  Layers3,
   LockKeyhole,
   Plus,
   ShieldCheck,
   X,
 } from "lucide-react";
+import "./lesson-editor.css";
 import {
   DndContext,
   KeyboardSensor,
@@ -194,6 +198,7 @@ export function LessonEditorPage() {
   const [sourceConfirmed, setSourceConfirmed] = useState(false);
   const [reviewNote, setReviewNote] = useState("");
   const [published, setPublished] = useState<PublishedLessonVersion | null>(null);
+  const [mobilePane, setMobilePane] = useState<"blocks" | "canvas" | "preview">("canvas");
   const [cases, setCases] = useState<CaseRecord[]>([]),
     [casesLoading, setCasesLoading] = useState(true),
     [casesError, setCasesError] = useState("");
@@ -407,7 +412,7 @@ export function LessonEditorPage() {
       update({ ...draft, blocks: arrayMove(draft.blocks, from, to) });
   };
   return (
-    <>
+    <div className="lesson-editor-page" data-mobile-pane={mobilePane}>
       <div className="workspace-context">
         <Link to="/educator">Educator studio</Link>
         <span>/</span>
@@ -424,7 +429,7 @@ export function LessonEditorPage() {
         <div className="editor-actions">
           <span className={saved ? "saved-label" : "unsaved-label"}>
             {saved ? <Check size={14} /> : <CircleAlert size={14} />}{" "}
-            {saved ? "Saved to local API" : "Unsaved changes"}
+            {saved ? (serverDraftId ? "Saved to educator account" : "Draft not saved yet") : "Unsaved changes"}
           </span>
           <Button variant="outline" onClick={() => void save()} disabled={saving || draftLoading || draftUnavailable || published !== null}>{saving ? "Saving…" : "Save draft"}</Button>
           <Button onClick={() => void loadPreview()} disabled={!serverDraftId || !saved || saving || draftUnavailable || published !== null}>Preview publication</Button>
@@ -454,8 +459,8 @@ export function LessonEditorPage() {
         </div>
       ) : (
         <>
-          <div className="builder-grid">
-            <div className="builder-main">
+          <div className="builder-grid educator-builder-grid">
+            <div className="builder-main educator-lesson-canvas">
               <Field className="builder-field">
                 <FieldLabel htmlFor="lesson-title">Lesson title</FieldLabel>
                 <Input
@@ -463,54 +468,6 @@ export function LessonEditorPage() {
                   value={draft.title}
                   onChange={(e) => update({ ...draft, title: e.target.value })}
                 />
-              </Field>
-              <Field className="builder-field">
-                <FieldLabel htmlFor="case-select">Research case</FieldLabel>
-                <Select items={cases.length ? cases.map(item => ({ label: `${item.label} · ${item.dataset_id} · ${item.reference_kind}`, value: item.id })) : [{ label: "No verified cases available", value: "empty" }]} value={draft.caseId || null} onValueChange={(value) => update({ ...draft, caseId: value ?? "" })}>
-                  <SelectTrigger id="case-select" className="w-full">
-                    <SelectValue placeholder="Choose an installed source case" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      {cases.length ? cases.map((item) => (
-                        <SelectItem key={item.id} value={item.id}>
-                      {item.label} · {item.dataset_id} · {item.reference_kind}
-                        </SelectItem>
-                      )) : <SelectItem value="empty" disabled>No verified cases available</SelectItem>}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-                <small>
-                  {casesLoading
-                    ? "Loading checksum-verified cases from the local registry…"
-                    : casesError
-                      ? `Case registry unavailable: ${casesError}`
-                      : cases.length
-                        ? `${cases.length} source-verified cases can be used in local drafts.`
-                        : "No verified source cases are installed."}
-                </small>
-                {selectedCase && (
-                  <div className="lesson-case-summary">
-                    <b>{selectedCase.label}</b>
-                    <span>
-                      {selectedCase.module} · {selectedCase.dataset_id} ·{" "}
-                      {selectedCase.source_case_id}
-                    </span>
-                    <span>Evidence origin: {selectedCase.reference_kind}.</span>
-                    <span>
-                      Source terms:{" "}
-                      {selectedEvidence?.license_label ??
-                        (evidenceError
-                          ? evidenceError
-                          : "Loading source terms…")}
-                    </span>
-                    <span>
-                      {selectedEvidence
-                        ? `Draft use: ${selectedEvidence.draft_use}. Publication review: ${selectedEvidence.publication_review}. ${selectedEvidence.publication_note}`
-                        : "Publication permissions are not established until source review."}
-                    </span>
-                  </div>
-                )}
               </Field>
               <div className="builder-section-head">
                 <div>
@@ -582,19 +539,21 @@ export function LessonEditorPage() {
                 </small>
               </section>
             </div>
-            <Card
-              role="complementary"
-              aria-label="Lesson block tools"
-              className="builder-aside"
-            >
+            <Card role="complementary" aria-label="Research source and lesson blocks" className="builder-aside educator-block-palette">
               <CardHeader>
-                <CardTitle>Add a block</CardTitle>
-                <p>
-                  Order blocks into a simple learning flow. Move controls work
-                  without dragging.
-                </p>
+                <div className="educator-zone-heading"><Layers3 aria-hidden="true"/><div><CardTitle>Build the lesson</CardTitle><p>Choose a verified source, then add the evidence tasks learners will complete.</p></div></div>
               </CardHeader>
               <CardContent>
+                <Field className="builder-field">
+                  <FieldLabel htmlFor="case-select">Research source</FieldLabel>
+                  <Select items={cases.length ? cases.map(item => ({ label: `${item.label} · ${item.dataset_id} · ${item.reference_kind}`, value: item.id })) : [{ label: "No verified cases available", value: "empty" }]} value={draft.caseId || null} onValueChange={(value) => update({ ...draft, caseId: value ?? "" })}>
+                    <SelectTrigger id="case-select" className="w-full"><SelectValue placeholder="Choose an installed source case" /></SelectTrigger>
+                    <SelectContent><SelectGroup>{cases.length ? cases.map((item) => <SelectItem key={item.id} value={item.id}>{item.label} · {item.dataset_id} · {item.reference_kind}</SelectItem>) : <SelectItem value="empty" disabled>No verified source cases available</SelectItem>}</SelectGroup></SelectContent>
+                  </Select>
+                  <small>{casesLoading ? "Loading checksum-verified cases…" : casesError ? `Registry unavailable: ${casesError}` : cases.length ? `${cases.length} source-verified cases available locally.` : "No verified source cases are installed."}</small>
+                  {selectedCase && <div className="lesson-case-summary"><b>{selectedCase.label}</b><span>{selectedCase.module} · {selectedCase.dataset_id} · {selectedCase.source_case_id}</span><span>Evidence origin: {selectedCase.reference_kind}.</span><span>Source terms: {selectedEvidence?.license_label ?? (evidenceError ? evidenceError : "Loading source terms…")}</span><span>{selectedEvidence ? `Draft use: ${selectedEvidence.draft_use}. Publication review: ${selectedEvidence.publication_review}. ${selectedEvidence.publication_note}` : "Publication permissions are not established until source review."}</span><Link to={`/studio/${selectedCase.module}/cases/${encodeURIComponent(selectedCase.id)}`}>Open this source in its scientific viewer</Link></div>}
+                </Field>
+                <div className="educator-palette-divider"><span>Lesson blocks</span><small>Arrange by drag, keyboard, or move controls.</small></div>
                 <div className="add-block-list">
                   {blockTypes.map((type) => (
                     <Button type="button" variant="outline" size="sm" className="w-full justify-start" key={type} onClick={() => add(type)}>
@@ -612,9 +571,32 @@ export function LessonEditorPage() {
                 </div>
               </CardContent>
             </Card>
+            <Card role="complementary" aria-label="Learner-safe lesson preview" className="lesson-live-preview">
+              <CardHeader>
+                <div className="educator-zone-heading"><Eye aria-hidden="true"/><div><CardTitle>Learner preview</CardTitle><p>Private rubric and reveal content stay out of this view.</p></div></div>
+              </CardHeader>
+              <CardContent className="lesson-live-preview-content">
+                <div className="learner-preview-paper">
+                  <span className="learner-preview-kicker">Lesson preview</span>
+                  <h2>{draft.title.trim() || "Untitled evidence lesson"}</h2>
+                  <p className="learner-preview-source">{selectedCase ? `${selectedCase.label} · ${selectedCase.dataset_id}` : "Choose a verified source to continue."}</p>
+                  {selectedEvidence && <p className="learner-preview-credit">{selectedEvidence.license_label}</p>}
+                  <div className="learner-preview-sequence">
+                    {draft.blocks.filter(block => block.type !== "Reveal").length ? draft.blocks.filter(block => block.type !== "Reveal").map((block, index) => <article className="learner-preview-block" key={block.id}><span>{String(index + 1).padStart(2, "0")} · {block.type}</span><h3>{block.title || `${block.type} block`}</h3><p>{block.content || "No learner prompt entered."}</p></article>) : <p className="learner-preview-empty">Add a learner-facing block to preview the lesson.</p>}
+                  </div>
+                  {draft.blocks.some(block => block.type === "Reveal") && <p className="learner-preview-redacted"><LockKeyhole aria-hidden="true"/> {draft.blocks.filter(block => block.type === "Reveal").length} educator reveal {draft.blocks.filter(block => block.type === "Reveal").length === 1 ? "block is" : "blocks are"} hidden from learners.</p>}
+                </div>
+                <div className="learner-preview-privacy"><ShieldCheck aria-hidden="true"/><span><b>Rubric stays private</b><small>The server publishes its validated learner projection. The private rubric and reveal blocks stay protected.</small></span></div>
+              </CardContent>
+            </Card>
           </div>
+          <nav className="educator-mobile-nav" aria-label="Lesson builder sections">
+            <button type="button" aria-pressed={mobilePane === "blocks"} onClick={() => setMobilePane("blocks")}><Layers3 aria-hidden="true"/>Source & blocks</button>
+            <button type="button" aria-pressed={mobilePane === "canvas"} onClick={() => setMobilePane("canvas")}><FileText aria-hidden="true"/>Lesson canvas</button>
+            <button type="button" aria-pressed={mobilePane === "preview"} onClick={() => setMobilePane("preview")}><Eye aria-hidden="true"/>Learner preview</button>
+          </nav>
         </>
       )}
-    </>
+    </div>
   );
 }

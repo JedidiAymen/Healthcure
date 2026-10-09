@@ -15,7 +15,7 @@ const Mission = lazy(() => import('./pages/Pages').then(page => ({ default: page
 const Progress = lazy(() => import('./pages/Pages').then(page => ({ default: page.Progress })))
 const StudentLearningPathPage = lazy(() => import('./pages/StudentLearningPath').then(page => ({ default: page.StudentLearningPathPage })))
 const Educator = lazy(() => import('./pages/Pages').then(page => ({ default: page.Educator })))
-const LessonEditor = lazy(() => import('./pages/Pages').then(page => ({ default: page.LessonEditor })))
+const LessonEditor = lazy(() => import('./pages/LessonEditor').then(page => ({ default: page.LessonEditorPage })))
 const Assignments = lazy(() => import('./pages/Pages').then(page => ({ default: page.Assignments })))
 const Submissions = lazy(() => import('./pages/Pages').then(page => ({ default: page.Submissions })))
 

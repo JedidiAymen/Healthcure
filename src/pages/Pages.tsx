@@ -1762,7 +1762,7 @@ export function Academy() {
           <div className="academy-feature-image"><AcademyPathPreview path={featuredPath}/></div>
           <div className="academy-feature-caption"><span>Source in focus</span><strong>{pathDetails[featuredPath.module].label}</strong><small>{pathDetails[featuredPath.module].source}</small></div>
           <span className="academy-feature-mark" aria-hidden="true"><Microscope/></span>
-        </div> : <figure className="academy-welcome-illustration"><img src={clinicalTeamImage} alt="Illustrative portrait of a medical research team; not scientific evidence"/><figcaption>Learning with real research sources, with an educator’s guidance.</figcaption></figure>}
+        </div> : <figure className="academy-welcome-illustration"><img src={clinicalTeamImage} alt="Illustrative portrait of a medical research team; not scientific evidence"/><figcaption><strong>Illustration</strong> · Team image is illustrative and is not source research data.</figcaption></figure>}
       </section>
       <div className="academy-guidance-line"><ShieldCheck aria-hidden="true"/><p><strong>Evidence first, answers after.</strong> Reference material stays private until your educator reviews your work. A reviewed lesson records feedback; it does not certify clinical skill.</p></div>
       <section id="academy-pathways" className="academy-journey" aria-labelledby="academy-pathways-title">
@@ -2066,11 +2066,6 @@ export function Progress() {
   );
 }
 
-export const LessonEditor = lazy(() =>
-  import("./LessonEditor").then((module) => ({
-    default: module.LessonEditorPage,
-  })),
-);
 export function Educator() {
   const drafts = useApi(queryKeys.educatorDrafts, api.educatorDrafts, [] as EducatorDraftSummary[]);
   return (
