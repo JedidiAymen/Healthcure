@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList } from '@/components/ui/combobox'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { parseSurgicalViewPreferences, type SurgicalViewPreferences } from '@/lib/workspace-preferences'
 import { buildSurgicalFrameReport } from '@/lib/surgical-evidence'
 
@@ -55,6 +57,7 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
   const [error,setError]=useState('')
   const [loading,setLoading]=useState(true)
   const [showBoxes,setShowBoxes]=useState(()=>savedPreferences?.show_boxes??true)
+  const [showMasks,setShowMasks]=useState(true)
   const [selected,setSelected]=useState<number|null>(()=>savedPreferences?.selected_annotation_id??null)
   const [zoom,setZoom]=useState(()=>savedPreferences?.zoom??1)
   const [pan,setPan]=useState({x:0,y:0})
@@ -103,7 +106,7 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
   const frameOptions=useMemo<FrameOption[]>(()=>availableFrameIds.map(id=>{
     const [,split,stem]=id.split(':')
     const [video,frameNumber]=stem?.split('_')??[]
-    return {id,label:`${split} · video ${video} · frame ${frameNumber} · ${stem??id}`}
+    return {id,label:`${split} · video ${video} · frame ${frameNumber}`}
   }),[availableFrameIds])
   const visibleFrameOptions=useMemo(()=>{
     const query=frameSearch.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean)
@@ -124,7 +127,7 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
     const context=canvas.getContext('2d')
     if(!context)return
     context.clearRect(0,0,frame.width,frame.height)
-    if(!showBoxes)return
+    if(!showMasks)return
     const output=context.createImageData(frame.width,frame.height)
     for(const annotation of displayedAnnotations){
       const segmentation=annotation.segmentation
@@ -135,7 +138,7 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
       catch{continue}
     }
     context.putImageData(output,0,0)
-  },[frame,showBoxes,displayedAnnotations])
+  },[frame,showMasks,displayedAnnotations])
   const pointerDown=(event:PointerEvent<HTMLDivElement>)=>{if(zoom===1)return;event.currentTarget.setPointerCapture(event.pointerId);setDrag({x:event.clientX,y:event.clientY,px:pan.x,py:pan.y})}
   const pointerMove=(event:PointerEvent<HTMLDivElement>)=>{if(drag)setPan({x:drag.px+event.clientX-drag.x,y:drag.py+event.clientY-drag.y})}
   const reset=()=>{setScale(1);setPan({x:0,y:0});setSelected(null)}
@@ -146,14 +149,15 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
     catch(error){setCvsError(error instanceof Error?error.message:'The local CVS-AdaptNet run failed')}
     finally{setCvsLoading(false)}
   }
+  const showAnyAnnotations=showBoxes||showMasks
   const reportMatchesView=savedFrameReport?.document.schema==='medforge.surgivision-source-frame-evidence/v1'
     &&savedFrameReport.document.case?.id===frame?.id
-    &&savedFrameReport.document.display_state?.show_annotations===showBoxes
+    &&savedFrameReport.document.display_state?.show_annotations===showAnyAnnotations
     &&savedFrameReport.document.display_state?.selected_annotation_id===selected
   const saveFrameEvidence=async()=>{
     if(!frame||guided||savingFrameReport||reportMatchesView)return
     setSavingFrameReport(true);setSaveFrameReportError('')
-    try{setSavedFrameReport(await api.createSurgicalFrameReport(frame.id,{show_annotations:showBoxes,selected_annotation_id:selected}))}
+    try{setSavedFrameReport(await api.createSurgicalFrameReport(frame.id,{show_annotations:showAnyAnnotations,selected_annotation_id:selected}))}
     catch(error){setSaveFrameReportError(error instanceof Error?error.message:'Could not save this frame evidence to Reports')}
     finally{setSavingFrameReport(false)}
   }
@@ -178,15 +182,48 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
   }
   if(loading)return <div className="my-6 grid min-h-40 content-center gap-3"><Skeleton className="h-24 w-full"/><p className="text-sm text-muted-foreground">Loading verified image and annotation record…</p></div>
   if(error||!frame)return <Alert variant="destructive" className="my-6 min-h-36 items-center"><AlertCircle/><AlertDescription><strong className="block font-semibold">Endoscapes sample is unavailable</strong>{error||'No validated frame record was returned.'}</AlertDescription></Alert>
-  return <section className="mt-7" aria-label="SurgiVision frame review">
-    <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><Badge variant="outline">{frame.width} × {frame.height} px</Badge>{guided&&!referenceIsReleased?<Badge variant="outline">Reference annotations withheld</Badge>:<><Badge variant="outline">{displayedAnnotations.length} source annotations</Badge><Badge variant="outline">{displayedAnnotations.filter(annotation=>annotation.segmentation&&!Array.isArray(annotation.segmentation)).length} official masks</Badge></>}</div>
-      <div className="grid min-w-0 gap-x-2 gap-y-1 text-xs text-muted-foreground sm:grid-cols-[auto_minmax(14rem,19rem)] md:justify-items-start">{guided?<><strong className="font-medium text-foreground">Assigned source frame</strong><span>{referenceIsReleased?'Reference annotations released after educator review':'One checksum-verified frame · reference labels withheld'}</span></>:<><label className="font-medium text-foreground" id="endoscapes-frame-label">Installed source frame</label><Combobox items={visibleFrameOptions} filter={null} value={selectedFrameOption} onInputValueChange={setFrameSearch} onValueChange={option=>{if(option){setFrameSearch('');navigate(`/studio/surgivision/cases/${encodeURIComponent(option.id)}`)}}} itemToStringLabel={option=>option.label} itemToStringValue={option=>option.id} isItemEqualToValue={(option,value)=>option.id===value.id} autoHighlight><ComboboxInput className="w-full" id="endoscapes-frame" aria-labelledby="endoscapes-frame-label" aria-label="Search installed source frames" placeholder="Search split, video, or frame" showClear/><ComboboxContent><ComboboxEmpty>No matching Endoscapes frames.</ComboboxEmpty><ComboboxList>{option=><ComboboxItem key={option.id} value={option}>{option.label}</ComboboxItem>}</ComboboxList></ComboboxContent></Combobox><small className="col-span-full text-[11px] text-muted-foreground">{availableFrameIds.length.toLocaleString()} checksum-verified frames · search by split, video or frame</small></>}</div>
+  return <section className="mt-4 grid min-w-0 gap-3" aria-label="SurgiVision frame review">
+    <div className="flex min-w-0 flex-col gap-3 rounded-xl border bg-card p-3 md:flex-row md:items-center md:justify-between">
+      <div className="min-w-0 flex-1">
+        {guided ? (
+          <>
+            <p className="mb-1 text-xs font-medium text-muted-foreground">Assigned source frame</p>
+            <p className="m-0 truncate text-sm font-semibold">{referenceIsReleased ? 'Reference annotations released after educator review' : 'One checksum-verified frame · reference labels withheld'}</p>
+          </>
+        ) : (
+          <>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground" id="endoscapes-frame-label">Endoscapes sampled frame</label>
+            <Combobox
+              items={visibleFrameOptions}
+              filter={null}
+              value={selectedFrameOption}
+              onInputValueChange={setFrameSearch}
+              onValueChange={option => {
+                if (option) {
+                  setFrameSearch('')
+                  navigate(`/studio/surgivision/cases/${encodeURIComponent(option.id)}`)
+                }
+              }}
+              itemToStringLabel={option => option.label}
+              itemToStringValue={option => option.id}
+              isItemEqualToValue={(option, value) => option.id === value.id}
+              autoHighlight
+            >
+              <ComboboxInput className="w-full md:max-w-xl" id="endoscapes-frame" aria-labelledby="endoscapes-frame-label" aria-label="Search installed source frames" placeholder="Search split, video, or frame" showClear />
+              <ComboboxContent>
+                <ComboboxEmpty>No matching Endoscapes frames.</ComboboxEmpty>
+                <ComboboxList>{option => <ComboboxItem key={option.id} value={option}>{option.label}</ComboboxItem>}</ComboboxList>
+              </ComboboxContent>
+            </Combobox>
+          </>
+        )}
+      </div>
+      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><Badge variant="outline">{frame.split}</Badge><Badge variant="outline">Video {frame.video_id} · frame {frame.frame_number}</Badge><Badge variant="outline">{frame.width} × {frame.height} px</Badge>{guided&&!referenceIsReleased?<Badge variant="outline">Reference labels withheld</Badge>:<><Badge variant="outline">{displayedAnnotations.length} annotations</Badge><Badge variant="outline">{displayedAnnotations.filter(annotation=>annotation.segmentation&&!Array.isArray(annotation.segmentation)).length} RLE masks</Badge>{!guided&&<span className="text-[11px]">{availableFrameIds.length.toLocaleString()} verified frames</span>}</>}</div>
     </div>
-    <div className="grid items-start gap-4 lg:grid-cols-12">
-      <Card className="min-w-0 lg:col-span-8">
+    <div className="grid min-w-0 items-start gap-3 xl:grid-cols-[minmax(0,3fr)_minmax(17rem,1fr)]">
+      <Card className="min-w-0 overflow-hidden">
         <CardHeader className="flex-row items-center justify-between gap-3 px-3 py-3">
-          <CardTitle className="flex items-center gap-2"><Image aria-hidden="true"/> Frame review</CardTitle>
+          <div className="min-w-0"><CardTitle className="flex items-center gap-2"><Image aria-hidden="true"/> Frame review <Badge variant="secondary">Sampled still</Badge></CardTitle><CardDescription className="mt-1">One source image · annotation coordinates remain in original pixels</CardDescription></div>
           <div className="flex items-center gap-1">
             <Button variant="outline" size="icon-sm" aria-label="Zoom out" title="Zoom out" onClick={()=>setScale(zoom-.25)} disabled={zoom<=1}><ZoomOut/></Button>
             <span className="min-w-10 text-center text-xs tabular-nums text-muted-foreground">{Math.round(zoom*100)}%</span>
@@ -194,48 +231,54 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
             <Button variant="outline" size="icon-sm" aria-label="Reset view" title="Reset view" onClick={reset}><Move/></Button>
             {!guided&&<>
               <Button variant="outline" size="icon-sm" aria-label="Save source evidence to Reports" title="Save source evidence to Reports" onClick={()=>void saveFrameEvidence()} disabled={savingFrameReport||reportMatchesView}>{savingFrameReport?<LoaderCircle className="animate-spin"/>:reportMatchesView?<Check/>:<Save/>}</Button>
-              <Button variant="outline" size="icon-sm" aria-label="Download source evidence JSON" title="Download source evidence JSON" onClick={()=>downloadSurgicalFrameEvidence(frame,showBoxes,selected)}><Download/></Button>
+              <Button variant="outline" size="icon-sm" aria-label="Download source evidence JSON" title="Download source evidence JSON" onClick={()=>downloadSurgicalFrameEvidence(frame,showAnyAnnotations,selected)}><Download/></Button>
             </>}
           </div>
         </CardHeader>
         <CardContent className="px-3 pb-3 pt-0">
+        {!guided&&<div className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 px-2.5 py-2"><span className="text-xs font-medium text-muted-foreground">Source overlays</span><ToggleGroup multiple variant="outline" size="sm" aria-label="Surgical source overlays" value={[...(showBoxes?['boxes']:[]),...(showMasks?['masks']:[])]} onValueChange={value=>{setShowBoxes(value.includes('boxes'));setShowMasks(value.includes('masks'))}}><ToggleGroupItem value="boxes" aria-label="Toggle official COCO boxes">COCO boxes</ToggleGroupItem><ToggleGroupItem value="masks" aria-label="Toggle official RLE masks">RLE masks</ToggleGroupItem></ToggleGroup></div>}
         {!guided&&saveFrameReportError&&<Alert variant="destructive"><AlertDescription>{saveFrameReportError}</AlertDescription></Alert>}
         {!guided&&reportMatchesView&&<div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm"><span className="flex items-center gap-2 text-muted-foreground"><Check className="text-primary"/>Frame evidence saved to Reports.</span><Link className="font-medium text-primary underline-offset-4 hover:underline" to="/studio/reports">View report history</Link></div>}
         <div ref={viewportRef} className={`surgi-canvas${zoom>1?' is-zoomed':''}`} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={()=>setDrag(null)} onPointerCancel={()=>setDrag(null)} onWheel={event=>{if(event.ctrlKey){event.preventDefault();setScale(zoom+(event.deltaY<0?.1:-.1))}}}>
           <div className="surgi-frame-transform" onClick={selectEvidencePoint} style={{transform:`translate(${pan.x}px,${pan.y}px) scale(${zoom})`,aspectRatio:`${frame.width}/${frame.height}`,cursor:guided&&!locked&&!referenceIsReleased?'crosshair':undefined}}>
             {imageUrl?<img src={imageUrl} alt={`Endoscapes source image, ${frame.split} split, video ${frame.video_id}, frame ${frame.frame_number}`} draggable={false}/>:<div className="grid h-full place-items-center px-4 text-center text-sm text-muted-foreground">{imageError||'Loading assigned source image…'}</div>}
             <canvas ref={maskCanvas} className="surgi-mask-layer" aria-hidden="true"/>
-            {showBoxes&&<svg className="surgi-annotation-layer" viewBox={`0 0 ${frame.width} ${frame.height}`} preserveAspectRatio="none" role="group" aria-label="Official COCO reference boxes">
-              {displayedAnnotations.map(annotation=><Annotation key={annotation.id} annotation={annotation} selected={selected===annotation.id} onSelect={()=>setSelected(annotation.id)}/>) }
-              {guided&&evidencePoint&&<g aria-label={`Your evidence point at ${evidencePoint.x}, ${evidencePoint.y} source pixels`}><circle cx={evidencePoint.x} cy={evidencePoint.y} r={11} fill="#102a31" fillOpacity=".8" stroke="#9bf0d0" strokeWidth={3} vectorEffect="non-scaling-stroke"/><circle cx={evidencePoint.x} cy={evidencePoint.y} r={2} fill="#ffffff"/></g>}
+            {(showBoxes||(guided&&evidencePoint))&&<svg className="surgi-annotation-layer" viewBox={`0 0 ${frame.width} ${frame.height}`} preserveAspectRatio="none" role="group" aria-label="Official COCO reference boxes">
+              {showBoxes&&displayedAnnotations.map(annotation=><Annotation key={annotation.id} annotation={annotation} selected={selected===annotation.id} onSelect={()=>setSelected(annotation.id)}/>) }
+              {guided&&evidencePoint&&<g aria-label={`Your evidence point at ${evidencePoint.x}, ${evidencePoint.y} source pixels`}><circle cx={evidencePoint.x} cy={evidencePoint.y} r={11} fill="#101624" fillOpacity=".8" stroke="#8498ff" strokeWidth={3} vectorEffect="non-scaling-stroke"/><circle cx={evidencePoint.x} cy={evidencePoint.y} r={2} fill="#ffffff"/></g>}
             </svg>}
           </div>
         </div>
-        <div className="flex flex-col items-start justify-between gap-3 pt-2 text-sm text-muted-foreground sm:flex-row sm:items-center"><span className="flex items-center gap-2"><i className="inline-block size-2 rounded-full bg-emerald-400"/>{guided&&!referenceIsReleased?evidencePoint?`Your evidence point · x ${evidencePoint.x}, y ${evidencePoint.y} source pixels`:'Click the frame or enter source pixel coordinates. Reference labels stay hidden.':'Official COCO boxes and RLE masks share original pixel coordinates'}</span>{guided&&!referenceIsReleased&&<div className="grid w-full grid-cols-[auto_minmax(4.5rem,1fr)_auto_minmax(4.5rem,1fr)] items-center gap-x-2 gap-y-1.5 text-xs text-muted-foreground sm:w-auto sm:grid-cols-[auto_5.5rem_auto_5.5rem]" role="group" aria-label="Evidence point in original image pixels"><label htmlFor="evidence-x-px">X pixel</label><Input className="h-8 text-xs" id="evidence-x-px" aria-label="Evidence X pixel coordinate" type="number" min={0} max={frame.width-1} step={1} value={coordinateDraft.x} disabled={locked} onChange={event=>updateCoordinateDraft('x',event.target.value)}/><label htmlFor="evidence-y-px">Y pixel</label><Input className="h-8 text-xs" id="evidence-y-px" aria-label="Evidence Y pixel coordinate" type="number" min={0} max={frame.height-1} step={1} value={coordinateDraft.y} disabled={locked} onChange={event=>updateCoordinateDraft('y',event.target.value)}/></div>}{(!guided||referenceIsReleased)&&<label className="flex items-center gap-2 text-foreground"><Checkbox checked={showBoxes} onCheckedChange={checked=>setShowBoxes(checked===true)}/>Show COCO annotations</label>}</div>
+        <div className="flex flex-col items-start justify-between gap-3 pt-2 text-sm text-muted-foreground sm:flex-row sm:items-center"><span className="flex items-center gap-2"><i className="inline-block size-2 rounded-full bg-primary"/>{guided&&!referenceIsReleased?evidencePoint?`Your evidence point · x ${evidencePoint.x}, y ${evidencePoint.y} source pixels`:'Click the frame or enter source pixel coordinates. Reference labels stay hidden.':'Official boxes and RLE masks use original source-pixel coordinates.'}</span>{guided&&!referenceIsReleased&&<div className="grid w-full grid-cols-[auto_minmax(4.5rem,1fr)_auto_minmax(4.5rem,1fr)] items-center gap-x-2 gap-y-1.5 text-xs text-muted-foreground sm:w-auto sm:grid-cols-[auto_5.5rem_auto_5.5rem]" role="group" aria-label="Evidence point in original image pixels"><label htmlFor="evidence-x-px">X pixel</label><Input className="h-8 text-xs" id="evidence-x-px" aria-label="Evidence X pixel coordinate" type="number" min={0} max={frame.width-1} step={1} value={coordinateDraft.x} disabled={locked} onChange={event=>updateCoordinateDraft('x',event.target.value)}/><label htmlFor="evidence-y-px">Y pixel</label><Input className="h-8 text-xs" id="evidence-y-px" aria-label="Evidence Y pixel coordinate" type="number" min={0} max={frame.height-1} step={1} value={coordinateDraft.y} disabled={locked} onChange={event=>updateCoordinateDraft('y',event.target.value)}/></div>}{guided&&referenceIsReleased&&<label className="flex items-center gap-2 text-foreground"><Checkbox checked={showBoxes} onCheckedChange={checked=>setShowBoxes(checked===true)}/>Show COCO boxes</label>}</div>
       </CardContent></Card>
-      <aside className="grid min-w-0 content-start gap-3 lg:col-span-4">
+      <aside className="grid min-w-0 content-start gap-3">
         <Card>
           <CardHeader className="gap-1"><CardDescription>{guided&&!referenceIsReleased?'Reference withheld':'Selected reference'}</CardDescription><CardTitle>{selectedAnnotation?pretty(selectedAnnotation.category_name):referenceIsReleased?'Source annotations':guided?'Available after review':'Choose a box'}</CardTitle></CardHeader>
-          <CardContent className="grid gap-3">{selectedAnnotation?<><CardDescription>Official COCO annotation #{selectedAnnotation.id}</CardDescription><dl className="m-0 grid">{[['Category',pretty(selectedAnnotation.category_name)],['Left · top',`${selectedAnnotation.bbox[0]} · ${selectedAnnotation.bbox[1]} px`],['Width · height',`${selectedAnnotation.bbox[2]} · ${selectedAnnotation.bbox[3]} px`]].map(([label,value])=><div className="flex items-start justify-between gap-3 border-t py-2" key={label}><dt className="text-xs text-muted-foreground">{label}</dt><dd className="m-0 max-w-[68%] text-right text-sm font-medium">{value}</dd></div>)}</dl><span className="mt-2 flex items-center gap-1.5 text-sm text-emerald-400"><Check aria-hidden="true"/>Reference label · not model output</span></>:<CardDescription className="leading-relaxed">{guided&&!referenceIsReleased?'Submit your observations for educator review to unlock the source annotations.':referenceIsReleased?`${displayedAnnotations.length} source annotations are now available for review.`:`Select one of the ${displayedAnnotations.length} colored boxes to inspect its source class and coordinates.`}</CardDescription>}</CardContent>
+          <CardContent className="grid gap-3">{selectedAnnotation?<><CardDescription>Official COCO annotation #{selectedAnnotation.id}</CardDescription><dl className="m-0 grid">{[['Category',pretty(selectedAnnotation.category_name)],['Left · top',`${selectedAnnotation.bbox[0]} · ${selectedAnnotation.bbox[1]} px`],['Width · height',`${selectedAnnotation.bbox[2]} · ${selectedAnnotation.bbox[3]} px`]].map(([label,value])=><div className="flex items-start justify-between gap-3 border-t py-2" key={label}><dt className="text-xs text-muted-foreground">{label}</dt><dd className="m-0 max-w-[68%] text-right text-sm font-medium">{value}</dd></div>)}</dl><span className="mt-2 flex items-center gap-1.5 text-sm text-[var(--med-success)]"><Check aria-hidden="true"/>Reference label · not model output</span></>:<CardDescription className="leading-relaxed">{guided&&!referenceIsReleased?'Submit your observations for educator review to unlock the source annotations.':referenceIsReleased?`${displayedAnnotations.length} source annotations are now available for review.`:`Select one of the ${displayedAnnotations.length} colored boxes to inspect its source class and coordinates.`}</CardDescription>}</CardContent>
         </Card>
         <Card>
           <CardHeader className="gap-1"><CardDescription>Source record</CardDescription><CardTitle>Image provenance</CardTitle></CardHeader>
           <CardContent className="grid gap-2"><dl className="m-0 grid">{[['Source split',frame.split],['Video / frame',`${frame.video_id} / ${frame.frame_number}`]].map(([label,value])=><div className="flex items-start justify-between gap-3 border-t py-2" key={label}><dt className="text-xs text-muted-foreground">{label}</dt><dd className="m-0 max-w-[68%] text-right text-sm font-medium">{value}</dd></div>)}{[['Image SHA-256',frame.image_sha256],['COCO SHA-256',frame.annotation_sha256]].map(([label,value])=><div className="flex items-start justify-between gap-3 border-t py-2" key={label}><dt className="text-xs text-muted-foreground">{label}</dt><dd className="m-0 max-w-[68%] break-all text-right font-mono text-[10px] leading-relaxed text-muted-foreground">{value}</dd></div>)}</dl><a className="mt-1 inline-flex text-xs text-primary hover:underline" href="https://github.com/CAMMA-public/Endoscapes" target="_blank" rel="noreferrer">Official Endoscapes source ↗</a><p className="text-xs text-muted-foreground">Murali et al. (2023), arXiv:2312.12429</p></CardContent>
         </Card>
       </aside>
-      <div className={`col-span-full grid gap-4 ${guided?'lg:grid-cols-1':'lg:grid-cols-2 xl:grid-cols-3'}`}>
+      <Tabs defaultValue="labels" className="col-span-full min-w-0 flex-col">
+        <TabsList aria-label="Surgical frame evidence sections"><TabsTrigger value="labels">CVS source labels</TabsTrigger>{!guided&&<TabsTrigger value="model">Model evidence</TabsTrigger>}</TabsList>
+        <TabsContent value="labels" className="mt-3 grid gap-4 lg:grid-cols-2">
         {!guided&&<Card><CardHeader><CardDescription>Dataset-level reference</CardDescription><CardTitle>CVS label coverage</CardTitle><CardDescription>Image-level label availability across the checksum-verified Endoscapes-BBox201 splits.</CardDescription></CardHeader><CardContent>
           {cvsCoverage?<><p className="text-sm font-medium tabular-nums">{cvsCoverage.complete_label_frames.toLocaleString()} of {cvsCoverage.verified_frames.toLocaleString()} frames include all three source labels.</p><div className="flex flex-wrap gap-1.5">{cvsCoverage.splits.map(split=><Badge variant="outline" key={split.split}>{split.split} · {split.complete_label_frames.toLocaleString()}/{split.verified_frames.toLocaleString()}</Badge>)}</div><div className="grid gap-2">{cvsCoverage.criteria.map(criterion=><div className="grid gap-1 rounded-md bg-muted/30 p-2" key={criterion.criterion_id}><b className="text-sm font-medium">{criterion.criterion_label}</b><span className="text-xs text-muted-foreground">{criterion.labelled_frames.toLocaleString()} labels · {criterion.fractional_mean_frames.toLocaleString()} fractional means</span></div>)}</div><p className="text-xs leading-relaxed text-muted-foreground">{cvsCoverage.interpretation_note}</p><a href="https://github.com/CAMMA-public/Endoscapes#file-structure" target="_blank" rel="noreferrer">How the source labels are defined ↗</a><details className="grid gap-1 text-xs"><summary className="cursor-pointer text-muted-foreground">COCO annotation hashes</summary>{cvsCoverage.splits.map(split=><code className="block break-all text-muted-foreground" key={split.split}>{split.split} · {split.annotation_sha256}</code>)}</details></>:cvsCoverageError?<Alert variant="destructive"><AlertDescription>Source label coverage is unavailable: {cvsCoverageError}</AlertDescription></Alert>:<Skeleton className="h-24"/>}
         </CardContent></Card>}
-        {!guided&&<Card><CardHeader><CardDescription>Single-frame research inference</CardDescription><CardTitle>CVS-AdaptNet</CardTitle><CardDescription>Scores compare this frame with the three pinned source prompts. They are not calibrated probabilities, surgical clearance or clinical guidance.</CardDescription></CardHeader><CardContent>
+        <Card><CardHeader className="gap-1"><CardDescription>{guided&&!referenceIsReleased?'CVS values withheld':'CVS source values'}</CardDescription><CardTitle>Image-level label array</CardTitle></CardHeader><CardContent className="grid gap-3"><CardDescription>{guided&&!referenceIsReleased?'The source values are released after educator review.':<>Original COCO <code>ds</code> values are shown as stored; no per-expert attribution is inferred.</>}</CardDescription><div className="grid grid-cols-3 gap-1.5">{(displayedCvs.length?displayedCvs:[null,null,null]).map((value,index)=><div className="grid gap-1 rounded-md border p-2" key={index}><span className="text-xs text-muted-foreground">Value {index+1}</span><b className="font-mono text-xs tabular-nums">{value===null?'—':value.toFixed(3)}</b></div>)}</div><p className="text-xs leading-relaxed text-muted-foreground">Reference annotations support research review. They do not indicate surgical safety or clearance.</p></CardContent></Card>
+        </TabsContent>
+        {!guided&&<TabsContent value="model" className="mt-3">
+        <Card><CardHeader><CardDescription>Single-frame research inference</CardDescription><CardTitle>CVS-AdaptNet</CardTitle><CardDescription>Scores compare this frame with the three pinned source prompts. They are not calibrated probabilities, surgical clearance or clinical guidance.</CardDescription></CardHeader><CardContent>
           <Badge variant={cvsValidation?.executable?'secondary':'outline'}>{cvsValidation?.executable?'Ready for local research run':cvsValidation?'Blocked':'Checking model gate'}</Badge>
           {cvsValidation&&!cvsValidation.executable&&<ul className="mt-3 grid gap-1.5 pl-4 text-xs leading-relaxed text-muted-foreground">{cvsValidation.blockers.map(item=><li key={item}>{item}</li>)}</ul>}
           {cvsError&&<p className="mt-2.5 text-xs leading-relaxed text-destructive" role="alert">{cvsError}</p>}
           {cvsRun?.results&&<div className="mt-3 grid" aria-label="CVS-AdaptNet frame scores">{cvsCriteria.map((criterion,index)=><div className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 border-b py-2.5 first:border-t" key={criterion}><span className="text-xs leading-relaxed">{criterion}</span><b className="text-sm tabular-nums">{cvsRun.results!.scores[index]?.toFixed(3)??'—'}</b><small className="col-span-full text-xs text-muted-foreground">Source label: {frame.cvs_criteria[index]?.toFixed(0)??'—'}</small></div>)}</div>}
           {cvsRun?.status==='failed'&&<p className="mt-2.5 text-xs leading-relaxed text-destructive">The saved worker run failed ({cvsRun.failure_code??'unknown error'}); no scores were produced.</p>}
-        </CardContent><CardFooter className="flex flex-wrap items-start justify-between gap-3 text-xs text-muted-foreground"><span>{cvsRun?`Saved run ${cvsRun.id}`:'Results are saved with frame, annotation, prompt and model hashes.'}</span><Button variant="outline" size="sm" onClick={runCvsModel} disabled={!cvsValidation?.executable||cvsLoading}>{cvsLoading?<LoaderCircle data-icon="inline-start" className="animate-spin"/>:<FlaskConical data-icon="inline-start"/>}{cvsLoading?'Running…':'Run on this frame'}</Button></CardFooter></Card>}
-        <Card className="md:col-span-2 xl:col-span-1"><CardHeader className="gap-1"><CardDescription>{guided&&!referenceIsReleased?'CVS values withheld':'CVS source values'}</CardDescription><CardTitle>Image-level label array</CardTitle></CardHeader><CardContent className="grid gap-3"><CardDescription>{guided&&!referenceIsReleased?'The source values are released after educator review.':<>Original COCO <code>ds</code> values are shown as stored; no per-expert attribution is inferred.</>}</CardDescription><div className="grid grid-cols-3 gap-1.5">{(displayedCvs.length?displayedCvs:[null,null,null]).map((value,index)=><div className="grid gap-1 rounded-md border p-2" key={index}><span className="text-xs text-muted-foreground">Value {index+1}</span><b className="font-mono text-xs tabular-nums">{value===null?'—':value.toFixed(3)}</b></div>)}</div><p className="text-xs leading-relaxed text-muted-foreground">Reference annotations support research review. They do not indicate surgical safety or clearance.</p></CardContent></Card>
-      </div>
+        </CardContent><CardFooter className="flex flex-wrap items-start justify-between gap-3 text-xs text-muted-foreground"><span>{cvsRun?`Saved run ${cvsRun.id}`:'Results are saved with frame, annotation, prompt and model hashes.'}</span><Button variant="outline" size="sm" onClick={runCvsModel} disabled={!cvsValidation?.executable||cvsLoading}>{cvsLoading?<LoaderCircle data-icon="inline-start" className="animate-spin"/>:<FlaskConical data-icon="inline-start"/>}{cvsLoading?'Running…':'Run on this frame'}</Button></CardFooter></Card>
+        </TabsContent>}
+      </Tabs>
     </div>
     <div className="mt-3 flex items-start gap-2 text-xs leading-relaxed text-muted-foreground"><AlertCircle className="mt-0.5 size-4 shrink-0"/><span>Local non-commercial research sample · CC BY-NC-SA 4.0 · do not redistribute this frame or annotations.</span></div>
   </section>
