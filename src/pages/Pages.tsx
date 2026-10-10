@@ -49,6 +49,7 @@ import {
   type EducatorStudent,
   type PublishedLessonVersion,
   type ModelRecord,
+  type ModelValidation,
   type DoseTwinRunRecord,
   type RunRecord,
   type ViewerEvidenceState,
@@ -1239,7 +1240,7 @@ export function Models() {
               <CardContent className="grid gap-4 px-4 py-4 sm:px-5">
                 <section aria-labelledby="method-provenance-title"><h2 id="method-provenance-title" className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Provenance and terms</h2><dl className="grid gap-2 sm:grid-cols-2"><div className="min-w-0 rounded-md border border-border px-3 py-2"><dt className="text-[11px] text-muted-foreground">Pinned source revision</dt><dd className="mt-1 break-all font-mono text-xs text-foreground">{selectedModel.source_revision}</dd></div><div className="min-w-0 rounded-md border border-border px-3 py-2"><dt className="text-[11px] text-muted-foreground">License / use terms</dt><dd className="mt-1 text-xs leading-5 text-foreground">{selectedModel.source_license}</dd></div></dl></section>
                 <section aria-labelledby="method-operations-title"><h2 id="method-operations-title" className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Registered operations</h2><div className="flex flex-wrap gap-1.5">{selectedModel.operation_ids.map((operation) => <Badge variant="secondary" key={operation}>{operation}</Badge>)}</div></section>
-                <div className={`flex items-start gap-2 rounded-md border px-3 py-2.5 text-xs leading-5 ${selectedModel.readiness === "ready" ? "border-primary/30 bg-primary/5" : "border-warning/30 bg-warning/5"}`}><LockKeyhole aria-hidden="true" className="mt-0.5 size-4 shrink-0"/><div><strong className="font-semibold">{selectedModel.readiness === "ready" ? "Execution checks passed" : "Execution remains gated"}</strong><p className="mt-0.5 text-muted-foreground">{selectedModel.readiness === "blocked" ? selectedModel.details : selectedModel.readiness === "ready" ? "The model registry marks this operation ready; inspect the selected source and its run controls before use." : "This method remains visible for research planning. The registry does not report it as ready for execution."}</p></div></div>
+                <ModelValidationPanel key={selectedModel.id} model={selectedModel}/>
               </CardContent>
             </Card> : <Card size="sm" className="min-h-64"><CardContent className="grid min-h-64 place-content-center text-center text-sm text-muted-foreground">{loading ? "Loading model registry…" : "No method is available for this filter."}</CardContent></Card>}
           </div>
@@ -1247,6 +1248,41 @@ export function Models() {
       )}
     </>
   );
+}
+
+function ModelValidationPanel({model}:{model:ModelRecord}){
+  const caseQuery=useQuery({queryKey:queryKeys.cases,queryFn:api.cases})
+  const compatibleCases=useMemo(()=>caseQuery.data?.filter(item=>item.module===model.module&&item.status==='ready')??[],[caseQuery.data,model.module])
+  const [selectedCaseId,setSelectedCaseId]=useState('')
+  const [operationId,setOperationId]=useState('')
+  const [validation,setValidation]=useState<ModelValidation|null>(null)
+  const [validationLoading,setValidationLoading]=useState(false)
+  const [validationError,setValidationError]=useState('')
+  const caseId=compatibleCases.some(item=>item.id===selectedCaseId)
+    ?selectedCaseId
+    :(compatibleCases.find(item=>model.id==='cvs-adaptnet'&&item.dataset_id==='Endoscapes-BBox201')??compatibleCases[0])?.id??''
+  const selectedOperationId=model.operation_ids.includes(operationId)?operationId:model.operation_ids[0]??''
+  useEffect(()=>{
+    let live=true
+    setValidation(null)
+    setValidationError('')
+    if(!caseId||!selectedOperationId){setValidationLoading(false);return()=>{live=false}}
+    setValidationLoading(true)
+    api.validateModel(model.id,caseId,selectedOperationId).then(result=>{if(live)setValidation(result)}).catch(error=>{if(live)setValidationError(error instanceof Error?error.message:'The source-specific execution gate could not be checked')}).finally(()=>{if(live)setValidationLoading(false)})
+    return()=>{live=false}
+  },[model.id,caseId,selectedOperationId])
+  const validationCase=compatibleCases.find(item=>item.id===caseId)
+  return <section aria-labelledby="model-source-validation-title" className="grid gap-3 rounded-lg border border-border bg-muted/20 p-3 sm:p-4">
+    <div><h2 id="model-source-validation-title" className="m-0 text-sm font-semibold">Validate this operation on a source case</h2><p className="mb-0 mt-1 text-xs leading-5 text-muted-foreground">The catalog describes the method generally. This check asks the API about the selected case, operation, installed adapter and current execution gates.</p></div>
+    <div className="grid gap-3 sm:grid-cols-2">
+      <ResearchCasePicker id="model-validation-case" label="Installed source case" cases={compatibleCases} value={caseId} onValueChange={setSelectedCaseId} loading={caseQuery.isLoading} error={caseQuery.error instanceof Error?caseQuery.error.message:''} placeholder="Choose a compatible source case"/>
+      {model.operation_ids.length>1?<Field className="grid min-w-0 gap-1.5"><FieldLabel htmlFor="model-validation-operation">Registered operation</FieldLabel><Select items={model.operation_ids.map(operation=>({label:operation,value:operation}))} value={selectedOperationId||null} onValueChange={next=>{if(typeof next==='string')setOperationId(next)}}><SelectTrigger id="model-validation-operation" className="w-full"><SelectValue placeholder="Choose an operation"/></SelectTrigger><SelectContent><SelectGroup>{model.operation_ids.map(operation=><SelectItem key={operation} value={operation}>{operation}</SelectItem>)}</SelectGroup></SelectContent></Select></Field>:<div className="grid content-start gap-1.5"><span className="text-sm font-medium">Registered operation</span><Badge variant="secondary" className="w-fit font-mono">{selectedOperationId}</Badge></div>}
+    </div>
+    {validationLoading&&<div className="flex items-center gap-2 text-sm text-muted-foreground" role="status"><LoaderCircle className="size-4 animate-spin"/>Checking the selected case with the execution gate…</div>}
+    {validationError&&<Alert variant="destructive"><CircleAlert/><AlertTitle>Case-specific validation failed</AlertTitle><AlertDescription>{validationError}</AlertDescription></Alert>}
+    {validation&&<Alert className={validation.executable?'border-primary/30 bg-primary/5':'border-warning/35 bg-warning/5'} role={validation.executable?'status':'alert'}><LockKeyhole/><AlertTitle>{validation.executable?'Operation gate passed for this case':'Operation is blocked for this case'}</AlertTitle><AlertDescription><span className="block">{validationCase?`${validationCase.label} · ${validationCase.dataset_id}`:'Selected installed source'} · {selectedOperationId}</span>{validation.blockers.length>0?<ul className="mt-2 grid gap-1 pl-4">{validation.blockers.map((blocker,index)=><li key={`${index}:${blocker}`}>{blocker}</li>)}</ul>:<p className="mb-0 mt-2">The API reports no current execution blockers for this source and operation.</p>}</AlertDescription></Alert>}
+    {!caseQuery.isLoading&&!caseQuery.error&&compatibleCases.length===0&&<p className="m-0 text-xs leading-5 text-muted-foreground">No ready {model.module} source case is installed. Install and verify a compatible source before checking this method.</p>}
+  </section>
 }
 
 function EmptyWork({

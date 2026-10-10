@@ -42,7 +42,7 @@ export function ResearchCasePicker({
     <Field className="grid min-w-0 gap-1.5">
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
       {eligible.length <= 20 ? (
-        <Select value={eligible.some((item) => item.id === value) ? value : null} onValueChange={(next) => { if (next) onValueChange(next); }} disabled={loading || eligible.length === 0}>
+        <Select items={eligible.map((item) => ({ label: `${item.label} · ${item.dataset_id} · ${item.reference_kind}`, value: item.id }))} value={eligible.some((item) => item.id === value) ? value : null} onValueChange={(next) => { if (next) onValueChange(next); }} disabled={loading || eligible.length === 0}>
           <SelectTrigger id={id} className="w-full"><SelectValue placeholder={placeholder} /></SelectTrigger>
           <SelectContent>
             <SelectGroup>
@@ -56,7 +56,7 @@ export function ResearchCasePicker({
           items={matches.items}
           filter={null}
           value={selected}
-          inputValue={query}
+          inputValue={query || selected?.label || ""}
           onInputValueChange={setQuery}
           onValueChange={(item) => { if (item) { setQuery(""); onValueChange(item.id); } }}
           itemToStringLabel={(item) => item.label}

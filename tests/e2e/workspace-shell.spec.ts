@@ -350,6 +350,24 @@ test('SurgiVision frame picker stays readable beside the professional sidebar at
 })
 
 test('model lab filters source-linked methods and explains an execution gate', async ({ page }) => {
+  const validationRequests: Array<{ model_id: string; case_id: string; operation_id: string }> = []
+  await page.route('**/api/v1/cases', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify([
+      { id: 'endoscapes:test:1', module: 'surgivision', dataset_id: 'Endoscapes-BBox201', source_case_id: 'video-1:frame-1', reference_kind: 'research-frame', status: 'ready', label: 'Endoscapes test · video 1 · frame 1' },
+      { id: 'openkbp:test', module: 'dosetwin', dataset_id: 'OpenKBP', source_case_id: 'pt_201', reference_kind: 'benchmark', status: 'ready', label: 'OpenKBP test · pt_201' },
+    ]),
+  }))
+  await page.route('**/api/v1/models/*/validate', async (route) => {
+    const modelId = new URL(route.request().url()).pathname.split('/').at(-2) ?? ''
+    const body = route.request().postDataJSON() as { case_id: string; operation_id: string }
+    validationRequests.push({ model_id: modelId, case_id: body.case_id, operation_id: body.operation_id })
+    const blockers = modelId === 'cvs-adaptnet'
+      ? ['Verified checkpoint SHA-256 is missing.', 'Checkpoint-specific research terms need review.']
+      : ['No installed and tested model adapter/checkpoint for this operation in reference harness']
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ model_id: modelId, executable: false, blockers }) })
+  })
   await page.route('**/api/v1/models', (route) => route.fulfill({
     status: 200,
     contentType: 'application/json',
@@ -375,6 +393,9 @@ test('model lab filters source-linked methods and explains an execution gate', a
   await expect(page.getByText('No registered methods match this search and filter.')).toBeVisible()
   await page.getByRole('button', { name: 'Gated methods' }).click()
   await expect(page.getByRole('button', { name: /CVS-AdaptNet/ })).toBeVisible()
+  await expect(page.getByRole('alert').getByText('Verified checkpoint SHA-256 is missing.')).toBeVisible()
+  await expect(page.getByRole('combobox', { name: /Installed source case/ })).toContainText('Endoscapes test')
+  await expect.poll(() => validationRequests.some((request) => request.model_id === 'cvs-adaptnet' && request.case_id === 'endoscapes:test:1' && request.operation_id === 'cvs.inference')).toBe(true)
   await page.getByRole('textbox', { name: 'Search model methods' }).fill('cvs.inference')
   await expect(page.getByRole('button', { name: /CVS-AdaptNet/ })).toBeVisible()
   await expect(page.getByRole('button', { name: /OpenKBP prediction baseline/ })).toHaveCount(0)
@@ -386,6 +407,8 @@ test('model lab filters source-linked methods and explains an execution gate', a
   await expect(page.getByRole('button', { name: /OpenKBP prediction baseline/ })).toBeVisible()
   await expect(page.getByRole('button', { name: /CVS-AdaptNet/ })).toHaveCount(0)
   await expect(page.getByText('Prediction weights and runtime are not verified.')).toBeVisible()
+  await expect(page.getByRole('alert').getByText('No installed and tested model adapter/checkpoint for this operation in reference harness')).toBeVisible()
+  await expect.poll(() => validationRequests.some((request) => request.model_id === 'openkbp-baseline' && request.case_id === 'openkbp:test' && request.operation_id === 'dose.prediction')).toBe(true)
   await expect(page.getByRole('link', { name: 'Inspect source workspace' })).toHaveAttribute('href', '/studio/dosetwin/cases/current')
 })
 
