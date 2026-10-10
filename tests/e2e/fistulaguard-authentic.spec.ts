@@ -1,3 +1,4 @@
+import { mkdir } from 'node:fs/promises'
 import { expect, test } from '@playwright/test'
 
 type SignalRecord = {
@@ -91,6 +92,30 @@ test('authentic FiSaV switches records, bounds windows, and reopens saved compar
   // Save a genuine PZT2 comparison with distinct windows, then reopen it via
   // the shareable route used by Evidence Reports.
   await durationButtons.getByRole('button', { name: '5s' }).click()
+  await startInput.fill('2.5')
+  await startInput.press('Tab')
+  const windowSlider = page.getByRole('slider', { name: 'Window start in seconds' })
+  const sliderMaximum = Number(await windowSlider.getAttribute('max'))
+  expect(sliderMaximum).toBeCloseTo(first.duration_sec - 5, 3)
+  await windowSlider.focus()
+  await page.keyboard.press('Home')
+  await expect.poll(async () => Number(await windowSlider.getAttribute('aria-valuenow'))).toBe(0)
+  await page.keyboard.press('ArrowRight')
+  await expect.poll(async () => Number(await windowSlider.getAttribute('aria-valuenow'))).toBeCloseTo(1 / first.sample_rate_hz, 7)
+  await expect(signalChart).toHaveAttribute('aria-label', /from 0\.000100 to 5\.000100 seconds/)
+  await page.keyboard.press('End')
+  await expect.poll(async () => Number(await windowSlider.getAttribute('aria-valuenow'))).toBe(sliderMaximum)
+  await expect(signalChart).toHaveAttribute('aria-label', new RegExp(`from ${sliderMaximum.toFixed(6)} to ${(sliderMaximum + 5).toFixed(6)} seconds`))
+  const reviewDir = '.local-review/FISTULAGUARD-SLIDER-KEYBOARD-QA'
+  await mkdir(reviewDir, { recursive: true })
+  for (const viewport of [{ width: 1440, height: 900, name: 'desktop' }, { width: 768, height: 1024, name: 'tablet' }, { width: 390, height: 844, name: 'phone' }]) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height })
+    await windowSlider.scrollIntoViewIfNeeded()
+    const dimensions = await page.evaluate(() => ({ width: innerWidth, scrollWidth: document.documentElement.scrollWidth }))
+    expect(dimensions.scrollWidth).toBe(dimensions.width)
+    await page.screenshot({ path: `${reviewDir}/fisav-slider-${viewport.name}.png`, fullPage: true, animations: 'disabled' })
+  }
+  await page.setViewportSize({ width: 1280, height: 720 })
   await startInput.fill('2.5')
   await startInput.press('Tab')
   await page.getByRole('button', { name: 'PZT2', exact: true }).click()
