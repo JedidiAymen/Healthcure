@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { Suspense, useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Activity, AudioLines, BookOpenCheck, Boxes, ClipboardCheck, FileText, FlaskConical, GraduationCap, Layers3, Microscope, Radio, ScanLine, Search, ShieldCheck, Stethoscope, Trophy } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { Badge } from '@/components/ui/badge'
@@ -52,6 +52,12 @@ export function Shell() {
   const workspace = location.pathname.startsWith('/academy') ? 'academy' : location.pathname.startsWith('/educator') ? 'educator' : 'professional'
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchText, setSearchText] = useState('')
+  const searchTriggerRef = useRef<HTMLButtonElement>(null)
+  const closeSearch = () => {
+    setSearchOpen(false)
+    setSearchText('')
+    window.requestAnimationFrame(() => searchTriggerRef.current?.focus())
+  }
   const sourceCases = useQuery({
     queryKey: queryKeys.cases,
     queryFn: api.cases,
@@ -125,7 +131,7 @@ export function Shell() {
         <div className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground sm:gap-3"><SidebarTrigger aria-label="Toggle navigation"/><span className="hidden sm:inline">MEDFORGE</span><span aria-hidden="true" className="hidden text-border sm:inline">/</span><b className="truncate font-medium text-foreground">{title}</b></div>
         <div className="flex shrink-0 items-center gap-2">
           <Button render={<NavLink to={roleDestination} />} nativeButton={false} variant="outline" size="sm" className="hidden max-w-40 truncate sm:inline-flex">{roleLabel}</Button>
-          <Button variant="outline" size="sm" className="w-8 px-0 sm:w-auto sm:justify-start sm:px-2.5" aria-label="Find a research case or workspace" onClick={() => { setSearchText(''); setSearchOpen(true) }}>
+          <Button ref={searchTriggerRef} variant="outline" size="sm" className="w-8 px-0 sm:w-auto sm:justify-start sm:px-2.5" aria-label="Find a research case or workspace" onClick={() => { setSearchText(''); setSearchOpen(true) }}>
             <Search data-icon="inline-start" />
             <span className="hidden sm:inline">Find case or workspace</span>
             <kbd className="ml-3 hidden rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-normal text-muted-foreground lg:inline">⌘ K</kbd>
@@ -135,7 +141,7 @@ export function Shell() {
       </header>
       <CommandDialog
         open={searchOpen}
-        onOpenChange={(open) => { setSearchOpen(open); if (!open) setSearchText('') }}
+        onOpenChange={(open) => { if (open) setSearchOpen(true); else closeSearch() }}
         title="Find a research case or workspace"
         description="Search specialty workspaces and verified source cases by dataset or case ID."
       >

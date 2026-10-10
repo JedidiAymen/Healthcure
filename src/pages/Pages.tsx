@@ -90,6 +90,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AchievementBadge } from "@/components/ui/achievement-badge";
 import { PointsBadge } from "@/components/ui/points-badge";
+import { ResearchCasePicker } from "@/components/ResearchCasePicker";
 import "./academy.css";
 import { queryKeys } from "@/lib/query-client";
 import { renderDoseSlicePixels } from "@/lib/dose-visualization";
@@ -1275,23 +1276,7 @@ export function Experiments() {
             <CardContent className="flex flex-col items-stretch justify-between gap-4 pt-4 sm:flex-row sm:items-end">
             <div>
               <div className="eyebrow">Source case</div>
-              <Field className="mt-2 grid gap-1.5">
-                <FieldLabel htmlFor="run-case-select">Select source case</FieldLabel>
-                <Select items={cases.map(c => ({ label: `${c.label} · ${c.reference_kind}`, value: c.id }))} value={caseId || null} onValueChange={(value) => setSelectedCase(value ?? "")}>
-                  <SelectTrigger id="run-case-select" className="w-full sm:min-w-72">
-                    <SelectValue placeholder="Choose an installed case" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      {cases.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.label} · {c.reference_kind}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </Field>
+              <ResearchCasePicker id="run-case-select" label="Select source case" cases={cases} value={caseId} onValueChange={setSelectedCase} placeholder="Choose an installed case" />
             </div>
             <Button
               type="button"

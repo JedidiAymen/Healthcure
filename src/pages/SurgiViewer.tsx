@@ -15,8 +15,9 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { parseSurgicalViewPreferences, type SurgicalViewPreferences } from '@/lib/workspace-preferences'
 import { buildSurgicalFrameReport } from '@/lib/surgical-evidence'
+import { searchSurgicalFrames, type SurgicalFrameOption } from '@/lib/source-picker'
 
-type FrameOption={id:string;label:string}
+type FrameOption=SurgicalFrameOption
 
 function downloadSurgicalFrameEvidence(frame:SurgicalFrameRecord,showAnnotations:boolean,selectedAnnotationId:number|null){
   const document=buildSurgicalFrameReport(frame,{show_annotations:showAnnotations,selected_annotation_id:selectedAnnotationId})
@@ -106,18 +107,11 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
   const frameOptions=useMemo<FrameOption[]>(()=>availableFrameIds.map(id=>{
     const [,split,stem]=id.split(':')
     const [video,frameNumber]=stem?.split('_')??[]
-    return {id,label:`${split} · video ${video} · frame ${frameNumber}`}
+    const sourceSplit=split??'unknown',sourceVideo=video??'unknown',sourceFrame=frameNumber??'unknown'
+    return {id,split:sourceSplit,video:sourceVideo,frame:sourceFrame,label:`${sourceSplit} · video ${sourceVideo} · frame ${sourceFrame}`}
   }),[availableFrameIds])
   const visibleFrameOptions=useMemo(()=>{
-    const query=frameSearch.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean)
-    const matches=query.length?frameOptions.filter(option=>{
-      const searchable=`${option.label} ${option.id}`.toLocaleLowerCase().replace(/[^a-z0-9]+/g,' ')
-      return query.every(term=>searchable.includes(term.replace(/[^a-z0-9]+/g,' ')))
-    }):[]
-    const visible=matches.slice(0,50)
-    const selected=frameOptions.find(option=>option.id===activeFrameId)
-    if(!query.length&&selected)visible.push(selected)
-    return visible
+    return searchSurgicalFrames(frameOptions,frameSearch,activeFrameId,12)
   },[frameOptions,frameSearch,activeFrameId])
   const selectedFrameOption=frameOptions.find(option=>option.id===activeFrameId)??null
   useEffect(()=>{
@@ -192,11 +186,12 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
           </>
         ) : (
           <>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground" id="endoscapes-frame-label">Endoscapes sampled frame</label>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="endoscapes-frame">Jump to surgical frame · annotated stills</label>
             <Combobox
-              items={visibleFrameOptions}
+              items={visibleFrameOptions.items}
               filter={null}
               value={selectedFrameOption}
+              inputValue={frameSearch}
               onInputValueChange={setFrameSearch}
               onValueChange={option => {
                 if (option) {
@@ -209,10 +204,11 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
               isItemEqualToValue={(option, value) => option.id === value.id}
               autoHighlight
             >
-              <ComboboxInput className="w-full md:max-w-xl" id="endoscapes-frame" aria-labelledby="endoscapes-frame-label" aria-label="Search installed source frames" placeholder="Search split, video, or frame" showClear />
+              <ComboboxInput className="w-full md:max-w-xl" id="endoscapes-frame" aria-label="Jump to surgical frame by split, video, or frame number" placeholder="Search split, video, or frame" showClear />
               <ComboboxContent>
-                <ComboboxEmpty>No matching Endoscapes frames.</ComboboxEmpty>
-                <ComboboxList>{option => <ComboboxItem key={option.id} value={option}>{option.label}</ComboboxItem>}</ComboboxList>
+                {frameSearch.trim()&&<ComboboxEmpty>No matching Endoscapes frames.</ComboboxEmpty>}
+                <ComboboxList>{option => <ComboboxItem key={option.id} value={option} className="items-start"><span className="grid min-w-0 gap-0.5"><span className="font-medium">{option.label}</span><span className="truncate font-mono text-[11px] text-muted-foreground">{option.id}</span></span></ComboboxItem>}</ComboboxList>
+                <div className="border-t border-border px-3 py-2 text-[11px] leading-4 text-muted-foreground" role="status" aria-live="polite">{frameSearch.trim()?`Showing ${visibleFrameOptions.items.length} of ${visibleFrameOptions.total.toLocaleString()} matches — refine your search`: `Showing the selected frame and nearby samples · ${availableFrameIds.length.toLocaleString()} verified frames`}</div>
               </ComboboxContent>
             </Combobox>
           </>

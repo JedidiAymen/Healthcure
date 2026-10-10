@@ -48,7 +48,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ResearchCasePicker } from "@/components/ResearchCasePicker";
 
 type LessonBlock = EducatorLessonBlock;
 type LessonDraft = {
@@ -544,15 +544,10 @@ export function LessonEditorPage() {
                 <div className="educator-zone-heading"><Layers3 aria-hidden="true"/><div><CardTitle>Build the lesson</CardTitle><p>Choose a verified source, then add the evidence tasks learners will complete.</p></div></div>
               </CardHeader>
               <CardContent>
-                <Field className="builder-field">
-                  <FieldLabel htmlFor="case-select">Research source</FieldLabel>
-                  <Select items={cases.length ? cases.map(item => ({ label: `${item.label} · ${item.dataset_id} · ${item.reference_kind}`, value: item.id })) : [{ label: "No verified cases available", value: "empty" }]} value={draft.caseId || null} onValueChange={(value) => update({ ...draft, caseId: value ?? "" })}>
-                    <SelectTrigger id="case-select" className="w-full"><SelectValue placeholder="Choose an installed source case" /></SelectTrigger>
-                    <SelectContent><SelectGroup>{cases.length ? cases.map((item) => <SelectItem key={item.id} value={item.id}>{item.label} · {item.dataset_id} · {item.reference_kind}</SelectItem>) : <SelectItem value="empty" disabled>No verified source cases available</SelectItem>}</SelectGroup></SelectContent>
-                  </Select>
-                  <small>{casesLoading ? "Loading checksum-verified cases…" : casesError ? `Registry unavailable: ${casesError}` : cases.length ? `${cases.length} source-verified cases available locally.` : "No verified source cases are installed."}</small>
+                <div className="builder-field">
+                  <ResearchCasePicker id="case-select" label="Research source" cases={cases} value={draft.caseId} onValueChange={(caseId) => update({ ...draft, caseId })} loading={casesLoading} error={casesError} />
                   {selectedCase && <div className="lesson-case-summary"><b>{selectedCase.label}</b><span>{selectedCase.module} · {selectedCase.dataset_id} · {selectedCase.source_case_id}</span><span>Evidence origin: {selectedCase.reference_kind}.</span><span>Source terms: {selectedEvidence?.license_label ?? (evidenceError ? evidenceError : "Loading source terms…")}</span><span>{selectedEvidence ? `Draft use: ${selectedEvidence.draft_use}. Publication review: ${selectedEvidence.publication_review}. ${selectedEvidence.publication_note}` : "Publication permissions are not established until source review."}</span><Link to={`/studio/${selectedCase.module}/cases/${encodeURIComponent(selectedCase.id)}`}>Open this source in its scientific viewer</Link></div>}
-                </Field>
+                </div>
                 <div className="educator-palette-divider"><span>Lesson blocks</span><small>Arrange by drag, keyboard, or move controls.</small></div>
                 <div className="add-block-list">
                   {blockTypes.map((type) => (
