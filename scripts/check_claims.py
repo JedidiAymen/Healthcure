@@ -31,7 +31,7 @@ BANNED: dict[str, str] = {
     r"\btreatment (recommendation|decision)s? (for|from) (the )?patient": "no treatment recommendations are made",
     r"\bour (model|ai) (predicts|predicted|generated) the (dose|pt_241)": "the pt_241 prediction is archived, not our inference",
 }
-NEGATION = re.compile(r"\b(not|no|none|never|unspecified|would|without|nor|cannot|isn't|aren't|doesn't|don't|won't|neither|avoid|must not|instead of|rather than|non)\b|n't\b", re.I)
+NEGATION = re.compile(r"\b(not|no|none|never|unspecified|would|prevents?|overclaims?|without|nor|cannot|isn't|aren't|doesn't|don't|won't|neither|avoid|must not|instead of|rather than|non)\b|n't\b", re.I)
 SCAN = ["src", "content", "README.md", "RUN_LOCAL.md", "docs"]
 EXCLUDE_PARTS = {"source", "design-handoff", "review", "evidence", "ui", "node_modules"}
 SUFFIXES = {".ts", ".tsx", ".md", ".json"}
