@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowDown,
+  Activity,
   Check,
   CircleAlert,
   Eye,
@@ -9,9 +10,15 @@ import {
   GripVertical,
   Layers3,
   LockKeyhole,
+  MessageSquareText,
   Plus,
+  ScanEye,
+  Ruler,
   ShieldCheck,
+  ClipboardList,
+  CircleHelp,
   X,
+  type LucideIcon,
 } from "lucide-react";
 import {
   DndContext,
@@ -40,6 +47,7 @@ import {
   type RubricCriterion,
 } from "../lib/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -51,6 +59,7 @@ import { ResearchCasePicker } from "@/components/ResearchCasePicker";
 import { EducatorSourcePreview } from "@/components/EducatorSourcePreview";
 import { Toggle } from "@/components/ui/toggle";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
 
 type LessonBlock = EducatorLessonBlock;
 type LessonDraft = {
@@ -69,6 +78,16 @@ const blockTypes: LessonBlockType[] = [
   "Reveal",
   "CVS self-check",
 ];
+
+const blockPalette: Record<LessonBlockType, { icon: LucideIcon; description: string }> = {
+  Instruction: { icon: ClipboardList, description: "Set the investigation brief." },
+  "Evidence view": { icon: ScanEye, description: "Direct learners to source evidence." },
+  Observation: { icon: MessageSquareText, description: "Capture what they can observe." },
+  Measurement: { icon: Ruler, description: "Ask for a measured finding." },
+  Question: { icon: CircleHelp, description: "Ask learners to explain evidence." },
+  Reveal: { icon: LockKeyhole, description: "Keep educator guidance private." },
+  "CVS self-check": { icon: Activity, description: "Use the supported CVS checklist." },
+};
 
 function emptyDraft(): LessonDraft {
   return {
@@ -114,18 +133,25 @@ function SortableLessonBlock({
     transition,
     isDragging,
   } = useSortable({ id: block.id });
+  const BlockIcon = blockPalette[block.type].icon;
   return (
     <Card
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       size="sm"
-      className={`lesson-block grid gap-1.5 transition-shadow ${isDragging ? "ring-2 ring-primary" : ""}`}
+      className={cn(
+        "lesson-block grid gap-1.5 border-l-2 border-l-primary/25 bg-card transition-shadow focus-within:border-l-primary",
+        isDragging && "ring-2 ring-primary shadow-md",
+      )}
     >
-      <CardHeader className="gap-1 pb-3">
-        <div className="flex items-center gap-2 text-[11px] text-primary">
-          <span className="tabular-nums text-muted-foreground">{String(index + 1).padStart(2, "0")}</span>
-          {block.type}
-          <div className="ml-auto flex gap-1">
+      <CardHeader className="gap-2 pb-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <Badge variant="outline" className="shrink-0 font-mono tabular-nums text-muted-foreground">
+            {String(index + 1).padStart(2, "0")}
+          </Badge>
+          <BlockIcon aria-hidden="true" className="size-4 shrink-0 text-primary" />
+          <span className="min-w-0 truncate text-xs font-semibold text-foreground">{block.type}</span>
+          <div className="ml-auto flex shrink-0 gap-1">
             <Button
               type="button"
               variant="ghost"
@@ -170,6 +196,7 @@ function SortableLessonBlock({
             onChange={(e) => onChange("title", e.target.value)}
           />
         </CardTitle>
+        <p className="m-0 text-xs leading-relaxed text-muted-foreground">{blockPalette[block.type].description}</p>
       </CardHeader>
       <CardContent className="w-full">
         <Textarea
@@ -533,11 +560,12 @@ export function LessonEditorPage() {
               </Field>
               <div className="mb-2 flex items-end justify-between border-b border-border py-2 max-[767px]:items-center">
                 <div>
-                  <div className="eyebrow">Lesson sequence</div>
-                  <h2 className="m-0 text-base font-semibold">Evidence blocks</h2>
+                  <div className="eyebrow">Authoring canvas</div>
+                  <h2 className="m-0 text-base font-semibold">Build the investigation</h2>
                 </div>
-                <span className="text-xs text-muted-foreground">{draft.blocks.length} blocks</span>
+                <Badge variant="secondary" className="font-mono tabular-nums">{draft.blocks.length} {draft.blocks.length === 1 ? "step" : "steps"}</Badge>
               </div>
+              <p className="mb-3 mt-0 text-xs leading-relaxed text-muted-foreground">Arrange the learner’s route through the real source. Each step below is part of this saved lesson.</p>
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
@@ -581,11 +609,15 @@ export function LessonEditorPage() {
                   <EducatorSourcePreview key={selectedCase?.id ?? "no-source"} source={selectedCase} evidence={selectedEvidence} evidenceError={evidenceError} />
                 </div>
                 <div className="my-3 grid gap-1 border-t border-border pt-3"><span className="text-sm font-semibold">Lesson blocks</span><small className="text-xs leading-relaxed text-muted-foreground">Arrange by drag, keyboard, or move controls.</small></div>
-                <div className="grid gap-2 [&_button]:min-h-10">
+                <div className="grid gap-2 [&_button]:min-h-12">
                   {blockTypes.filter((type) => type !== "CVS self-check" || selectedCase?.module === "surgivision").map((type) => (
-                    <Button type="button" variant="outline" size="sm" className="w-full justify-start" key={type} onClick={() => add(type)}>
-                      <Plus data-icon="inline-start" />
-                      {type}
+                    <Button type="button" variant="outline" size="sm" className="h-auto w-full justify-start gap-2.5 py-2 text-left" key={type} onClick={() => add(type)} aria-label={`Add ${type} block`}>
+                      {(() => { const PaletteIcon = blockPalette[type].icon; return <PaletteIcon aria-hidden="true" className="size-4 shrink-0 text-primary" />; })()}
+                      <span className="grid min-w-0 flex-1 gap-0.5">
+                        <span className="truncate text-xs font-semibold">{type}</span>
+                        <span className="line-clamp-2 whitespace-normal text-[10px] font-normal leading-snug text-muted-foreground">{blockPalette[type].description}</span>
+                      </span>
+                      <Plus data-icon="inline-end" />
                     </Button>
                   ))}
                 </div>

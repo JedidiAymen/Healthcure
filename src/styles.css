@@ -244,6 +244,105 @@ body {
   color: var(--primary);
 }
 
+.home-role-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.home-role-card {
+  display: flex;
+  min-width: 0;
+  min-height: 176px;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--foreground);
+  transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+
+.home-role-card:hover {
+  border-color: color-mix(in srgb, var(--primary) 42%, var(--border));
+  box-shadow: 0 8px 24px rgb(16 22 36 / 7%);
+}
+
+.home-role-card:active { transform: translateY(1px); }
+.home-role-link { display: block; min-width: 0; border-radius: 12px; }
+.home-role-link:focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
+.home-role-header { gap: 8px; padding: 13px 13px 0; }
+.home-role-content { padding: 7px 13px 12px; }
+.home-role-footer { min-height: 50px; margin-top: auto; padding: 0 13px 13px; border: 0; background: transparent; }
+.home-role-title { margin: 0; font-size: 16px; font-weight: 650; letter-spacing: -.02em; line-height: 1.25; }
+.home-role-content [data-slot="card-description"] { max-width: 38ch; margin: 0; font-size: 12px; line-height: 1.5; }
+
+.home-role-card-professional {
+  border-color: #26334c;
+  background: #101624;
+  color: #fff;
+}
+
+.home-role-card-professional:hover { border-color: #657be8; }
+.home-role-card-academy { border-color: #eadfce; background: #fff8ed; }
+.home-role-card-educator { background: #f6f8fc; }
+
+.home-role-card-top,
+.home-role-card-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.home-role-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--primary) 9%, transparent);
+  color: var(--primary);
+}
+
+.home-role-card-professional .home-role-icon { border-color: rgb(255 255 255 / 14%); background: rgb(255 255 255 / 8%); color: #b8c4ff; }
+.home-role-card-academy .home-role-icon { border-color: #efc9b9; background: #fff0e7; color: #81503d; }
+
+.home-role-index {
+  margin-left: auto;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.home-role-card-professional .home-role-index { color: #c1cada; }
+.home-role-arrow { width: 16px; flex: 0 0 auto; color: var(--muted-foreground); transition: transform 140ms ease; }
+.home-role-card:hover .home-role-arrow { transform: translateX(3px); }
+
+.home-role-card-professional .home-role-content [data-slot="card-description"] { color: #c1cada; }
+.home-role-footer { justify-content: flex-start; flex-wrap: wrap; }
+.home-role-link-label { display: inline-flex; align-items: center; gap: 7px; color: var(--primary); font-size: 12px; font-weight: 600; }
+.home-role-link-label svg { width: 14px; height: 14px; transition: transform 140ms ease; }
+.home-role-card:hover .home-role-link-label svg { transform: translateX(3px); }
+
+@media (max-width: 1023px) {
+  .home-role-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 767px) {
+  .home-role-grid { gap: 8px; }
+  .home-role-card { min-height: 136px; }
+  .home-role-card-professional { min-height: 156px; }
+  .home-role-header { padding: 9px 12px 0; }
+  .home-role-content { padding: 5px 12px 6px; }
+  .home-role-footer { min-height: 38px; padding: 0 12px 8px; }
+  .home-role-content [data-slot="card-description"] { max-width: 56ch; }
+}
+
 @media (max-width: 767px) {
   .medforge-toolbar { padding-inline: 12px; }
   .medforge-content { padding-inline: 16px; }

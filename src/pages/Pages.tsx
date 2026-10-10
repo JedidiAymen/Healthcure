@@ -309,64 +309,67 @@ export function Home() {
   const resumableRun = runHistory.data.find((run): run is DoseTwinRunRecord =>
     run.operation_id === "openkbp.case_summary" && run.status === "completed" && run.results !== null,
   );
-  const areas = [
-    { id: "surgivision", name: "SurgiVision", discipline: "Surgical vision research", source: "Endoscapes", measure: "annotated frames" },
-    { id: "dosetwin", name: "DoseTwin", discipline: "Radiation oncology & physics", source: "OpenKBP", measure: "benchmark case" },
-    { id: "fistulaguard", name: "FistulaGuard", discipline: "Nephrology & access care", source: "FiSaV", measure: "signal recordings" },
-  ] as const;
   return (
-    <main className="home-page grid gap-10 pb-8">
-      <section className="home-hero grid items-stretch gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.82fr)]">
-        <div className="flex min-w-0 flex-col justify-center gap-6 py-2 xl:py-8">
+    <main className="home-page grid gap-5 pb-8">
+      <section className="home-hero grid min-w-0 gap-3">
+        <div className="flex min-w-0 flex-col justify-center gap-3 py-1">
           <Badge variant="outline" className="w-fit gap-2 rounded-md border-primary/25 bg-card px-3 py-1.5 font-medium text-primary">
-            <Stethoscope data-icon="inline-start" /> Research tools for clinical teams
+            <Stethoscope data-icon="inline-start" /> MEDFORGE · evidence-centered workspaces
           </Badge>
-          <div className="max-w-[720px] space-y-4">
-            <h1 className="home-title text-4xl leading-[1.04] font-semibold tracking-[-0.045em] text-foreground sm:text-5xl xl:text-[56px]">
-              Clinical research, grounded in evidence.
+          <div className="max-w-[760px] space-y-1.5">
+            <h1 className="home-title text-3xl leading-[1.06] font-semibold tracking-[-0.045em] text-foreground sm:text-4xl">
+              Choose your MEDFORGE workspace.
             </h1>
-            <p className="max-w-[590px] text-base leading-7 text-muted-foreground">
-              Explore source-verified surgical imagery, radiotherapy benchmark volumes, and measured vascular-access signals in tools built for scientific inspection.
+            <p className="max-w-[680px] text-sm leading-5 text-muted-foreground sm:text-base sm:leading-6">
+              Source-backed scientific viewers for professionals, guided investigations for learners, and lesson tools for educators.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Link
-              to={resumableRun ? `/studio/experiments?runId=${encodeURIComponent(resumableRun.id)}` : "/studio"}
-              className={buttonVariants({ size: "lg", className: "h-11 rounded-[10px] px-5" })}
-            >
-              {resumableRun ? "Continue analysis" : "Open Professional Studio"} <ArrowRight data-icon="inline-end" />
-            </Link>
-            <span className="inline-flex items-center gap-2 text-sm text-muted-foreground"><ShieldCheck className="size-4 text-primary"/> Source and limits stay visible</span>
-          </div>
-          <div className="grid max-w-[640px] grid-cols-3 border-t border-border pt-4">
-            {areas.map((area) => {
-              const count = cases.data.filter((record) => record.module === area.id).length;
-              return <div className="grid content-start gap-1 border-r border-border pr-3 pl-3 first:pl-0 last:border-0" key={area.id}>
-                <span className="text-xs leading-snug text-muted-foreground">{area.name}</span>
-                <b className="font-mono text-xl font-medium tracking-tight text-foreground">{cases.loading ? "—" : count.toLocaleString()}</b>
-                <small className="text-[11px] leading-snug text-muted-foreground">{area.measure}</small>
-              </div>;
-            })}
-          </div>
-        </div>
-        <div role="group" aria-label="Live previews of the three independent research sources" className="relative min-h-[280px] overflow-hidden rounded-xl border border-[#34415C] bg-[#101624] sm:min-h-[340px] xl:min-h-[400px]">
-          <ResearchEvidenceMontage cases={cases.data} />
         </div>
       </section>
 
-      <StudioDepartmentAtlas cases={cases.data} />
+      <section aria-labelledby="home-workspace-title" className="home-role-section grid gap-3">
+        <header className="flex flex-wrap items-end justify-between gap-2">
+          <div><p className="m-0 text-xs font-medium text-primary">Start here</p><h2 id="home-workspace-title" className="m-0 mt-1 text-lg font-semibold tracking-tight">Choose your workspace</h2></div>
+          <span className="hidden items-center gap-2 text-xs text-muted-foreground sm:inline-flex"><ShieldCheck aria-hidden="true" className="size-4 text-primary"/> Research and education only</span>
+        </header>
+        <div className="home-role-grid">
+          <Card className="home-role-card home-role-card-professional">
+            <CardHeader className="home-role-header">
+              <div className="home-role-card-top"><span className="home-role-icon"><Stethoscope aria-hidden="true"/></span><span className="home-role-index">Clinicians &amp; research teams</span></div>
+              <CardTitle className="home-role-title">Professional Studio</CardTitle>
+            </CardHeader>
+            <CardContent className="home-role-content"><CardDescription>Inspect surgical frames, radiotherapy volumes, and vascular-access signals from their original sources.</CardDescription></CardContent>
+            <CardFooter className="home-role-footer"><Link to={resumableRun ? `/studio/experiments?runId=${encodeURIComponent(resumableRun.id)}` : "/studio"} className={buttonVariants({ size: "lg", className: "h-10 rounded-lg px-4" })}>{resumableRun ? "Continue analysis" : "Open Professional Studio"}<ArrowRight data-icon="inline-end"/></Link></CardFooter>
+          </Card>
+          <Link to="/academy" aria-label="Learn: open Student Academy" className="home-role-link group">
+            <Card className="home-role-card home-role-card-academy">
+              <CardHeader className="home-role-header">
+                <div className="home-role-card-top"><span className="home-role-icon"><GraduationCap aria-hidden="true"/></span><span className="home-role-index">For learners</span><ArrowRight aria-hidden="true" className="home-role-arrow"/></div>
+                <CardTitle className="home-role-title">Student Academy</CardTitle>
+              </CardHeader>
+              <CardContent className="home-role-content"><CardDescription>Explore medical evidence through educator-assigned investigations.</CardDescription></CardContent>
+              <CardFooter className="home-role-footer"><span className="home-role-link-label">Explore learning paths <ArrowRight aria-hidden="true"/></span></CardFooter>
+            </Card>
+          </Link>
+          <Link to="/educator" aria-label="Teach: open Educator Studio" className="home-role-link group">
+            <Card className="home-role-card home-role-card-educator">
+              <CardHeader className="home-role-header">
+                <div className="home-role-card-top"><span className="home-role-icon"><BookOpenCheck aria-hidden="true"/></span><span className="home-role-index">For educators</span><ArrowRight aria-hidden="true" className="home-role-arrow"/></div>
+                <CardTitle className="home-role-title">Educator Studio</CardTitle>
+              </CardHeader>
+              <CardContent className="home-role-content"><CardDescription>Build evidence-based lessons and review learner submissions.</CardDescription></CardContent>
+              <CardFooter className="home-role-footer"><span className="home-role-link-label">Open teaching workspace <ArrowRight aria-hidden="true"/></span></CardFooter>
+            </Card>
+          </Link>
+        </div>
+      </section>
 
-      <section aria-label="Other MEDFORGE workspaces" className="grid gap-4 border-t border-border pt-7 md:grid-cols-2">
-        <Link to="/academy" className="home-role-link group flex min-h-24 items-center gap-4 rounded-xl border border-border bg-card px-5 py-4 transition-colors hover:border-primary/35">
-          <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-[#DFF4F8] text-[#23576b]"><GraduationCap aria-hidden="true"/></span>
-          <span className="grid flex-1 gap-1"><b className="font-medium text-foreground">Student Academy</b><small className="text-sm leading-5 text-muted-foreground">Learn through source-backed medical investigations.</small></span>
-          <ArrowRight aria-hidden="true" className="size-4 text-muted-foreground transition-transform group-hover:translate-x-1"/>
-        </Link>
-        <Link to="/educator" className="home-role-link group flex min-h-24 items-center gap-4 rounded-xl border border-border bg-card px-5 py-4 transition-colors hover:border-primary/35">
-          <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-[#edf1f8] text-primary"><BookOpenCheck aria-hidden="true"/></span>
-          <span className="grid flex-1 gap-1"><b className="font-medium text-foreground">Educator Studio</b><small className="text-sm leading-5 text-muted-foreground">Build evidence-centered lessons and review submissions.</small></span>
-          <ArrowRight aria-hidden="true" className="size-4 text-muted-foreground transition-transform group-hover:translate-x-1"/>
-        </Link>
+      <section aria-labelledby="home-research-title" className="grid gap-4 border-t border-border pt-5">
+        <header className="flex flex-wrap items-end justify-between gap-2"><div><p className="m-0 text-xs font-medium text-primary">Explore verified sources</p><h2 id="home-research-title" className="m-0 mt-1 text-lg font-semibold tracking-tight">Research collections</h2></div><span className="text-xs text-muted-foreground">Independent datasets · no shared patient record</span></header>
+        <div role="group" aria-label="Live previews of the three independent research sources" className="relative min-h-[220px] overflow-hidden rounded-xl border border-[#34415C] bg-[#101624] sm:min-h-[280px]">
+          <ResearchEvidenceMontage cases={cases.data} />
+        </div>
+        <StudioDepartmentAtlas cases={cases.data} />
       </section>
     </main>
   );
@@ -504,8 +507,12 @@ function ResearchEvidenceMontage({ cases }: { cases: CaseRecord[] }) {
   );
 }
 
+function getAcademyFeaturedLesson(path: StudentLearningPath) {
+  return path.lessons.find((lesson) => lesson.state === "in_progress") ?? path.lessons[0];
+}
+
 function AcademyPathPreview({ path }: { path: StudentLearningPath }) {
-  const lesson = path.lessons[0];
+  const lesson = getAcademyFeaturedLesson(path);
   if (!lesson?.case_id) {
     const Icon = path.module === "surgivision" ? Stethoscope : path.module === "dosetwin" ? Activity : Radio;
     return <span className="grid size-14 shrink-0 place-items-center rounded-md border bg-muted/40 text-muted-foreground"><Icon aria-hidden="true"/></span>;
@@ -2213,6 +2220,7 @@ export function Academy() {
   const featuredPath = paths.data.find((path) => path.lessons.some((lesson) => lesson.state === "in_progress"))
     ?? paths.data.find((path) => path.lessons.length > 0)
     ?? paths.data[0];
+  const featuredLesson = featuredPath ? getAcademyFeaturedLesson(featuredPath) : undefined;
   return (
       <main className="academy-home">
       <section className="academy-welcome" aria-labelledby="academy-title">
@@ -2226,9 +2234,9 @@ export function Academy() {
           </div>
           {!challenges.loading && !challenges.error && challenges.data.length === 0 && <p className="academy-welcome-empty">Your pathways explain what each source contains. Lessons appear here only after your educator assigns them.</p>}
         </div>
-        {featuredPath?.lessons[0]?.case_id ? <div className="academy-feature-evidence">
+        {featuredPath && featuredLesson?.case_id ? <div className="academy-feature-evidence">
           <div className="academy-feature-image"><AcademyPathPreview path={featuredPath}/></div>
-          <div className="academy-feature-caption"><span>Source in focus</span><strong>{pathDetails[featuredPath.module].label}</strong><small>{pathDetails[featuredPath.module].source}</small></div>
+          <div className="academy-feature-caption"><span>{featuredLesson?.state === "in_progress" ? "Current investigation" : "Source in focus"}</span><strong>{featuredLesson?.title ?? pathDetails[featuredPath.module].label}</strong><small>{pathDetails[featuredPath.module].source}{featuredLesson ? ` · ${featuredLesson.case_label}` : ""}</small></div>
           <span className="academy-feature-mark" aria-hidden="true"><Microscope/></span>
         </div> : <figure className="academy-welcome-illustration"><img src={clinicalTeamImage} alt="Illustrative portrait of a medical research team; not scientific evidence"/><figcaption><strong>Illustration</strong> · Team image is illustrative and is not source research data.</figcaption></figure>}
       </section>
