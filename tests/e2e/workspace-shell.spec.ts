@@ -99,6 +99,65 @@ test('educator lesson editor loads as a real route and switches its phone panes'
   expect(errors).toEqual([])
 })
 
+test('educator teaching desk shows real work and opens the selected assignment review', async ({ page }) => {
+  const assignmentId = 'assignment-review-001'
+  const lessonTitle = 'Inspect a measured source window'
+  await page.route('**/api/v1/auth/local-login', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      access_token: 'e2e-educator-session',
+      user: { id: 'e2e-educator', display_name: 'Review educator', role: 'educator' },
+    }),
+  }))
+  await page.route('**/api/v1/educator/drafts', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify([{
+      id: 'draft-001', title: 'Compare two signal windows', case_id: 'fisav:pat011',
+      module: 'fistulaguard', revision: 3, updated_at: '2026-10-10 08:00:00',
+    }]),
+  }))
+  await page.route('**/api/v1/educator/assignments', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify([{
+      id: assignmentId, lesson_version_id: 'version-001', lesson_title: lessonTitle,
+      cohort_id: 'cohort-001', due_at: null, student_count: 2,
+    }]),
+  }))
+  await page.route('**/api/v1/educator/cohorts', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify([{ id: 'cohort-001', name: 'Physiological signals seminar', student_count: 2 }]),
+  }))
+  await page.route(`**/api/v1/educator/assignments/${assignmentId}/attempts`, (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify([{
+      attempt_id: 'attempt-001', student_id: 'student-001', student_name: 'Learner One',
+      state: 'review_required', submitted_at: '2026-10-10T08:30:00Z', score: null,
+      observations: [], rubric_criteria: [], criterion_scores: [], viewer_evidence: null,
+    }]),
+  }))
+
+  await page.goto('/educator')
+  await page.getByLabel('Username').fill('educator')
+  await page.getByLabel('Password').fill('test-only-password')
+  await page.getByRole('button', { name: 'Sign in as educator' }).click()
+  await expect(page.getByRole('heading', { name: 'Teaching desk' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Submissions awaiting review' })).toBeVisible()
+  await expect(page.getByText('Learner One')).toBeVisible()
+  await expect(page.getByText(lessonTitle)).toBeVisible()
+  await expect(page.getByText('Physiological signals seminar')).toBeVisible()
+  await expect(page.getByText('Compare two signal windows')).toBeVisible()
+
+  await page.getByRole('link', { name: 'Review Learner One submission for Inspect a measured source window' }).click()
+  await expect(page).toHaveURL(new RegExp(`/educator/submissions\\?assignmentId=${assignmentId}`))
+  await expect(page.getByRole('combobox', { name: 'Assignment' })).toContainText(lessonTitle)
+  await expect(page.getByText('Learner One')).toBeVisible()
+})
+
 test('model lab filters source-linked methods and explains an execution gate', async ({ page }) => {
   await page.route('**/api/v1/models', (route) => route.fulfill({
     status: 200,

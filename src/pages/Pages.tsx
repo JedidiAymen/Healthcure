@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { useQuery, useQueryClient, type QueryKey } from "@tanstack/react-query";
+import { useQueries, useQuery, useQueryClient, type QueryKey } from "@tanstack/react-query";
 import {
   Activity,
   ArrowRight,
@@ -85,6 +85,7 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -2092,125 +2093,116 @@ export function Progress() {
 
 export function Educator() {
   const drafts = useApi(queryKeys.educatorDrafts, api.educatorDrafts, [] as EducatorDraftSummary[]);
+  const assignments = useApi(queryKeys.educatorAssignments, api.educatorAssignments, [] as EducatorAssignment[]);
+  const cohorts = useApi(queryKeys.educatorCohorts, api.educatorCohorts, [] as EducatorCohort[]);
+  const reviewQueries = useQueries({
+    queries: assignments.data.map((assignment) => ({
+      queryKey: queryKeys.educatorAssignmentAttempts(assignment.id),
+      queryFn: () => api.educatorAssignmentAttempts(assignment.id),
+      enabled: !assignments.loading && !assignments.error,
+    })),
+  });
+  const reviewError = assignments.error || reviewQueries.find((query) => query.isError)?.error?.message || "";
+  const reviewLoading = assignments.loading || reviewQueries.some((query) => query.isPending);
+  const reviewQueue = assignments.data.flatMap((assignment, index) =>
+    (reviewQueries[index]?.data ?? [])
+      .filter((attempt) => attempt.state === "review_required")
+      .map((attempt) => ({ assignment, attempt })),
+  ).sort((left, right) => Date.parse(right.attempt.submitted_at ?? "") - Date.parse(left.attempt.submitted_at ?? ""));
   return (
     <>
       <Header
         eyebrow="Educator studio"
-        title="Build evidence lessons"
-        description="Compose source-grounded learning activities. Drafts are saved under your local educator account. Publishing requires a source-rights review and creates an immutable learner-safe version."
+        title="Teaching desk"
+        description="Review learner evidence, manage your cohorts, and shape the next source-grounded lesson."
         action={
           <Button render={<Link to="/educator/cases/new/edit" />} nativeButton={false}>
             <Microscope data-icon="inline-start" />
-            Create lesson draft
+            Create case lesson
           </Button>
         }
       />
-      <div className="academy-banner">
-        <div className="academy-symbol">
-          <ShieldCheck size={22} />
-        </div>
-        <div>
-            <strong>Server-owned drafts, controlled learner access</strong>
-            <p>
-            Lesson prompts and rubrics stay in educator-only records.
-            Learners receive only published, cohort-assigned versions; private
-            answers appear after an educator reviews a submission.
-            </p>
-          </div>
-        <SourceBadge kind="ready">Source review at publish</SourceBadge>
-      </div>
-      <div className="academy-columns">
-        <Card className="learning-panel">
-          <CardHeader className="panel-section-head">
-            <div>
-              <div className="eyebrow">Your drafts</div>
-              <CardTitle>
-                <h2>
-                  {drafts.loading
-                    ? "Loading saved drafts"
-                    : drafts.data.length
-                      ? `${drafts.data.length} saved lesson${drafts.data.length === 1 ? "" : "s"}`
-                      : "No saved drafts yet"}
-                </h2>
-              </CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {drafts.error ? (
-              <Alert variant="destructive"><CircleAlert/><AlertTitle>Could not load saved drafts</AlertTitle><AlertDescription>{drafts.error}</AlertDescription></Alert>
-            ) : drafts.data.length ? (
-              <div className="case-list">
-                {drafts.data.map((draft) => (
-                  <Link
-                    className="case-row"
-                    key={draft.id}
-                    to={`/educator/cases/${draft.id}/edit`}
-                  >
-                    <span className="case-module-icon">
-                      <ClipboardList size={17} />
-                    </span>
-                    <span className="case-primary">
-                      <b>{draft.title}</b>
-                      <small>
-                        {draft.module} · {draft.case_id} · revision{" "}
-                        {draft.revision}
-                      </small>
-                    </span>
-                    <span className="case-id">
-                      {new Date(
-                        `${draft.updated_at.replace(" ", "T")}Z`,
-                      ).toLocaleDateString()}
-                    </span>
-                    <ArrowRight size={16} />
-                  </Link>
-                ))}
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(17rem,0.8fr)]">
+        <section aria-label="Teaching work" className="grid min-w-0 gap-5">
+          <Card className="min-w-0">
+            <CardHeader className="flex flex-wrap items-start justify-between gap-3">
+              <div className="grid gap-1">
+                <CardTitle className="flex items-center gap-2"><h2><ClipboardCheck data-icon="inline-start"/>Submissions awaiting review</h2></CardTitle>
+                <CardDescription>New learner work, linked to the assignment and its published rubric.</CardDescription>
               </div>
-            ) : (
-              <div className="empty-slate">
-                <ClipboardList size={18} />
-                <span>
-                  {drafts.loading
-                    ? "Checking your local educator account…"
-                    : "Create a draft to begin a source-grounded lesson."}
-                </span>
-                {!drafts.loading && (
-                  <Link to="/educator/cases/new/edit">
-                    Create lesson <ArrowRight size={14} />
-                  </Link>
-                )}
-              </div>
-            )}
-            <div className="path-links">
-              <Link to="/educator/assignments">
-                <span>
-                  <BookOpenCheck size={16} />
-                  Assignments
-                </span>
-                <ArrowRight size={15} />
-              </Link>
-              <Link to="/educator/submissions">
-                <span>
-                  <FileLock2 size={16} />
-                  Submission review
-                </span>
-                <ArrowRight size={15} />
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="learning-aside">
-          <CardHeader>
-            <div className="eyebrow">Integrity boundary</div>
-            <CardTitle>
-              <h3>Keep educator answers protected.</h3>
-            </CardTitle>
-            <CardDescription>
-              Drafts are editable only by their owner. Students see published
-              assignment summaries and submit source-bound work; rubric scores
-              and answer reveals stay private until an authorized review.
-            </CardDescription>
-          </CardHeader>
-        </Card>
+              <Button render={<Link to="/educator/submissions"/>} nativeButton={false} variant="outline" size="sm">All submissions<ArrowRight data-icon="inline-end"/></Button>
+            </CardHeader>
+            <CardContent>
+              {reviewLoading ? <div className="grid gap-3"><Skeleton className="h-16"/><Skeleton className="h-16"/></div>
+                : reviewError ? <Alert variant="destructive"><CircleAlert/><AlertTitle>Review queue could not load</AlertTitle><AlertDescription>{reviewError}</AlertDescription></Alert>
+                  : reviewQueue.length ? <div className="grid">
+                    {reviewQueue.slice(0, 6).map(({ assignment, attempt }, index) => <div key={attempt.attempt_id}>
+                      {index > 0 && <Separator/>}
+                      <Link
+                        to={`/educator/submissions?assignmentId=${encodeURIComponent(assignment.id)}`}
+                        aria-label={`Review ${attempt.student_name} submission for ${assignment.lesson_title}`}
+                        className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 rounded-sm py-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:grid-cols-[minmax(0,1fr)_auto_auto]"
+                      >
+                        <span className="min-w-0 truncate font-medium">{attempt.student_name}</span>
+                        <Badge variant="secondary" className="col-start-2 row-start-1">Awaiting review</Badge>
+                        <span className="col-span-2 min-w-0 truncate text-sm text-muted-foreground sm:col-span-1 sm:col-start-1 sm:row-start-2">{assignment.lesson_title}</span>
+                        <span className="col-span-2 text-xs text-muted-foreground sm:col-span-1 sm:col-start-3 sm:row-span-2 sm:row-start-1 sm:text-right">{attempt.submitted_at ? new Date(attempt.submitted_at).toLocaleString() : "Submitted"}</span>
+                      </Link>
+                    </div>)}
+                    {reviewQueue.length > 6 && <><Separator/><Link to="/educator/submissions" className="py-3 text-sm font-medium text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">View {reviewQueue.length - 6} more pending reviews<ArrowRight data-icon="inline-end"/></Link></>}
+                  </div>
+                    : <Empty className="min-h-40 rounded-lg border border-dashed"><EmptyHeader><EmptyMedia variant="icon"><ClipboardCheck/></EmptyMedia><EmptyTitle>No submissions are waiting</EmptyTitle><EmptyDescription>Submitted learner evidence will appear here for criterion-based review.</EmptyDescription></EmptyHeader><Button render={<Link to="/educator/assignments"/>} nativeButton={false} variant="outline" size="sm">Manage assignments</Button></Empty>}
+            </CardContent>
+          </Card>
+
+          <Card className="min-w-0">
+            <CardHeader className="flex flex-wrap items-center justify-between gap-3">
+              <div className="grid gap-1"><CardTitle><h2>Lesson drafts</h2></CardTitle><CardDescription>Return to your source-grounded lesson work.</CardDescription></div>
+              {!drafts.loading && !drafts.error && drafts.data.length > 0 && <Badge variant="outline">{drafts.data.length} saved</Badge>}
+            </CardHeader>
+            <CardContent>
+              {drafts.loading ? <div className="grid gap-3"><Skeleton className="h-14"/><Skeleton className="h-14"/></div>
+                : drafts.error ? <Alert variant="destructive"><CircleAlert/><AlertTitle>Saved lessons could not load</AlertTitle><AlertDescription>{drafts.error}</AlertDescription></Alert>
+                  : drafts.data.length ? <div className="grid">
+                    {drafts.data.slice(0, 5).map((draft, index) => <div key={draft.id}>
+                      {index > 0 && <Separator/>}
+                      <Link to={`/educator/cases/${draft.id}/edit`} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-sm py-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:grid-cols-[minmax(0,1fr)_auto_auto]">
+                        <span className="grid min-w-0 gap-1"><b className="truncate font-medium">{draft.title}</b><small className="truncate text-muted-foreground">{draft.module} · {draft.case_id} · revision {draft.revision}</small></span>
+                        <span className="text-xs text-muted-foreground">{new Date(`${draft.updated_at.replace(" ", "T")}Z`).toLocaleDateString()}</span>
+                        <ArrowRight aria-hidden="true" className="hidden size-4 text-muted-foreground sm:block"/>
+                      </Link>
+                    </div>)}
+                    {drafts.data.length > 5 && <><Separator/><Link to="/educator/cases/new/edit" className="py-3 text-sm font-medium text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">Create another lesson<ArrowRight data-icon="inline-end"/></Link></>}
+                  </div>
+                    : <Empty className="min-h-36 rounded-lg border border-dashed"><EmptyHeader><EmptyMedia variant="icon"><ClipboardList/></EmptyMedia><EmptyTitle>No lesson drafts yet</EmptyTitle><EmptyDescription>Choose a verified research source and shape it into a learner-safe investigation.</EmptyDescription></EmptyHeader><Button render={<Link to="/educator/cases/new/edit"/>} nativeButton={false} size="sm">Create your first lesson</Button></Empty>}
+            </CardContent>
+          </Card>
+        </section>
+
+        <aside aria-label="Teaching groups and assignment tools" className="grid min-w-0 gap-5">
+          <Card className="min-w-0">
+            <CardHeader className="flex flex-wrap items-center justify-between gap-3">
+              <div className="grid gap-1"><CardTitle><h2>Learning groups</h2></CardTitle><CardDescription>Cohorts you own and the learners assigned to each.</CardDescription></div>
+              <Button render={<Link to="/educator/assignments"/>} nativeButton={false} variant="ghost" size="sm">Manage</Button>
+            </CardHeader>
+            <CardContent>
+              {cohorts.loading ? <div className="grid gap-3"><Skeleton className="h-12"/><Skeleton className="h-12"/></div>
+                : cohorts.error ? <Alert variant="destructive"><CircleAlert/><AlertTitle>Cohorts could not load</AlertTitle><AlertDescription>{cohorts.error}</AlertDescription></Alert>
+                  : cohorts.data.length ? <div className="grid">
+                    {cohorts.data.map((cohort, index) => <div key={cohort.id}>
+                      {index > 0 && <Separator/>}
+                      <div className="flex min-w-0 items-center justify-between gap-3 py-3"><b className="min-w-0 truncate font-medium">{cohort.name}</b><Badge variant={cohort.student_count ? "secondary" : "outline"}>{cohort.student_count} {cohort.student_count === 1 ? "learner" : "learners"}</Badge></div>
+                    </div>)}
+                  </div>
+                    : <Empty className="min-h-36 rounded-lg border border-dashed"><EmptyHeader><EmptyMedia variant="icon"><GraduationCap/></EmptyMedia><EmptyTitle>No learning groups yet</EmptyTitle><EmptyDescription>Create a cohort and add provisioned student accounts before assigning lessons.</EmptyDescription></EmptyHeader><Button render={<Link to="/educator/assignments"/>} nativeButton={false} variant="outline" size="sm">Set up a group</Button></Empty>}
+            </CardContent>
+          </Card>
+
+          <Alert className="items-start">
+            <ShieldCheck/>
+            <div><AlertTitle>Source review stays with the lesson</AlertTitle><AlertDescription>Publication checks the selected dataset terms and creates a versioned learner view. Rubrics and reveal content remain private until you review a submission.</AlertDescription></div>
+          </Alert>
+        </aside>
       </div>
     </>
   );
@@ -2254,6 +2246,8 @@ export function Assignments() {
   );
 }
 export function Submissions() {
+  const [searchParams] = useSearchParams();
+  const requestedAssignmentId = searchParams.get("assignmentId") ?? "";
   const [assignments, setAssignments] = useState<EducatorAssignment[]>([]);
   const [assignmentId, setAssignmentId] = useState("");
   const [attempts, setAttempts] = useState<EducatorAttemptReview[]>([]);
@@ -2265,7 +2259,7 @@ export function Submissions() {
   const [busy, setBusy] = useState(true);
   const [saving, setSaving] = useState("");
   const gradeRequestKeys = useRef<Record<string, { payload: string; key: string }>>({});
-  useEffect(() => { let live = true; api.educatorAssignments().then(items => { if (live) { setAssignments(items); setAssignmentId(items[0]?.id ?? ""); } }).catch(e => { if (live) setError(e instanceof Error ? e.message : "Assignments could not load"); }).finally(() => { if (live) setBusy(false); }); return () => { live = false; }; }, []);
+  useEffect(() => { let live = true; api.educatorAssignments().then(items => { if (live) { setAssignments(items); setAssignmentId(items.find(item => item.id === requestedAssignmentId)?.id ?? items[0]?.id ?? ""); } }).catch(e => { if (live) setError(e instanceof Error ? e.message : "Assignments could not load"); }).finally(() => { if (live) setBusy(false); }); return () => { live = false; }; }, [requestedAssignmentId]);
   useEffect(() => { if (!assignmentId) { setAttempts([]); return; } let live = true; api.educatorAssignmentAttempts(assignmentId).then(items => { if (!live) return; setAttempts(items); setCriterionPoints(current => Object.fromEntries(items.map(item => [item.attempt_id, current[item.attempt_id] ?? Object.fromEntries(item.rubric_criteria.map(criterion => [criterion.id, String(item.criterion_scores.find(score => score.id === criterion.id)?.earned_points ?? "")]))]))); setCriterionNotes(current => Object.fromEntries(items.map(item => [item.attempt_id, current[item.attempt_id] ?? Object.fromEntries(item.criterion_scores.map(score => [score.id, score.note]))]))); }).catch(e => { if (live) setError(e instanceof Error ? e.message : "Submissions could not load"); }); return () => { live = false; }; }, [assignmentId]);
   const grade = async (attempt: EducatorAttemptReview) => {
     const criterion_scores = attempt.rubric_criteria.map(criterion => {

@@ -21,4 +21,7 @@ export const queryKeys = {
   studentLearningPaths: ["student", "learning-paths"] as const,
   studentProgress: ["student", "progress"] as const,
   educatorDrafts: ["educator", "drafts"] as const,
+  educatorAssignments: ["educator", "assignments"] as const,
+  educatorCohorts: ["educator", "cohorts"] as const,
+  educatorAssignmentAttempts: (assignmentId: string) => ["educator", "assignment-attempts", assignmentId] as const,
 };
