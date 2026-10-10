@@ -2,6 +2,7 @@
 """Install the public CholecT50 challenge-validation frame and label bundle."""
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import os
@@ -120,4 +121,5 @@ def install() -> None:
 
 
 if __name__ == "__main__":
+    argparse.ArgumentParser(description=__doc__).parse_args()
     install()

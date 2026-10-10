@@ -7,6 +7,7 @@ by Git; the downloaded ZIP is removed after successful extraction to save space.
 """
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import os
@@ -218,6 +219,7 @@ def _sha256_file(path: Path) -> str:
 
 
 def main() -> None:
+    argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter).parse_args()
     DATA_ROOT.mkdir(parents=True, exist_ok=True)
     size, etag = remote_headers()
     print(f"Pinned official Endoscapes release: {size:,} bytes · {etag}", flush=True)

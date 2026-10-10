@@ -3,11 +3,11 @@
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 from pathlib import Path
 
-from huggingface_hub import hf_hub_download
 
 ROOT = Path(__file__).resolve().parents[1]
 TARGET = ROOT / "data/models/bioclinicalbert"
@@ -25,6 +25,8 @@ def sha256(path: Path) -> str:
 
 
 def main() -> None:
+    argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter).parse_args()
+    from huggingface_hub import hf_hub_download  # worker dependency, needed only when downloading
     TARGET.mkdir(parents=True, exist_ok=True)
     manifest_files = []
     for filename in FILES:

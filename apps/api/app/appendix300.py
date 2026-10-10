@@ -54,12 +54,16 @@ def _load_record(signature: tuple[Any, ...]) -> tuple[dict[str, Any], Path] | No
             return None
         if _sha256(path) != manifest.get("video_sha256"):
             return None
+        duration = manifest.get("video_duration_seconds")
+        # Without a measured duration the clip is not verified, so it stays hidden.
+        if isinstance(duration, bool) or not isinstance(duration, (int, float)) or duration <= 0:
+            return None
         record = {
             "clip_id": manifest["clip_id"],
             "dataset_id": "Appendix300",
             "procedure_label": manifest["procedure_label"],
             "media_kind": "native_video",
-            "duration_sec": manifest.get("video_duration_seconds"),
+            "duration_sec": float(duration),
             "asset_uri": f"/api/v1/surgivision/clips/{manifest['clip_id']}/video",
             "source_url": SOURCE_URL,
             "license_label": "CC BY 4.0",
