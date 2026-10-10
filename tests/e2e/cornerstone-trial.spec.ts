@@ -9,6 +9,7 @@ test('opt-in Cornerstone3D renders the installed OpenKBP volume across viewports
   await page.goto('/studio/dosetwin/cornerstone-trial')
   await expect(page.getByRole('heading', { name: /Cornerstone3D on OpenKBP pt_201/ })).toBeVisible()
   await expect(page.getByText(/Cornerstone3D rendered the verified 128³ CT volume/)).toBeVisible({ timeout: 60_000 })
+  const origin = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:4173'
   for (const plane of ['xy', 'xz', 'yz']) {
     const canvas = page.locator(`[data-testid="cornerstone-${plane}"] canvas`)
     await expect(canvas).toBeVisible()
@@ -34,7 +35,7 @@ test('opt-in Cornerstone3D renders the installed OpenKBP volume across viewports
     const axisIndex = xyz[axis]
     const offset = plane === 'xy' ? xyz[0] * 128 + xyz[1] : plane === 'xz' ? xyz[0] * 128 + xyz[2] : xyz[1] * 128 + xyz[2]
     for (const [layer, selector] of [['ct', 'cornerstone-ct-value'], ['dose', 'cornerstone-dose-value'], ['roi', 'cornerstone-roi-value']] as const) {
-      const response = await page.request.get(`http://127.0.0.1:15179/api/v1/cases/openkbp%3Apt_201/viewer/slice?axis=${axis}&index=${axisIndex}&layer=${layer}&roi=Brainstem`)
+      const response = await page.request.get(`${origin}/api/v1/cases/openkbp%3Apt_201/viewer/slice?axis=${axis}&index=${axisIndex}&layer=${layer}&roi=Brainstem`)
       expect(response.ok()).toBe(true)
       const slice = await response.json() as { values: number[] }
       const rendered = await page.getByTestId(selector).textContent()
@@ -42,7 +43,7 @@ test('opt-in Cornerstone3D renders the installed OpenKBP volume across viewports
       else expect(Number(rendered)).toBeCloseTo(slice.values[offset], 1)
     }
   }
-  const base = `${process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:4173'}/api/v1/cases/openkbp%3Apt_201/viewer`
+  const base = `${origin}/api/v1/cases/openkbp%3Apt_201/viewer`
   const [doseResponse, roiResponse, dvhResponse] = await Promise.all([
     page.request.get(`${base}/cornerstone-volume?layer=dose&roi=Brainstem`),
     page.request.get(`${base}/cornerstone-volume?layer=roi&roi=Brainstem`),
