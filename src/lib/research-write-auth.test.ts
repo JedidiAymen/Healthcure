@@ -15,6 +15,7 @@ describe("isResearchWritePath", () => {
     expect(isResearchWritePath("/api/v1/reports/surgivision-frame")).toBe(true);
     expect(isResearchWritePath("/api/v1/models/cvs-adaptnet/validate")).toBe(true);
     expect(isResearchWritePath("/api/v1/cases/openkbp%3Apt_201/dose-artifacts?file_name=a.csv")).toBe(true);
+    expect(isResearchWritePath("/api/v1/research-reviews")).toBe(true);
     expect(isResearchWritePath("/api/v1/auth/local-login")).toBe(false);
     expect(isResearchWritePath("/api/v1/academy/attempts")).toBe(false);
     expect(isResearchWritePath("/api/v1/educator/drafts")).toBe(false);

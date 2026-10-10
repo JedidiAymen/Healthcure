@@ -24,7 +24,7 @@ ACTIONS = {
     'lesson.publish', 'assignment.create', 'attempt.submit', 'attempt.grade_release', 'cvs_self_check.commit',
     'report.save', 'comparison.save', 'dose_prediction.import',
     'signal_annotation.create', 'signal_annotation.delete',
-    'model_output.review', 'expert_review.record',
+    'model_output.review', 'expert_review.record', 'research_review.decision',
     'account.export', 'account.erase',
 }
 FIELDS = ('created_at', 'actor_id', 'actor_role', 'action', 'target_kind', 'target_id', 'owner_id', 'details_json', 'prev_hash')

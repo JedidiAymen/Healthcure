@@ -8,7 +8,7 @@ export function setResearchSignInPrompt(next: ResearchSignInPrompt | null) {
   prompt = next
 }
 
-const researchWritePaths = [/^\/api\/v1\/comparisons(\?|$)/, /^\/api\/v1\/runs(\?|$)/, /^\/api\/v1\/reports(\/|\?|$)/, /^\/api\/v1\/models\/[^/]+\/validate$/, /^\/api\/v1\/cases\/[^/]+\/dose-artifacts(\?|$)/]
+const researchWritePaths = [/^\/api\/v1\/comparisons(\?|$)/, /^\/api\/v1\/runs(\?|$)/, /^\/api\/v1\/reports(\/|\?|$)/, /^\/api\/v1\/models\/[^/]+\/validate$/, /^\/api\/v1\/cases\/[^/]+\/dose-artifacts(\?|$)/, /^\/api\/v1\/research-reviews$/]
 
 export function isResearchWritePath(path: string) {
   return researchWritePaths.some(pattern => pattern.test(path))
