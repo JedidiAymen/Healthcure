@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
-  ArrowDownRight,
+  ArrowDown,
   Check,
   CircleAlert,
   Eye,
@@ -13,7 +13,6 @@ import {
   ShieldCheck,
   X,
 } from "lucide-react";
-import "./lesson-editor.css";
 import {
   DndContext,
   KeyboardSensor,
@@ -116,13 +115,13 @@ function SortableLessonBlock({
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       size="sm"
-      className={`lesson-block${isDragging ? " dragging" : ""}`}
+      className={`lesson-block grid gap-1.5 transition-shadow ${isDragging ? "ring-2 ring-primary" : ""}`}
     >
-      <CardHeader className="lesson-block-header">
-        <div className="block-type">
-          <span>{String(index + 1).padStart(2, "0")}</span>
+      <CardHeader className="gap-1 pb-3">
+        <div className="flex items-center gap-2 text-[11px] text-primary">
+          <span className="tabular-nums text-muted-foreground">{String(index + 1).padStart(2, "0")}</span>
           {block.type}
-          <div>
+          <div className="ml-auto flex gap-1">
             <Button
               type="button"
               variant="ghost"
@@ -142,7 +141,7 @@ function SortableLessonBlock({
               disabled={index === 0}
               onClick={() => onShift(-1)}
             >
-              <ArrowDownRight className="arrow-up" />
+              <ArrowDown className="rotate-180" />
             </Button>
             <Button
               type="button"
@@ -152,25 +151,25 @@ function SortableLessonBlock({
               disabled={index === count - 1}
               onClick={() => onShift(1)}
             >
-              <ArrowDownRight />
+              <ArrowDown />
             </Button>
             <Button type="button" variant="ghost" size="icon-xs" aria-label={`Remove ${block.type}`} onClick={onRemove}>
               <X />
             </Button>
           </div>
         </div>
-        <CardTitle className="lesson-block-title">
+        <CardTitle className="w-full">
           <Input
-            className="lesson-block-title-input"
+            className="w-full"
             value={block.title}
             aria-label={`${block.type} title`}
             onChange={(e) => onChange("title", e.target.value)}
           />
         </CardTitle>
       </CardHeader>
-      <CardContent className="lesson-block-content">
+      <CardContent className="w-full">
         <Textarea
-          className="lesson-block-content-input"
+          className="w-full"
           value={block.content}
           aria-label={`${block.type} content`}
           onChange={(e) => onChange("content", e.target.value)}
@@ -412,22 +411,22 @@ export function LessonEditorPage() {
       update({ ...draft, blocks: arrayMove(draft.blocks, from, to) });
   };
   return (
-    <div className="lesson-editor-page" data-mobile-pane={mobilePane}>
+    <div className="lesson-editor-page relative min-w-0 pb-4 text-foreground">
       <div className="mb-5 flex items-center gap-2 text-xs text-muted-foreground">
         <Link className="text-primary hover:underline" to="/educator">Educator studio</Link>
         <span aria-hidden="true">/</span>
         <b className="font-medium text-foreground">Lesson draft</b>
       </div>
-      <div className="editor-title">
-        <div>
-          <div className="eyebrow">Server-owned lesson draft</div>
-          <h1>Compose an evidence lesson</h1>
-          <p>
+      <div className="mb-4 flex items-center justify-between gap-4 border-b border-border pb-4 max-[900px]:items-start max-[900px]:flex-col">
+        <div className="min-w-0">
+          <div className="eyebrow text-xs font-semibold tracking-wide text-primary">Server-owned lesson draft</div>
+          <h1 className="mb-1 mt-1 text-[clamp(1.65rem,2.1vw,1.95rem)] font-semibold leading-tight tracking-tight text-foreground max-[1150px]:text-[1.7rem]">Compose an evidence lesson</h1>
+          <p className="m-0 max-w-3xl text-sm leading-relaxed text-muted-foreground">
             Drafts and rubrics save to your educator account. Publishing creates a versioned student projection with answers kept private.
           </p>
         </div>
-        <div className="editor-actions">
-          <span className={saved ? "saved-label" : "unsaved-label"}>
+        <div className="flex w-full flex-wrap items-center justify-start gap-2 min-[901px]:w-auto min-[901px]:justify-end">
+          <span className={`mr-1 inline-flex items-center gap-1 whitespace-nowrap text-xs text-muted-foreground ${saved ? "" : "text-amber-800 dark:text-amber-300"}`}>
             {saved ? <Check size={14} /> : <CircleAlert size={14} />}{" "}
             {saved ? (serverDraftId ? "Saved to educator account" : "Draft not saved yet") : "Unsaved changes"}
           </span>
@@ -452,16 +451,16 @@ export function LessonEditorPage() {
         <div
           role="status"
           aria-label="Loading lesson draft"
-          className="draft-loading"
+          className="grid gap-4"
         >
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-40 w-full" />
         </div>
       ) : (
         <>
-          <div className="builder-grid educator-builder-grid">
-            <div className="builder-main educator-lesson-canvas">
-              <Field className="builder-field">
+          <div className="mt-4 grid items-start gap-4 min-[1151px]:grid-cols-[minmax(12.5rem,15rem)_minmax(0,1fr)_minmax(17rem,19rem)] max-[1150px]:grid-cols-[minmax(12rem,14rem)_minmax(0,1fr)] max-[900px]:block max-[900px]:pb-18">
+            <div className={`educator-lesson-canvas min-w-0 [grid-column:2] [grid-row:1] ${mobilePane === "canvas" ? "max-[900px]:block" : "max-[900px]:hidden"}`}>
+              <Field className="mb-4 grid gap-2">
                 <FieldLabel htmlFor="lesson-title">Lesson title</FieldLabel>
                 <Input
                   id="lesson-title"
@@ -469,12 +468,12 @@ export function LessonEditorPage() {
                   onChange={(e) => update({ ...draft, title: e.target.value })}
                 />
               </Field>
-              <div className="builder-section-head">
+              <div className="mb-2 flex items-end justify-between border-b border-border py-2 max-[900px]:items-center">
                 <div>
                   <div className="eyebrow">Lesson sequence</div>
-                  <h2>Evidence blocks</h2>
+                  <h2 className="m-0 text-base font-semibold">Evidence blocks</h2>
                 </div>
-                <span>{draft.blocks.length} blocks</span>
+                <span className="text-xs text-muted-foreground">{draft.blocks.length} blocks</span>
               </div>
               <DndContext
                 sensors={sensors}
@@ -485,7 +484,7 @@ export function LessonEditorPage() {
                   items={draft.blocks.map((block) => block.id)}
                   strategy={verticalListSortingStrategy}
                 >
-                  <div className="block-list">
+                  <div className="mt-2 grid gap-2">
                     {draft.blocks.map((block, index) => (
                       <SortableLessonBlock
                         key={block.id}
@@ -507,7 +506,7 @@ export function LessonEditorPage() {
                   </div>
                 </SortableContext>
               </DndContext>
-              <section className="builder-field rubric-field">
+              <section className="mb-4 mt-4 grid gap-2">
                 <FieldLabel>Scored rubric · 100 points total</FieldLabel>
                 <div className="flex flex-col gap-3">
                   {draft.rubricCriteria.map((criterion, index) => (
@@ -533,23 +532,23 @@ export function LessonEditorPage() {
                     placeholder="Add any private context that helps another educator apply these criteria consistently."
                   />
                 </Field>
-                <small>
+                <small className="text-xs leading-relaxed text-muted-foreground">
                   The rubric is saved in the educator-only draft record and is
                   never included in student challenge summaries.
                 </small>
               </section>
             </div>
-            <Card role="complementary" aria-label="Research source and lesson blocks" className="builder-aside educator-block-palette">
+            <Card role="complementary" aria-label="Research source and lesson blocks" className={`educator-block-palette sticky top-4 [grid-column:1] [grid-row:1] max-[1150px]:[grid-row:1/span_2] max-[900px]:static max-[900px]:[grid-column:auto] max-[900px]:[grid-row:auto] ${mobilePane === "blocks" ? "max-[900px]:block" : "max-[900px]:hidden"}`}>
               <CardHeader>
-                <div className="educator-zone-heading"><Layers3 aria-hidden="true"/><div><CardTitle>Build the lesson</CardTitle><p>Choose a verified source, then add the evidence tasks learners will complete.</p></div></div>
+                <div className="flex items-start gap-2.5"><Layers3 aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary"/><div><CardTitle>Build the lesson</CardTitle><p className="mb-0 mt-1 text-xs leading-relaxed text-muted-foreground">Choose a verified source, then add the evidence tasks learners will complete.</p></div></div>
               </CardHeader>
               <CardContent>
-                <div className="builder-field">
+                <div className="mb-0 grid gap-2">
                   <ResearchCasePicker id="case-select" label="Research source" cases={cases} value={draft.caseId} onValueChange={(caseId) => update({ ...draft, caseId })} loading={casesLoading} error={casesError} />
-                  {selectedCase && <div className="lesson-case-summary"><b>{selectedCase.label}</b><span>{selectedCase.module} · {selectedCase.dataset_id} · {selectedCase.source_case_id}</span><span>Evidence origin: {selectedCase.reference_kind}.</span><span>Source terms: {selectedEvidence?.license_label ?? (evidenceError ? evidenceError : "Loading source terms…")}</span><span>{selectedEvidence ? `Draft use: ${selectedEvidence.draft_use}. Publication review: ${selectedEvidence.publication_review}. ${selectedEvidence.publication_note}` : "Publication permissions are not established until source review."}</span><Link to={`/studio/${selectedCase.module}/cases/${encodeURIComponent(selectedCase.id)}`}>Open this source in its scientific viewer</Link></div>}
+                  {selectedCase && <div className="lesson-case-summary grid wrap-anywhere gap-1 border-l-2 border-primary bg-muted/50 p-2.5 text-xs leading-relaxed text-muted-foreground [&_b]:text-foreground"><b>{selectedCase.label}</b><span>{selectedCase.module} · {selectedCase.dataset_id} · {selectedCase.source_case_id}</span><span>Evidence origin: {selectedCase.reference_kind}.</span><span>Source terms: {selectedEvidence?.license_label ?? (evidenceError ? evidenceError : "Loading source terms…")}</span><span>{selectedEvidence ? `Draft use: ${selectedEvidence.draft_use}. Publication review: ${selectedEvidence.publication_review}. ${selectedEvidence.publication_note}` : "Publication permissions are not established until source review."}</span><Link className="font-medium text-primary hover:underline" to={`/studio/${selectedCase.module}/cases/${encodeURIComponent(selectedCase.id)}`}>Open this source in its scientific viewer</Link></div>}
                 </div>
-                <div className="educator-palette-divider"><span>Lesson blocks</span><small>Arrange by drag, keyboard, or move controls.</small></div>
-                <div className="add-block-list">
+                <div className="my-3 grid gap-1 border-t border-border pt-3"><span className="text-sm font-semibold">Lesson blocks</span><small className="text-xs leading-relaxed text-muted-foreground">Arrange by drag, keyboard, or move controls.</small></div>
+                <div className="grid gap-2 [&_button]:min-h-10">
                   {blockTypes.map((type) => (
                     <Button type="button" variant="outline" size="sm" className="w-full justify-start" key={type} onClick={() => add(type)}>
                       <Plus data-icon="inline-start" />
@@ -557,8 +556,8 @@ export function LessonEditorPage() {
                     </Button>
                   ))}
                 </div>
-                <div className="builder-security">
-                  <ShieldCheck size={17} />
+                <div className="mt-4 grid grid-cols-[19px_minmax(0,1fr)] gap-x-2 gap-y-1 border-t border-border pt-3 [&_svg]:row-span-2 [&_svg]:text-primary [&_b]:text-sm [&_p]:col-start-2 [&_p]:m-0 [&_p]:text-xs [&_p]:leading-relaxed [&_p]:text-muted-foreground">
+                  <ShieldCheck size={17} aria-hidden="true" />
                   <b>Student answer protection</b>
                   <p>
                     Publication checks source rights, removes reveal blocks from learner view, and stores the rubric separately.
@@ -566,29 +565,29 @@ export function LessonEditorPage() {
                 </div>
               </CardContent>
             </Card>
-            <Card role="complementary" aria-label="Learner-safe lesson preview" className="lesson-live-preview">
+            <Card role="complementary" aria-label="Learner-safe lesson preview" className={`lesson-live-preview min-w-0 sticky top-4 [grid-column:3] [grid-row:1] max-[1150px]:static max-[1150px]:[grid-column:2] max-[1150px]:[grid-row:2] max-[900px]:[grid-column:auto] max-[900px]:[grid-row:auto] ${mobilePane === "preview" ? "max-[900px]:block" : "max-[900px]:hidden"}`}>
               <CardHeader>
-                <div className="educator-zone-heading"><Eye aria-hidden="true"/><div><CardTitle>Learner preview</CardTitle><p>Private rubric and reveal content stay out of this view.</p></div></div>
+                <div className="flex items-start gap-2.5"><Eye aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary"/><div><CardTitle>Learner preview</CardTitle><p className="mb-0 mt-1 text-xs leading-relaxed text-muted-foreground">Private rubric and reveal content stay out of this view.</p></div></div>
               </CardHeader>
-              <CardContent className="lesson-live-preview-content">
-                <div className="learner-preview-paper">
-                  <span className="learner-preview-kicker">Lesson preview</span>
-                  <h2>{draft.title.trim() || "Untitled evidence lesson"}</h2>
-                  <p className="learner-preview-source">{selectedCase ? `${selectedCase.label} · ${selectedCase.dataset_id}` : "Choose a verified source to continue."}</p>
-                  {selectedEvidence && <p className="learner-preview-credit">{selectedEvidence.license_label}</p>}
-                  <div className="learner-preview-sequence">
-                    {draft.blocks.filter(block => block.type !== "Reveal").length ? draft.blocks.filter(block => block.type !== "Reveal").map((block, index) => <article className="learner-preview-block" key={block.id}><span>{String(index + 1).padStart(2, "0")} · {block.type}</span><h3>{block.title || `${block.type} block`}</h3><p>{block.content || "No learner prompt entered."}</p></article>) : <p className="learner-preview-empty">Add a learner-facing block to preview the lesson.</p>}
+              <CardContent className="grid gap-3">
+                <div className="min-h-56 rounded-xl border border-border bg-background p-4">
+                  <span className="text-[11px] font-semibold tracking-wide text-primary">Lesson preview</span>
+                  <h2 className="mb-2 mt-2 text-lg font-semibold leading-snug tracking-tight">{draft.title.trim() || "Untitled evidence lesson"}</h2>
+                  <p className="mb-1 mt-2 text-xs font-medium leading-relaxed">{selectedCase ? `${selectedCase.label} · ${selectedCase.dataset_id}` : "Choose a verified source to continue."}</p>
+                  {selectedEvidence && <p className="mb-1 mt-1 text-[11px] leading-relaxed text-muted-foreground">{selectedEvidence.license_label}</p>}
+                  <div className="mt-4 grid gap-3 border-t border-border pt-3">
+                    {draft.blocks.filter(block => block.type !== "Reveal").length ? draft.blocks.filter(block => block.type !== "Reveal").map((block, index) => <article className="border-l-2 border-primary pl-2.5" key={block.id}><span className="text-[10px] text-muted-foreground">{String(index + 1).padStart(2, "0")} · {block.type}</span><h3 className="mb-1 mt-1 text-[13px] font-semibold leading-snug">{block.title || `${block.type} block`}</h3><p className="m-0 whitespace-pre-wrap text-xs leading-relaxed text-muted-foreground">{block.content || "No learner prompt entered."}</p></article>) : <p className="m-0 text-xs leading-relaxed text-muted-foreground">Add a learner-facing block to preview the lesson.</p>}
                   </div>
-                  {draft.blocks.some(block => block.type === "Reveal") && <p className="learner-preview-redacted"><LockKeyhole aria-hidden="true"/> {draft.blocks.filter(block => block.type === "Reveal").length} educator reveal {draft.blocks.filter(block => block.type === "Reveal").length === 1 ? "block is" : "blocks are"} hidden from learners.</p>}
+                  {draft.blocks.some(block => block.type === "Reveal") && <p className="mb-0 mt-4 flex items-start gap-1.5 text-xs leading-relaxed text-muted-foreground"><LockKeyhole aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary"/> {draft.blocks.filter(block => block.type === "Reveal").length} educator reveal {draft.blocks.filter(block => block.type === "Reveal").length === 1 ? "block is" : "blocks are"} hidden from learners.</p>}
                 </div>
-                <div className="learner-preview-privacy"><ShieldCheck aria-hidden="true"/><span><b>Rubric stays private</b><small>The server publishes its validated learner projection. The private rubric and reveal blocks stay protected.</small></span></div>
+                <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3"><ShieldCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary"/><span className="grid gap-1"><b className="text-xs font-semibold">Rubric stays private</b><small className="text-[11px] leading-relaxed text-muted-foreground">The server publishes its validated learner projection. The private rubric and reveal blocks stay protected.</small></span></div>
               </CardContent>
             </Card>
           </div>
-          <nav className="educator-mobile-nav" aria-label="Lesson builder sections">
-            <button type="button" aria-pressed={mobilePane === "blocks"} onClick={() => setMobilePane("blocks")}><Layers3 aria-hidden="true"/>Source & blocks</button>
-            <button type="button" aria-pressed={mobilePane === "canvas"} onClick={() => setMobilePane("canvas")}><FileText aria-hidden="true"/>Lesson canvas</button>
-            <button type="button" aria-pressed={mobilePane === "preview"} onClick={() => setMobilePane("preview")}><Eye aria-hidden="true"/>Learner preview</button>
+          <nav className="educator-mobile-nav fixed inset-x-2.5 bottom-2.5 z-20 grid grid-cols-3 gap-1 rounded-xl border border-border bg-card p-1 shadow-lg min-[901px]:hidden" aria-label="Lesson builder sections">
+            <button type="button" className="flex min-h-13 flex-col items-center justify-center gap-1 rounded-lg px-1 py-1 text-[11px] font-medium text-muted-foreground aria-pressed:bg-primary/10 aria-pressed:text-primary" aria-pressed={mobilePane === "blocks"} onClick={() => setMobilePane("blocks")}><Layers3 aria-hidden="true" className="size-4"/>Source & blocks</button>
+            <button type="button" className="flex min-h-13 flex-col items-center justify-center gap-1 rounded-lg px-1 py-1 text-[11px] font-medium text-muted-foreground aria-pressed:bg-primary/10 aria-pressed:text-primary" aria-pressed={mobilePane === "canvas"} onClick={() => setMobilePane("canvas")}><FileText aria-hidden="true" className="size-4"/>Lesson canvas</button>
+            <button type="button" className="flex min-h-13 flex-col items-center justify-center gap-1 rounded-lg px-1 py-1 text-[11px] font-medium text-muted-foreground aria-pressed:bg-primary/10 aria-pressed:text-primary" aria-pressed={mobilePane === "preview"} onClick={() => setMobilePane("preview")}><Eye aria-hidden="true" className="size-4"/>Learner preview</button>
           </nav>
         </>
       )}

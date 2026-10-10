@@ -127,6 +127,9 @@ test('educator lesson editor loads as a real route and switches its phone panes'
   await page.getByRole('option', { name: /Endoscapes test.*frame 6575/ }).click()
   await expect(page.locator('.lesson-case-summary')).toContainText('video-162:frame-6575')
   await expect(page.locator('.lesson-case-summary')).toContainText('Publication permissions are not established until source review.')
+  await page.screenshot({ path: '.local-review/FIX-01/educator-builder-fixture-1440x900.png', fullPage: true })
+  await page.setViewportSize({ width: 768, height: 1024 })
+  await page.screenshot({ path: '.local-review/FIX-01/educator-builder-fixture-768x1024.png', fullPage: true })
   await page.getByRole('button', { name: 'Reveal', exact: true }).click()
 
   await page.setViewportSize({ width: 390, height: 844 })
@@ -135,6 +138,7 @@ test('educator lesson editor loads as a real route and switches its phone panes'
   await expect(page.locator('.educator-lesson-canvas')).toBeHidden()
   await expect(page.locator('.lesson-live-preview')).toContainText('1 educator reveal block is hidden from learners.')
   await expect(page.locator('.lesson-live-preview')).not.toContainText('Evidence use')
+  await page.screenshot({ path: '.local-review/FIX-01/educator-builder-fixture-390x844.png', fullPage: true })
   expect(errors).toEqual([])
 })
 
