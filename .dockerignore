@@ -1,0 +1,16 @@
+.git
+**/node_modules
+**/.venv
+**/.venvs
+**/__pycache__
+**/.pytest_cache
+data
+dist
+test-results
+playwright-report
+references/upstream
+docs/evidence
+docker/secrets
+docker/certs
+.local-review
+*.sqlite3

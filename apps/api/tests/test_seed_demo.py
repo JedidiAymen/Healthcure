@@ -53,3 +53,16 @@ def test_seed_refuses_databases_outside_local_folders(tmp_path):
     assert result.returncode != 0
     assert 'Refusing to seed' in result.stderr
     assert not outside.exists()
+
+
+def test_seed_accepts_an_explicit_local_database_folder(tmp_path):
+    folder = ROOT.parent / '.medforge-seed-test-volume'
+    env = {**_env(tmp_path, tmp_path / 'unused.sqlite3'), 'MEDFORGE_LOCAL_DB_DIR': str(folder)}
+    try:
+        result = _run(env, '--db', str(folder / 'state.sqlite3'))
+        assert result.returncode == 0, result.stderr
+        assert (folder / 'state.sqlite3').exists()
+    finally:
+        for item in folder.glob('*'):
+            item.unlink()
+        folder.rmdir() if folder.exists() else None

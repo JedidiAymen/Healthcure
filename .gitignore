@@ -22,3 +22,7 @@ references/upstream/SurgVLP/
 .local-review/
 playwright-report/
 test-results/
+
+# Local Docker secrets and certificates
+docker/secrets/
+docker/certs/
