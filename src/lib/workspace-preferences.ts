@@ -2,6 +2,7 @@ export const DOSE_ROIS = [
   'Brainstem', 'SpinalCord', 'RightParotid', 'LeftParotid', 'Esophagus',
   'Larynx', 'Mandible', 'PTV56', 'PTV63', 'PTV70',
 ] as const
+export const SYNTHETIC_DOSE_ROIS = ['Target', 'OAR-Cylinder-A', 'OAR-Cylinder-B'] as const
 
 export const FISTULA_CHANNELS = ['ECG', 'raw PZT1', 'raw PZT2', 'raw PZT3', 'raw PZT4'] as const
 
@@ -9,7 +10,7 @@ export type DoseWorkspacePreferences = {
   case_id: string
   voxel: [number, number, number]
   axis: 0 | 1 | 2
-  roi: typeof DOSE_ROIS[number]
+  roi: string
   dose_overlay: boolean
   roi_overlay: boolean
   dose_opacity: number
@@ -40,7 +41,9 @@ export function parseDoseWorkspacePreferences(caseId: string, value: unknown): D
   if (!state || state.case_id !== caseId || !Array.isArray(state.voxel) || state.voxel.length !== 3
       || !state.voxel.every(index => Number.isInteger(index) && Number(index) >= 0 && Number(index) <= 127)
       || !(state.axis === undefined || state.axis === 0 || state.axis === 1 || state.axis === 2)
-      || typeof state.roi !== 'string' || !DOSE_ROIS.includes(state.roi as typeof DOSE_ROIS[number])
+      || typeof state.roi !== 'string' || !(caseId === 'synthetic-dose:phantom-v1'
+        ? SYNTHETIC_DOSE_ROIS.includes(state.roi as typeof SYNTHETIC_DOSE_ROIS[number])
+        : DOSE_ROIS.includes(state.roi as typeof DOSE_ROIS[number]))
       || typeof state.dose_overlay !== 'boolean' || typeof state.roi_overlay !== 'boolean'
       || typeof state.dose_opacity !== 'number' || !Number.isFinite(state.dose_opacity)
       || state.dose_opacity < 0 || state.dose_opacity > 1) return null
@@ -48,7 +51,7 @@ export function parseDoseWorkspacePreferences(caseId: string, value: unknown): D
     case_id: caseId,
     voxel: state.voxel as [number, number, number],
     axis: (state.axis ?? 2) as 0 | 1 | 2,
-    roi: state.roi as typeof DOSE_ROIS[number],
+    roi: state.roi,
     dose_overlay: state.dose_overlay,
     roi_overlay: state.roi_overlay,
     dose_opacity: state.dose_opacity,

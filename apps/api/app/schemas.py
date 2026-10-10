@@ -39,8 +39,8 @@ class Case(StrictModel):
     module: Module
     dataset_id: str
     source_case_id: str
-    reference_kind: Literal['benchmark','research','synthetic-test']
-    status: Literal['ready','blocked']
+    reference_kind: Literal['benchmark','research','synthetic','synthetic-test']
+    status: Literal['ready','blocked','synthetic-viewer']
     label: str
 
 class EducatorEvidenceItem(StrictModel):
@@ -411,10 +411,10 @@ class VoxelVolumeArtifact(StrictModel):
     asset_key: str
     shape: tuple[int,int,int]
     spacing_mm: tuple[float,float,float]
-    coordinate_frame: Literal['openkbp-processed-voxel-grid'] = 'openkbp-processed-voxel-grid'
+    coordinate_frame: Literal['openkbp-processed-voxel-grid','synthetic-phantom-grid'] = 'openkbp-processed-voxel-grid'
     orientation_known: bool = False
     native_dicom_coordinates: bool = False
-    dose_unit: Literal['Gy'] = 'Gy'
+    dose_unit: Literal['Gy','synthetic-illustrative-scale'] = 'Gy'
 
 class SurgicalFrameArtifact(StrictModel):
     kind: Literal['image-sequence'] = 'image-sequence'
@@ -733,10 +733,10 @@ class VoxelSlice(StrictModel):
     index: int = Field(ge=0, lt=128)
     shape: tuple[int, int]
     values: list[float]
-    unit: Literal['benchmark-value','Gy','binary-mask']
-    source_kind: Literal['benchmark','research','synthetic-test']
-    origin: Literal['benchmark-reference','computed-from-benchmark-array','synthetic-test-fixture']
-    coordinate_frame: Literal['openkbp-processed-voxel-grid']
+    unit: Literal['benchmark-value','Gy','binary-mask','synthetic-relative-density','synthetic-illustrative-scale']
+    source_kind: Literal['benchmark','research','synthetic','synthetic-test']
+    origin: Literal['benchmark-reference','computed-from-benchmark-array','synthetic-test-fixture','synthetic-phantom']
+    coordinate_frame: Literal['openkbp-processed-voxel-grid','synthetic-phantom-grid']
 
 class RoiMaskVolume(StrictModel):
     """Sparse occupancy for a source-backed OpenKBP ROI surface reconstruction."""
@@ -749,9 +749,9 @@ class RoiMaskVolume(StrictModel):
     voxel_count: int = Field(ge=1)
     # Source CSV flattened in C order: x-major, then y, then z (z changes fastest).
     voxel_indices_c_order: list[int]
-    source_kind: Literal['benchmark','research','synthetic-test']
-    origin: Literal['computed-from-benchmark-array','computed-from-synthetic-test-fixture']
-    coordinate_frame: Literal['openkbp-processed-voxel-grid']
+    source_kind: Literal['benchmark','research','synthetic','synthetic-test']
+    origin: Literal['computed-from-benchmark-array','computed-from-synthetic-test-fixture','synthetic-phantom']
+    coordinate_frame: Literal['openkbp-processed-voxel-grid','synthetic-phantom-grid']
     index_convention: Literal['x-major-y-middle-z-fastest']
 
 class DoseArtifact(StrictModel):
@@ -844,8 +844,10 @@ class DvhSummary(StrictModel):
     official_metrics: DvhMetrics
     curve: list[DvhPoint]
     method: str
-    source_kind: Literal['benchmark','research','synthetic-test']
-    origin: Literal['computed-from-benchmark-arrays','computed-from-synthetic-test-fixture']
+    dose_scale_kind: Literal['physical-gy-reference','synthetic-illustrative-scale'] = 'physical-gy-reference'
+    metrics_kind: Literal['openkbp-official-evaluator','synthetic-descriptive'] = 'openkbp-official-evaluator'
+    source_kind: Literal['benchmark','research','synthetic','synthetic-test']
+    origin: Literal['computed-from-benchmark-arrays','computed-from-synthetic-test-fixture','synthetic-phantom']
 
 class ModelRecord(StrictModel):
     id: str

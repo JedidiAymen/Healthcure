@@ -408,13 +408,15 @@ function SurgicalAtlasView({ frameId }: { frameId: string }) {
 }
 
 function DoseAtlasView({ caseId }: { caseId: string }) {
+  const synthetic = caseId === "synthetic-dose:phantom-v1";
+  const roiName = synthetic ? "Target" : "PTV70";
   const { data } = useQuery({
     queryKey: [...queryKeys.cases, "studio-preview", caseId],
     queryFn: async () => {
       const [ct, dose, roi] = await Promise.all([
-        api.slice(caseId, 2, 54, "ct", "PTV70"),
-        api.slice(caseId, 2, 54, "dose", "PTV70"),
-        api.slice(caseId, 2, 54, "roi", "PTV70"),
+        api.slice(caseId, 2, 54, "ct", roiName),
+        api.slice(caseId, 2, 54, "dose", roiName),
+        api.slice(caseId, 2, 54, "roi", roiName),
       ]);
       return { ct, dose, roi };
     },
@@ -442,8 +444,8 @@ function DoseAtlasView({ caseId }: { caseId: string }) {
   const caseLabel = caseId.split(":").at(-1) ?? caseId;
   return (
     <div className="relative grid h-full place-items-center overflow-hidden bg-[#0b1420]">
-      {data ? <svg viewBox="0 0 128 128" role="img" aria-label={`OpenKBP ${caseLabel} axial slice z54; source CT, reference dose and PTV70 boundary`} className="size-32 sm:size-36 [image-rendering:pixelated]">{cells.map((cell) => <rect key={`${cell.x}-${cell.y}`} x={cell.x} y={cell.y} width="4" height="4" fill={cell.fill} />)}</svg> : <div className="grid size-20 place-items-center rounded-full border border-sky-300/20 text-sky-100"><Activity aria-hidden="true" className="size-7" /></div>}
-      <span className="absolute bottom-2 left-2 rounded-sm bg-black/65 px-2 py-1 font-mono text-[10px] text-white">{data ? `${caseLabel} · axial z54 · PTV70 boundary` : `Reading ${caseLabel} source arrays…`}</span>
+      {data ? <svg viewBox="0 0 128 128" role="img" aria-label={synthetic ? `Synthetic phantom ${caseLabel}, axial slice z54; generated relative water-density volume, deterministic analytic dose field, and spherical Target mask; not anatomy or a treatment plan` : `OpenKBP ${caseLabel} axial slice z54; source CT, reference dose and PTV70 boundary`} className="size-32 sm:size-36 [image-rendering:pixelated]">{cells.map((cell) => <rect key={`${cell.x}-${cell.y}`} x={cell.x} y={cell.y} width="4" height="4" fill={cell.fill} />)}</svg> : <div className="grid size-20 place-items-center rounded-full border border-sky-300/20 text-sky-100"><Activity aria-hidden="true" className="size-7" /></div>}
+      <span className="absolute bottom-2 left-2 rounded-sm bg-black/65 px-2 py-1 font-mono text-[10px] text-white">{data ? synthetic ? `${caseLabel} · synthetic phantom · Target` : `${caseLabel} · axial z54 · PTV70 boundary` : `Reading ${caseLabel} source arrays…`}</span>
     </div>
   );
 }
@@ -495,7 +497,7 @@ function ResearchEvidenceMontage({ cases }: { cases: CaseRecord[] }) {
       </figure>
       <figure className="relative m-0 min-h-0 overflow-hidden bg-[#0b1420]">
         {dose ? <DoseAtlasView caseId={dose.id} /> : unavailable("No verified OpenKBP case is installed")}
-        <figcaption className="sr-only">OpenKBP {dose?.source_case_id ?? "case unavailable"}, reference dose and PTV70 boundary</figcaption>
+        <figcaption className="sr-only">{dose?.reference_kind === "synthetic" ? "Synthetic phantom, not anatomy or a treatment plan" : `OpenKBP ${dose?.source_case_id ?? "case unavailable"}, reference dose and PTV70 boundary`}</figcaption>
       </figure>
       <figure className="relative m-0 min-h-0 overflow-hidden bg-[#0d1a1c]">
         {signal ? <SignalAtlasView compact recordId={signal.id.split(":").at(-1) ?? signal.id} /> : unavailable("No verified FiSaV recording is installed")}
@@ -613,8 +615,8 @@ function StudioDepartmentAtlas({ cases }: { cases: CaseRecord[] }) {
   const sourceInventory = (Object.keys(specialtyData) as ModuleId[]).map((id) => ({
     id,
     module: specialtyData[id],
-    record: cases.find((item) => item.module === id),
-    count: cases.filter((item) => item.module === id).length,
+    record: cases.find((item) => item.module === id && item.reference_kind !== "synthetic"),
+    count: cases.filter((item) => item.module === id && item.reference_kind !== "synthetic").length,
   }));
   const labName: Record<ModuleId, string> = {
     surgivision: "Surgery lab",
@@ -645,7 +647,7 @@ function StudioDepartmentAtlas({ cases }: { cases: CaseRecord[] }) {
         {sourceInventory.map(({ id, module, record, count }) => {
           const caseId = record?.id ?? "";
           const unavailable = !record;
-          const measure = id === "surgivision" ? "annotated frames" : id === "dosetwin" ? "benchmark case" : "signal recordings";
+          const measure = id === "surgivision" ? "annotated frames" : id === "dosetwin" ? "benchmark cases" : "signal recordings";
           return (
             <Card key={id} className={`min-w-0 overflow-hidden rounded-lg border-l-2 ${accent[id]}`}>
               <div className="relative h-44 overflow-hidden border-b border-border/70 sm:h-48">
@@ -664,9 +666,12 @@ function StudioDepartmentAtlas({ cases }: { cases: CaseRecord[] }) {
               </CardHeader>
               <CardFooter className="mt-auto flex items-center justify-between gap-3 border-t border-border/70 bg-muted/15 px-4 py-3">
                 <span className="grid gap-0.5"><span className="font-mono text-lg font-medium tabular-nums text-foreground">{count.toLocaleString()}</span><span className="text-xs text-muted-foreground">{measure}</span></span>
-                <Button render={<Link to={unavailable ? "/studio/cases" : `/studio/${id}/cases/${encodeURIComponent(caseId)}`} />} nativeButton={false} variant="outline" size="sm" disabled={unavailable}>
-                  Open lab <ArrowRight data-icon="inline-end" />
-                </Button>
+                <div className="grid justify-items-end gap-1">
+                  <Button render={<Link to={unavailable ? "/studio/cases" : `/studio/${id}/cases/${encodeURIComponent(caseId)}`} />} nativeButton={false} variant="outline" size="sm" disabled={unavailable}>
+                    Open lab <ArrowRight data-icon="inline-end" />
+                  </Button>
+                  {id === "dosetwin" && <Link className="text-xs font-medium text-primary underline-offset-4 hover:underline" to="/studio/dosetwin/cases/synthetic-dose%3Aphantom-v1">Open synthetic phantom</Link>}
+                </div>
               </CardFooter>
             </Card>
           );
@@ -834,9 +839,9 @@ export function Cases() {
     const query = params.toString();
     return query ? `?${query}` : "?";
   };
-  const sourceKind = (record: CaseRecord) => record.module === "surgivision"
-    ? "Frame"
-    : record.module === "dosetwin" ? "Case" : "Recording";
+  const sourceKind = (record: CaseRecord) => record.reference_kind === "synthetic"
+    ? "Synthetic phantom"
+    : record.module === "surgivision" ? "Frame" : record.module === "dosetwin" ? "Case" : "Recording";
   const moduleLabel = (record: CaseRecord) => specialtyData[record.module].name;
   const lastAction = (record: CaseRecord) => recentRuns.data.find((run) => run.case_id === record.id);
   const actionLabel = (run: RunRecord | undefined) => !run
@@ -943,7 +948,7 @@ export function Cases() {
                         </Link>
                       </TableCell>
                       <TableCell className="overflow-hidden"><Badge variant="outline" className="max-w-full rounded-sm font-normal">{sourceKind(c)}</Badge></TableCell>
-                      <TableCell className="overflow-hidden"><Badge variant={c.status === "ready" ? "secondary" : "outline"} className="max-w-full font-normal">{c.status === "ready" ? "Ready" : "Blocked"}</Badge></TableCell>
+                      <TableCell className="overflow-hidden"><Badge variant={c.status === "blocked" ? "outline" : "secondary"} className="max-w-full font-normal">{c.status === "synthetic-viewer" ? "Synthetic · inspection only" : c.status === "ready" ? "Ready" : "Blocked"}</Badge></TableCell>
                       <TableCell className="hidden max-w-0 overflow-hidden text-xs sm:table-cell">
                         <span className="block truncate text-muted-foreground" title={actionLabel(lastAction(c))}>{actionLabel(lastAction(c))}</span>
                       </TableCell>
@@ -962,7 +967,7 @@ export function Cases() {
                 <CardHeader className="gap-2 pb-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <Badge variant="outline" className="rounded-sm font-normal">{moduleLabel(selectedCase)}</Badge>
-                    <Badge variant={selectedCase.status === "ready" ? "secondary" : "outline"} className="font-normal">{selectedCase.status === "ready" ? "Ready to inspect" : "Viewer only"}</Badge>
+                    <Badge variant={selectedCase.status === "blocked" ? "outline" : "secondary"} className="font-normal">{selectedCase.status === "synthetic-viewer" ? "Synthetic · inspection only" : selectedCase.status === "ready" ? "Ready to inspect" : "Viewer only"}</Badge>
                   </div>
                   <CardTitle className="text-lg leading-snug">{selectedCase.label}</CardTitle>
                   <CardDescription>{selectedCase.dataset_id} · {selectedCase.reference_kind}</CardDescription>
@@ -973,14 +978,14 @@ export function Cases() {
                     <div className="min-w-0"><dt className="text-xs text-muted-foreground">Registry ID</dt><dd className="truncate font-mono text-xs">{selectedCase.id}</dd></div>
                     <div className="min-w-0"><dt className="text-xs text-muted-foreground">Last analysis action</dt><dd className="truncate text-xs text-muted-foreground">{actionLabel(lastAction(selectedCase))}</dd></div>
                   </dl>
-                  {selectedCase.status === "blocked" && <p className="text-xs leading-relaxed text-muted-foreground">This source is registered, but its analysis operation is not available in the current setup.</p>}
+                  {selectedCase.status === "blocked" && <p className="text-xs leading-relaxed text-muted-foreground">This source is registered, but its analysis operation is not available in the current setup.</p>}{selectedCase.status === "synthetic-viewer" && <p className="text-xs leading-relaxed text-muted-foreground">Generated deterministically for software demonstration. Inspection only; model runs, prediction imports, comparisons, and reports are not available.</p>}
                   <Button
                     render={<Link to={`/studio/${selectedCase.module}/cases/${encodeURIComponent(selectedCase.id)}`} />}
                     nativeButton={false}
                     className="w-full justify-between"
                     disabled={selectedCase.status === "blocked"}
                   >
-                    Open analysis<ArrowRight data-icon="inline-end" />
+                    {selectedCase.reference_kind === "synthetic" ? "Open synthetic viewer" : "Open analysis"}<ArrowRight data-icon="inline-end" />
                   </Button>
                 </CardContent>
               </Card>
@@ -1068,7 +1073,7 @@ export function DomainWorkspace({ module }: { module: ModuleId }) {
     : doseCases.find((item) => item.id === caseId);
   const doseCaseOptions = doseCases.map((item) => ({
     value: item.id,
-    label: `${item.label} · ${item.status === "blocked" ? "viewer only" : "comparison available"}`,
+    label: `${item.label} · ${item.reference_kind === "synthetic" ? "synthetic · inspection only" : item.status === "blocked" ? "viewer only" : "comparison available"}`,
   }));
   const artifactCaseId = module === "dosetwin" && selectedDoseCase?.status === "ready"
     ? selectedDoseCase.id
@@ -1149,7 +1154,7 @@ export function DomainWorkspace({ module }: { module: ModuleId }) {
                 : `Source case ${record.source_case_id} · ${record.dataset_id} · ${record.reference_kind}`
               : "No source case has been selected for this workspace."}
           </p>
-          {module === "dosetwin" && doseCases.length > 1 && (
+          {module === "dosetwin" && doseCases.length > 1 && record?.reference_kind !== "synthetic" && (
             <Field className="mt-2 grid w-full max-w-xl gap-1.5">
               <FieldLabel htmlFor="dosetwin-case-picker">DoseTwin source case</FieldLabel>
               <Select
@@ -1166,7 +1171,7 @@ export function DomainWorkspace({ module }: { module: ModuleId }) {
                   <SelectGroup>
                     {doseCases.map((item) => (
                       <SelectItem key={item.id} value={item.id}>
-                        {item.label} · {item.status === "blocked" ? "viewer only" : "comparison available"}
+                        {item.label} · {item.reference_kind === "synthetic" ? "synthetic · inspection only" : item.status === "blocked" ? "viewer only" : "comparison available"}
                       </SelectItem>
                     ))}
                   </SelectGroup>
@@ -1179,10 +1184,12 @@ export function DomainWorkspace({ module }: { module: ModuleId }) {
           )}
         </div>
         <div className="flex w-full flex-wrap items-center gap-3 2xl:w-auto 2xl:justify-end">
-          <SourceBadge kind={record?.status === "ready" ? "ready" : "blocked"}>
-            {record?.status === "blocked" && module === "dosetwin"
-              ? "Viewer only · analysis and imports disabled"
-              : record ? "Source configured" : "Dataset required"}
+          <SourceBadge kind={record?.status === "blocked" ? "blocked" : "ready"}>
+            {record?.reference_kind === "synthetic"
+              ? "Synthetic phantom · inspection only"
+              : record?.status === "blocked" && module === "dosetwin"
+                ? "Viewer only · analysis and imports disabled"
+                : record ? "Source configured" : "Dataset required"}
           </SourceBadge>
           <span className="text-xs text-muted-foreground">For research and education</span>
         </div>
@@ -1195,7 +1202,7 @@ export function DomainWorkspace({ module }: { module: ModuleId }) {
             </div>
           }
         >
-          <DoseViewer key={record.id} caseId={record.id} viewerOnly={record.status === "blocked"} />
+          <DoseViewer key={record.id} caseId={record.id} viewerOnly={record.status !== "ready"} />
         </Suspense>
       ) : record && module === "surgivision" ? (
         <Suspense
@@ -1282,7 +1289,7 @@ export function DomainWorkspace({ module }: { module: ModuleId }) {
                 "Index-space linked slice views",
                 "Dose statistics and DVH",
               ].includes(task);
-              const viewerOnlyAvailable = module === "dosetwin" && record?.status === "blocked" && doseViewerMethod;
+              const viewerOnlyAvailable = module === "dosetwin" && record?.status !== "ready" && doseViewerMethod;
               const requiredClipAvailable=task==="Cholec80 full-rate video with frame-matched phase labels"
                 ?surgicalClipIds.includes("cholect80-video01")
                 :task==="Licensed Appendix300 video excerpt playback"
@@ -1291,7 +1298,7 @@ export function DomainWorkspace({ module }: { module: ModuleId }) {
               const available = Boolean(record && (record.status === "ready" || viewerOnlyAvailable) && requiredClipAvailable);
               return (
                 <TableRow key={task}>
-                  <TableCell className="whitespace-normal"><span className="mr-2 inline-block font-mono text-xs text-muted-foreground">{String(i + 1).padStart(2, "0")}</span>{task}</TableCell>
+                  <TableCell className="whitespace-normal"><span className="mr-2 inline-block font-mono text-xs text-muted-foreground">{String(i + 1).padStart(2, "0")}</span>{record?.reference_kind === "synthetic" && task === "CT, reference dose and ROI masks" ? "Synthetic phantom, illustrative dose field and masks" : task}</TableCell>
                   <TableCell className="text-right"><Badge variant={available ? "secondary" : "outline"}>{viewerOnlyAvailable ? "Viewer-only" : available ? "Source-backed" : "Awaiting source"}</Badge></TableCell>
                 </TableRow>
               );
@@ -1300,8 +1307,10 @@ export function DomainWorkspace({ module }: { module: ModuleId }) {
               const comparisonInstalled = module === "dosetwin" && task === "Reference-versus-prediction comparison" && (doseArtifacts.data?.length ?? 0) > 0;
               const currentReason = comparisonInstalled
                 ? "An authentic same-case prediction is imported and validated on this case's grid. This is a reference comparison, not inference or clinical evaluation."
-                : module === "dosetwin" && record?.status === "blocked"
-                  ? "This installed source profile is viewer-only. Analysis, dose import, comparison, and report generation are disabled."
+                : module === "dosetwin" && record?.reference_kind === "synthetic"
+                  ? "Deterministic synthetic phantom only. Model runs, prediction imports, comparisons, and reports are disabled."
+                  : module === "dosetwin" && record?.status === "blocked"
+                    ? "This installed source profile is viewer-only. Analysis, dose import, comparison, and report generation are disabled."
                   : reason;
               return (
                 <TableRow key={task}>
@@ -1317,9 +1326,11 @@ export function DomainWorkspace({ module }: { module: ModuleId }) {
         <Card>
           <CardHeader>
             <Badge variant="outline" className="w-fit">Source record</Badge>
-            <CardTitle className="text-base">{m.source}</CardTitle>
+            <CardTitle className="text-base">{record?.reference_kind === "synthetic" ? "Synthetic phantom generator" : m.source}</CardTitle>
             <CardDescription>
-            {module === "surgivision"
+            {record?.reference_kind === "synthetic"
+              ? "Deterministic local geometry and dose formula; arbitrary synthetic scale units, not physical Gy. No patient or benchmark data is used."
+              : module === "surgivision"
               ? "Official COCO boxes and image-level reference labels are served from a checksum-verified local source."
               : module === "dosetwin"
                 ? "Benchmark arrays preserve index-space geometry and dose units."
@@ -1330,10 +1341,10 @@ export function DomainWorkspace({ module }: { module: ModuleId }) {
           </CardHeader>
           <CardContent className="grid gap-4">
             <div className="flex items-center justify-between gap-3">
-              <span className="text-sm text-muted-foreground">Dataset documentation</span>
-              <Button render={<a href={m.sourceUrl} target="_blank" rel="noreferrer" />} nativeButton={false} variant="link" size="sm" className="h-auto p-0">
-                Open source <ExternalLink data-icon="inline-end" />
-              </Button>
+              <span className="text-sm text-muted-foreground">{record?.reference_kind === "synthetic" ? "Synthetic case ID" : "Dataset documentation"}</span>
+              {record?.reference_kind === "synthetic"
+                ? <code className="break-all text-xs">{record.id}</code>
+                : <Button render={<a href={m.sourceUrl} target="_blank" rel="noreferrer" />} nativeButton={false} variant="link" size="sm" className="h-auto p-0">Open source <ExternalLink data-icon="inline-end" /></Button>}
             </div>
             <div className="flex items-start gap-2 border-t border-border pt-3 text-xs leading-5 text-muted-foreground">
               <LockKeyhole aria-hidden="true" className="mt-0.5 size-4 shrink-0" />

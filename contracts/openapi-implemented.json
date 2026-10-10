@@ -346,6 +346,7 @@
             "enum": [
               "benchmark",
               "research",
+              "synthetic",
               "synthetic-test"
             ],
             "title": "Reference Kind",
@@ -358,7 +359,8 @@
           "status": {
             "enum": [
               "ready",
-              "blocked"
+              "blocked",
+              "synthetic-viewer"
             ],
             "title": "Status",
             "type": "string"
@@ -1486,6 +1488,15 @@
             "title": "Dose Display Max Gy",
             "type": "number"
           },
+          "dose_scale_kind": {
+            "default": "physical-gy-reference",
+            "enum": [
+              "physical-gy-reference",
+              "synthetic-illustrative-scale"
+            ],
+            "title": "Dose Scale Kind",
+            "type": "string"
+          },
           "dose_sha256": {
             "title": "Dose Sha256",
             "type": "string"
@@ -1505,13 +1516,23 @@
             "title": "Method",
             "type": "string"
           },
+          "metrics_kind": {
+            "default": "openkbp-official-evaluator",
+            "enum": [
+              "openkbp-official-evaluator",
+              "synthetic-descriptive"
+            ],
+            "title": "Metrics Kind",
+            "type": "string"
+          },
           "official_metrics": {
             "$ref": "#/components/schemas/DvhMetrics"
           },
           "origin": {
             "enum": [
               "computed-from-benchmark-arrays",
-              "computed-from-synthetic-test-fixture"
+              "computed-from-synthetic-test-fixture",
+              "synthetic-phantom"
             ],
             "title": "Origin",
             "type": "string"
@@ -1528,6 +1549,7 @@
             "enum": [
               "benchmark",
               "research",
+              "synthetic",
               "synthetic-test"
             ],
             "title": "Source Kind",
@@ -3226,7 +3248,10 @@
             "type": "string"
           },
           "coordinate_frame": {
-            "const": "openkbp-processed-voxel-grid",
+            "enum": [
+              "openkbp-processed-voxel-grid",
+              "synthetic-phantom-grid"
+            ],
             "title": "Coordinate Frame",
             "type": "string"
           },
@@ -3238,7 +3263,8 @@
           "origin": {
             "enum": [
               "computed-from-benchmark-array",
-              "computed-from-synthetic-test-fixture"
+              "computed-from-synthetic-test-fixture",
+              "synthetic-phantom"
             ],
             "title": "Origin",
             "type": "string"
@@ -3268,6 +3294,7 @@
             "enum": [
               "benchmark",
               "research",
+              "synthetic",
               "synthetic-test"
             ],
             "title": "Source Kind",
@@ -6842,7 +6869,10 @@
             "type": "string"
           },
           "coordinate_frame": {
-            "const": "openkbp-processed-voxel-grid",
+            "enum": [
+              "openkbp-processed-voxel-grid",
+              "synthetic-phantom-grid"
+            ],
             "title": "Coordinate Frame",
             "type": "string"
           },
@@ -6856,7 +6886,8 @@
             "enum": [
               "benchmark-reference",
               "computed-from-benchmark-array",
-              "synthetic-test-fixture"
+              "synthetic-test-fixture",
+              "synthetic-phantom"
             ],
             "title": "Origin",
             "type": "string"
@@ -6883,6 +6914,7 @@
             "enum": [
               "benchmark",
               "research",
+              "synthetic",
               "synthetic-test"
             ],
             "title": "Source Kind",
@@ -6900,7 +6932,9 @@
             "enum": [
               "benchmark-value",
               "Gy",
-              "binary-mask"
+              "binary-mask",
+              "synthetic-relative-density",
+              "synthetic-illustrative-scale"
             ],
             "title": "Unit",
             "type": "string"
@@ -6938,14 +6972,20 @@
             "type": "string"
           },
           "coordinate_frame": {
-            "const": "openkbp-processed-voxel-grid",
             "default": "openkbp-processed-voxel-grid",
+            "enum": [
+              "openkbp-processed-voxel-grid",
+              "synthetic-phantom-grid"
+            ],
             "title": "Coordinate Frame",
             "type": "string"
           },
           "dose_unit": {
-            "const": "Gy",
             "default": "Gy",
+            "enum": [
+              "Gy",
+              "synthetic-illustrative-scale"
+            ],
             "title": "Dose Unit",
             "type": "string"
           },
@@ -8299,7 +8339,7 @@
                 }
               }
             },
-            "description": "Request Entity Too Large"
+            "description": "Content Too Large"
           },
           "422": {
             "content": {
@@ -8309,7 +8349,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           }
         },
         "summary": "Import Dose Artifact"
@@ -8383,7 +8423,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           }
         },
         "summary": "Dose Artifact Comparison"
@@ -8481,7 +8521,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           }
         },
         "summary": "Dose Artifact Slice"
@@ -8642,7 +8682,7 @@
             "required": false,
             "schema": {
               "default": "Brainstem",
-              "pattern": "^(Brainstem|SpinalCord|RightParotid|LeftParotid|Esophagus|Larynx|Mandible|PTV56|PTV63|PTV70)$",
+              "pattern": "^(Brainstem|SpinalCord|RightParotid|LeftParotid|Esophagus|Larynx|Mandible|PTV56|PTV63|PTV70|Target|OAR-Cylinder-A|OAR-Cylinder-B)$",
               "title": "Roi",
               "type": "string"
             }
@@ -8693,7 +8733,7 @@
             "required": false,
             "schema": {
               "default": "Brainstem",
-              "pattern": "^(Brainstem|SpinalCord|RightParotid|LeftParotid|Esophagus|Larynx|Mandible|PTV56|PTV63|PTV70)$",
+              "pattern": "^(Brainstem|SpinalCord|RightParotid|LeftParotid|Esophagus|Larynx|Mandible|PTV56|PTV63|PTV70|Target|OAR-Cylinder-A|OAR-Cylinder-B)$",
               "title": "Roi",
               "type": "string"
             }
@@ -8778,7 +8818,7 @@
             "required": false,
             "schema": {
               "default": "Brainstem",
-              "pattern": "^(Brainstem|SpinalCord|RightParotid|LeftParotid|Esophagus|Larynx|Mandible|PTV56|PTV63|PTV70)$",
+              "pattern": "^(Brainstem|SpinalCord|RightParotid|LeftParotid|Esophagus|Larynx|Mandible|PTV56|PTV63|PTV70|Target|OAR-Cylinder-A|OAR-Cylinder-B)$",
               "title": "Roi",
               "type": "string"
             }
@@ -8941,7 +8981,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           }
         },
         "summary": "Create Signal Comparison"
@@ -10878,7 +10918,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           }
         },
         "summary": "Create Report"
@@ -10944,7 +10984,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           }
         },
         "summary": "Create Dose Comparison Report"
@@ -11010,7 +11050,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           }
         },
         "summary": "Create Surgical Frame Report"
@@ -11444,7 +11484,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           }
         },
         "summary": "Create Run"

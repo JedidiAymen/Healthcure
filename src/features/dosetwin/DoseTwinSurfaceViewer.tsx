@@ -8,12 +8,13 @@ import { AlertCircle, Box, Eye, EyeOff, LoaderCircle, RotateCcw } from 'lucide-r
 import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { DOSE_ROIS } from '@/lib/workspace-preferences'
+import { DOSE_ROIS, SYNTHETIC_DOSE_ROIS } from '@/lib/workspace-preferences'
 import { buildRoiImage, meshStats } from './roi-surface-geometry'
 
 const palette: Record<string, [number, number, number]> = {
   Brainstem:[255,205,86],SpinalCord:[95,211,195],RightParotid:[248,133,123],LeftParotid:[155,140,255],
   Esophagus:[255,161,92],Larynx:[113,184,255],Mandible:[229,121,187],PTV56:[227,231,111],PTV63:[249,178,92],PTV70:[245,120,100],
+  Target:[245,120,100],'OAR-Cylinder-A':[95,211,195],'OAR-Cylinder-B':[248,133,123],
 }
 
 export function DoseTwinSurfaceViewer({caseId,selectedRoi,onRoiChange}:{caseId:string;selectedRoi:string;onRoiChange:(roi:string)=>void}) {
@@ -28,6 +29,8 @@ export function DoseTwinSurfaceViewer({caseId,selectedRoi,onRoiChange}:{caseId:s
   const [error,setError]=useState('')
   const query=useQuery({queryKey:['dosetwin','roi-volume',caseId,selectedRoi],queryFn:()=>api.roiVolume(caseId,selectedRoi),retry:false,staleTime:Infinity})
   const payload=query.data
+  const synthetic=caseId==='synthetic-dose:phantom-v1'
+  const availableRois=synthetic?SYNTHETIC_DOSE_ROIS:DOSE_ROIS
   const color=useMemo(()=>palette[selectedRoi]??[130,190,220],[selectedRoi])
 
   useEffect(()=>{
@@ -103,14 +106,14 @@ export function DoseTwinSurfaceViewer({caseId,selectedRoi,onRoiChange}:{caseId:s
 
   const resetCamera=()=>{viewRef.current?.getRenderer().resetCamera();viewRef.current?.getRenderWindow().render()}
 
-  if(query.isError)return <Card className="border-amber-300 bg-amber-50 text-amber-950"><CardContent className="flex items-start gap-2 p-4 text-sm"><AlertCircle className="mt-0.5 size-4 shrink-0"/><div><b>3D structure source unavailable</b><p className="mb-0 mt-1">{query.error.message} · Continue with the validated linked 2D planes.</p></div></CardContent></Card>
+  if(query.isError)return <Card className="border-amber-300 bg-amber-50 text-amber-950"><CardContent className="flex items-start gap-2 p-4 text-sm"><AlertCircle className="mt-0.5 size-4 shrink-0"/><div><b>{synthetic?'3D synthetic mask unavailable':'3D structure source unavailable'}</b><p className="mb-0 mt-1">{query.error.message} · Continue with the linked 2D planes.</p></div></CardContent></Card>
 
   return <Card className="overflow-hidden border-border bg-card shadow-none" aria-label="DoseTwin 3D structure surface">
     <CardHeader className="flex-row flex-wrap items-start justify-between gap-3 border-b border-border/70">
-      <div><CardTitle className="flex items-center gap-2 text-base"><Box className="size-4 text-primary"/>3D structure surface</CardTitle><CardDescription className="mt-1">Reconstructed from the selected verified OpenKBP voxel mask · orbit, pan, and zoom with pointer or trackpad.</CardDescription></div>
+      <div><CardTitle className="flex items-center gap-2 text-base"><Box className="size-4 text-primary"/>{synthetic?'3D synthetic mask surface':'3D structure surface'}</CardTitle><CardDescription className="mt-1">{synthetic?'Reconstructed from a deterministic phantom mask on illustrative grid spacing; not anatomy or a treatment plan.':'Reconstructed from the selected verified OpenKBP voxel mask.'} Orbit, pan, and zoom with pointer or trackpad.</CardDescription></div>
       <div className="flex flex-wrap items-center gap-2">
         <label className="sr-only" htmlFor="dosetwin-3d-structure">Structure to reconstruct</label>
-        <select id="dosetwin-3d-structure" value={selectedRoi} onChange={event=>onRoiChange(event.target.value)} className="h-9 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">{DOSE_ROIS.map(roi=><option key={roi} value={roi}>{roi}</option>)}</select>
+        <select id="dosetwin-3d-structure" value={selectedRoi} onChange={event=>onRoiChange(event.target.value)} className="h-9 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">{availableRois.map(roi=><option key={roi} value={roi}>{roi}</option>)}</select>
         <Button type="button" variant="outline" size="sm" aria-pressed={visible} onClick={()=>setVisible(value=>!value)}>{visible?<Eye/>:<EyeOff/>}{visible?'Visible':'Hidden'}</Button>
         <label className="flex items-center gap-2 text-xs text-muted-foreground">Surface opacity <input aria-label="3D surface opacity" type="range" min="0.2" max="1" step="0.05" value={opacity} onChange={event=>setOpacity(Number(event.target.value))}/></label>
         <Button type="button" variant="ghost" size="icon-sm" aria-label="Reset 3D camera" onClick={resetCamera}><RotateCcw/></Button>
@@ -118,11 +121,11 @@ export function DoseTwinSurfaceViewer({caseId,selectedRoi,onRoiChange}:{caseId:s
     </CardHeader>
     <CardContent className="grid gap-3 p-3">
       <div ref={host} data-testid="dosetwin-3d-viewport" className="relative h-[min(55vh,480px)] min-h-[300px] overflow-hidden rounded-lg border border-[#304156] bg-[#101624]" aria-label={`${selectedRoi} reconstructed 3D surface viewport`}>
-        {(query.isPending||(!stats&&!error))&&<div className="absolute inset-0 z-10 grid place-content-center gap-2 text-center text-sm text-slate-200"><LoaderCircle className="mx-auto size-5 animate-spin"/>Building a surface from {query.data?.voxel_count.toLocaleString()??'verified'} source voxels…</div>}
+        {(query.isPending||(!stats&&!error))&&<div className="absolute inset-0 z-10 grid place-content-center gap-2 text-center text-sm text-slate-200"><LoaderCircle className="mx-auto size-5 animate-spin"/>Building a surface from {query.data?.voxel_count.toLocaleString()??(synthetic?'phantom':'verified source')} {synthetic?'phantom mask voxels':'source voxels'}…</div>}
         {error&&<div role="status" className="absolute inset-0 z-10 grid place-content-center gap-2 bg-[#101624] px-6 text-center text-sm text-amber-100"><AlertCircle className="mx-auto size-5"/>{error}<span>Use the linked 2D planes to inspect this structure.</span></div>}
         {query.isPending&&<div className="sr-only" role="status">Loading verified structure mask</div>}
       </div>
-      {query.data&&stats&&<div className="grid gap-2 rounded-md border border-border/70 bg-muted/20 px-3 py-2 text-xs sm:grid-cols-3"><p className="m-0"><b>{query.data.voxel_count.toLocaleString()}</b> source mask voxels · {stats.points.toLocaleString()} surface points</p><p className="m-0 font-mono text-muted-foreground">Spacing {query.data.spacing_mm.map(value=>value.toFixed(3)).join(' × ')} mm</p><p className="m-0 font-mono text-muted-foreground">{query.data.source_file} · revision {query.data.source_revision.slice(0,12)}</p><p className="m-0 truncate font-mono text-muted-foreground" title={query.data.source_sha256}>Mask SHA-256 {query.data.source_sha256.slice(0,16)}…</p><p className="m-0 sm:col-span-3 text-muted-foreground">Processed-index coordinates with approximate benchmark spacing; no patient orientation or DICOM frame is asserted. Surface follows the source voxel grid and its limited resolution.</p><p className="m-0 font-mono text-muted-foreground sm:col-span-3" data-testid="dosetwin-3d-bounds">Mesh bounds (approx. mm): {stats.bounds.map(value=>value.toFixed(2)).join(', ')} · {stats.triangles.toLocaleString()} triangles</p></div>}
+      {query.data&&stats&&<div className="grid gap-2 rounded-md border border-border/70 bg-muted/20 px-3 py-2 text-xs sm:grid-cols-3"><p className="m-0"><b>{query.data.voxel_count.toLocaleString()}</b> {synthetic?'synthetic mask voxels':'source mask voxels'} · {stats.points.toLocaleString()} surface points</p><p className="m-0 font-mono text-muted-foreground">{synthetic?'Illustrative spacing':'Spacing'} {query.data.spacing_mm.map(value=>value.toFixed(3)).join(' × ')} mm</p><p className="m-0 font-mono text-muted-foreground">{query.data.source_file} · revision {query.data.source_revision.slice(0,12)}</p><p className="m-0 truncate font-mono text-muted-foreground" title={query.data.source_sha256}>Mask SHA-256 {query.data.source_sha256.slice(0,16)}…</p><p className="m-0 sm:col-span-3 text-muted-foreground">{synthetic?'Synthetic phantom-grid coordinates and illustrative spacing; not anatomy, patient orientation, or a DICOM frame. Surface follows the deterministic mask at its grid resolution.':'Processed-index coordinates with approximate benchmark spacing; no patient orientation or DICOM frame is asserted. Surface follows the source voxel grid and its limited resolution.'}</p><p className="m-0 font-mono text-muted-foreground sm:col-span-3" data-testid="dosetwin-3d-bounds">Mesh bounds ({synthetic?'illustrative':'approx.'} mm): {stats.bounds.map(value=>value.toFixed(2)).join(', ')} · {stats.triangles.toLocaleString()} triangles</p></div>}
       {error&&<div className="flex items-center justify-between gap-3 text-sm text-amber-900"><span>WebGL may be unavailable or the mesh could not be built.</span><Button variant="outline" size="sm" onClick={()=>void query.refetch()}>Try again</Button></div>}
       {!stats&&<p className="m-0 flex items-center gap-2 text-xs leading-relaxed text-muted-foreground"><AlertCircle className="size-4 shrink-0"/>If WebGL fails or device memory is limited, the validated 2D viewer remains available above.</p>}
     </CardContent>

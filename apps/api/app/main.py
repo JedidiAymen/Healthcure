@@ -57,6 +57,7 @@ from . import fisav as _fisav
 from . import appendix300 as _appendix300
 from . import cholect80_video as _cholect80_video
 from . import cholect50_validation as _cholect50_validation
+from . import synthetic_dose as _synthetic_dose
 
 ROOT = Path(__file__).resolve().parents[3]
 MIGRATIONS = ROOT/'db'/'migrations'
@@ -191,6 +192,8 @@ def _expect_viewer_case(case_id:str) -> tuple[Case,Path]:
     return _case_record(stable_id,root,fully_enabled=fully_enabled),root
 
 def _expect_enabled_case(case_id:str) -> tuple[Case,Path]:
+    if case_id==_synthetic_dose.CASE_ID:
+        raise HTTPException(status_code=404,detail={'code':'SYNTHETIC_VIEWER_ONLY','message':'The synthetic phantom is for deterministic visual inspection only; model runs, prediction imports, comparisons, and reports are disabled.'})
     entry=_case_entry(case_id)
     if entry is None or not entry[2]:
         raise HTTPException(status_code=404,detail={'code':'CASE_NOT_ENABLED','message':'This case is not enabled for runs, prediction import, comparison, and evidence reports','action':'Configure the case in MEDFORGE_OPENKBP_FULL_CASES_JSON after verifying its data and use basis'})
@@ -577,7 +580,7 @@ def create_app() -> FastAPI:
         fistula_ready=bool(fistula_records)
         return [
             ModuleStatus(id='surgivision',capability_state='ready' if surgical_ready else 'requires-setup',detail=surgical_media_detail if surgical_ready else 'Set MEDFORGE_ENDOSCAPES_ROOT to a verified local research sample'),
-            ModuleStatus(id='dosetwin',capability_state='ready' if ready else 'requires-setup',detail=('OpenKBP local case summary available' if ready else 'Set MEDFORGE_OPENKBP_CASE_DIR') + (f'; {sum(1 for _,_,enabled in openkbp_cases.values() if enabled)} case(s) fully enabled, {sum(1 for _,_,enabled in openkbp_cases.values() if not enabled)} viewer-only case(s)' if openkbp_cases else '')),
+            ModuleStatus(id='dosetwin',capability_state='ready' if ready else 'requires-setup',detail=('OpenKBP local case summary available' if ready else 'Set MEDFORGE_OPENKBP_CASE_DIR') + (f'; {sum(1 for _,_,enabled in openkbp_cases.values() if enabled)} case(s) fully enabled, {sum(1 for _,_,enabled in openkbp_cases.values() if not enabled)} viewer-only case(s)' if openkbp_cases else '; built-in synthetic phantom available for inspection only')),
             ModuleStatus(id='fistulaguard',capability_state='ready' if fistula_ready else 'requires-setup',detail=f'Source-verified FiSaV CSV cohort available ({len(fistula_records)} recordings); no classifier is enabled' if fistula_ready else 'Set MEDFORGE_FISAV_ROOT to a verified local FiSaV research sample')]
 
     @app.get('/api/v1/cases',response_model=list[Case])
@@ -589,6 +592,8 @@ def create_app() -> FastAPI:
 
     @app.get('/api/v1/cases/{case_id}',response_model=Case,responses={404:{'model':ApiError}})
     def get_case(case_id:str):
+        if case_id==_synthetic_dose.CASE_ID:
+            return _synthetic_dose.case_record()
         frame=_endoscapes_frame(case_id)
         if frame:
             return _endoscapes_case_record(frame)
@@ -605,6 +610,22 @@ def create_app() -> FastAPI:
 
     @app.get('/api/v1/cases/{case_id}/viewer-manifest',response_model=ViewerManifest)
     def manifest(case_id:str):
+        if case_id==_synthetic_dose.CASE_ID:
+            from .schemas import VoxelVolumeArtifact
+            return ViewerManifest(
+                case_id=_synthetic_dose.CASE_ID,
+                modality='radiotherapy-volume',
+                artifacts=[VoxelVolumeArtifact(
+                    asset_key=f'/api/v1/cases/{_synthetic_dose.CASE_ID}/viewer/slice',
+                    shape=_synthetic_dose.SHAPE,
+                    spacing_mm=_synthetic_dose.SPACING_MM,
+                    coordinate_frame='synthetic-phantom-grid',
+                    dose_unit='synthetic-illustrative-scale',
+                )],
+                provenance_label=_synthetic_dose.NOTICE,
+                source_url='urn:medforge:synthetic-dose:phantom-v1',
+                limitations=_synthetic_dose.LIMITATIONS,
+            )
         frame=_endoscapes_frame(case_id)
         if frame:
             sampled=frame.dataset_id=='Endoscapes2023'
@@ -939,7 +960,19 @@ def create_app() -> FastAPI:
 
     @app.get('/api/v1/cases/{case_id}/viewer/slice',response_model=VoxelSlice)
     def viewer_slice(case_id:str,axis:int=Query(2,ge=0,le=2),index:int=Query(64,ge=0,lt=128),
-                     layer:str=Query('dose',pattern='^(ct|dose|roi)$'),roi:str=Query('Brainstem',pattern='^(Brainstem|SpinalCord|RightParotid|LeftParotid|Esophagus|Larynx|Mandible|PTV56|PTV63|PTV70)$')):
+                     layer:str=Query('dose',pattern='^(ct|dose|roi)$'),roi:str=Query('Brainstem',pattern='^(Brainstem|SpinalCord|RightParotid|LeftParotid|Esophagus|Larynx|Mandible|PTV56|PTV63|PTV70|Target|OAR-Cylinder-A|OAR-Cylinder-B)$')):
+        if case_id==_synthetic_dose.CASE_ID:
+            if layer=='roi' and roi not in _synthetic_dose.STRUCTURES:
+                raise HTTPException(status_code=404,detail={'code':'SYNTHETIC_STRUCTURE_UNKNOWN','message':'This synthetic phantom has only its explicitly named target and OAR cylinders.'})
+            name=roi if layer=='roi' else layer
+            values,shape=_synthetic_dose.slice_values(name,axis,index)
+            return VoxelSlice(
+                case_id=case_id,source_revision=_synthetic_dose.SOURCE_REVISION,
+                source_file=f'{name}.synthetic-volume',source_sha256=_synthetic_dose.volume_sha256(name),
+                axis=axis,index=index,shape=shape,values=values,
+                unit='synthetic-relative-density' if layer=='ct' else ('synthetic-illustrative-scale' if layer=='dose' else 'binary-mask'),
+                source_kind='synthetic',origin='synthetic-phantom',coordinate_frame='synthetic-phantom-grid',
+            )
         case,case_root=_expect_viewer_case(case_id)
         file_name={'ct':'ct.csv','dose':'dose.csv','roi':f'{roi}.csv'}[layer]
         path=case_root/file_name
@@ -954,8 +987,23 @@ def create_app() -> FastAPI:
             origin='synthetic-test-fixture' if _source_kind()=='synthetic-test' else ('benchmark-reference' if layer=='dose' else 'computed-from-benchmark-array'),coordinate_frame='openkbp-processed-voxel-grid')
 
     @app.get('/api/v1/cases/{case_id}/viewer/roi-volume',response_model=RoiMaskVolume)
-    def viewer_roi_volume(case_id:str,roi:str=Query('Brainstem',pattern='^(Brainstem|SpinalCord|RightParotid|LeftParotid|Esophagus|Larynx|Mandible|PTV56|PTV63|PTV70)$')):
+    def viewer_roi_volume(case_id:str,roi:str=Query('Brainstem',pattern='^(Brainstem|SpinalCord|RightParotid|LeftParotid|Esophagus|Larynx|Mandible|PTV56|PTV63|PTV70|Target|OAR-Cylinder-A|OAR-Cylinder-B)$')):
         """Return a sparse, source-indexed ROI mask for the optional vtk.js surface viewer."""
+        if case_id==_synthetic_dose.CASE_ID:
+            if roi not in _synthetic_dose.STRUCTURES:
+                raise HTTPException(status_code=404,detail={'code':'SYNTHETIC_STRUCTURE_UNKNOWN','message':'This synthetic phantom has only its explicitly named target and OAR cylinders.'})
+            try:
+                payload=_synthetic_dose.roi_volume(roi)
+            except ValueError as e:
+                raise HTTPException(status_code=422,detail={'code':'INVALID_SYNTHETIC_PHANTOM','message':str(e)}) from e
+            return RoiMaskVolume(
+                case_id=case_id,source_revision=_synthetic_dose.SOURCE_REVISION,
+                source_file=payload['source_file'],source_sha256=payload['source_sha256'],
+                shape=_synthetic_dose.SHAPE,spacing_mm=_synthetic_dose.SPACING_MM,
+                voxel_count=payload['voxel_count'],voxel_indices_c_order=payload['voxel_indices_c_order'],
+                source_kind='synthetic',origin='synthetic-phantom',coordinate_frame='synthetic-phantom-grid',
+                index_convention='x-major-y-middle-z-fastest',
+            )
         case,case_root=_expect_viewer_case(case_id)
         path=case_root/f'{roi}.csv'
         if not path.is_file():
@@ -977,7 +1025,24 @@ def create_app() -> FastAPI:
             coordinate_frame='openkbp-processed-voxel-grid',index_convention='x-major-y-middle-z-fastest')
 
     @app.get('/api/v1/cases/{case_id}/viewer/dvh',response_model=DvhSummary)
-    def viewer_dvh(case_id:str,roi:str=Query('Brainstem',pattern='^(Brainstem|SpinalCord|RightParotid|LeftParotid|Esophagus|Larynx|Mandible|PTV56|PTV63|PTV70)$')):
+    def viewer_dvh(case_id:str,roi:str=Query('Brainstem',pattern='^(Brainstem|SpinalCord|RightParotid|LeftParotid|Esophagus|Larynx|Mandible|PTV56|PTV63|PTV70|Target|OAR-Cylinder-A|OAR-Cylinder-B)$')):
+        if case_id==_synthetic_dose.CASE_ID:
+            if roi not in _synthetic_dose.STRUCTURES:
+                raise HTTPException(status_code=404,detail={'code':'SYNTHETIC_STRUCTURE_UNKNOWN','message':'This synthetic phantom has only its explicitly named target and OAR cylinders.'})
+            try:
+                summary=_synthetic_dose.dvh(roi)
+            except ValueError as e:
+                raise HTTPException(status_code=422,detail={'code':'INVALID_SYNTHETIC_PHANTOM','message':str(e)}) from e
+            return DvhSummary(
+                case_id=case_id,source_revision=_synthetic_dose.SOURCE_REVISION,roi=roi,
+                dose_sha256=summary['dose_sha256'],roi_sha256=summary['roi_sha256'],
+                voxel_count=summary['voxel_count'],mean_dose_gy=summary['mean_dose_gy'],
+                dose_display_max_gy=summary['dose_display_max_gy'],spacing_mm=summary['spacing_mm'],
+                ct_display_range=summary['ct_display_range'],ct_display_note=summary['ct_display_note'],
+                official_metrics=summary['official_metrics'],curve=summary['curve'],
+                method=summary['method'],source_kind='synthetic',origin='synthetic-phantom',
+                dose_scale_kind='synthetic-illustrative-scale',metrics_kind='synthetic-descriptive',
+            )
         case,case_root=_expect_viewer_case(case_id)
         dose_path=case_root/'dose.csv'; roi_path=case_root/f'{roi}.csv'; ct_path=case_root/'ct.csv'; spacing_path=case_root/'voxel_dimensions.csv'
         if not dose_path.is_file() or not roi_path.is_file() or not ct_path.is_file() or not spacing_path.is_file():
