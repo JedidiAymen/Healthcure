@@ -93,6 +93,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AchievementBadge } from "@/components/ui/achievement-badge";
 import { AchievementGrid } from "@/components/ui/achievement-grid";
@@ -1530,6 +1531,7 @@ export function Experiments() {
     [selectedCase, setSelectedCase] = useState(""),
     [selectedRun, setSelectedRun] = useState<DoseTwinRunRecord | null>(null),
     [report, setReport] = useState<EvidenceReport | null>(null),
+    [activeView, setActiveView] = useState<"configure" | "history">(requestedRunId ? "history" : "configure"),
     [error, setError] = useState("");
   useEffect(() => {
     let live = true;
@@ -1543,6 +1545,7 @@ export function Experiments() {
           );
           setRuns(doseRuns);
           setSelectedRun(doseRuns.find((item) => item.id === requestedRunId) ?? doseRuns[0] ?? null);
+          if (requestedRunId) setActiveView("history");
         }
       })
       .catch((e: unknown) => {
@@ -1569,6 +1572,7 @@ export function Experiments() {
     try {
       const record = await api.createRun(caseId);
       setSelectedRun(record);
+      setActiveView("history");
       setRuns((current) => [
         record,
         ...current.filter((item) => item.id !== record.id),
@@ -1614,15 +1618,6 @@ export function Experiments() {
           </Button>
         }
       />
-      <Alert className="mb-4 border-primary/25 bg-primary/5 [&>svg]:mt-0.5">
-        <Workflow />
-        <AlertTitle>Enabled operation · OpenKBP reference summary</AlertTitle>
-        <AlertDescription>
-            Validates the installed sparse arrays, computes per-ROI benchmark
-            metrics, records source hashes and reuses an identical saved run for
-            the same input.
-        </AlertDescription>
-      </Alert>
       {loading ? (
         <div role="status" className="mt-4 grid min-h-64 place-items-center rounded-lg border border-border bg-card px-6 py-5 text-center text-sm text-muted-foreground">
           <div className="flex items-center gap-2"><LoaderCircle className="size-4 animate-spin" />
@@ -1639,147 +1634,162 @@ export function Experiments() {
         />
       ) : (
         <>
-          <Card className="my-3">
-            <CardContent className="flex flex-col items-stretch justify-between gap-4 pt-4 sm:flex-row sm:items-end">
-            <div>
-              <div className="eyebrow">Source case</div>
-              <ResearchCasePicker id="run-case-select" label="Select source case" cases={cases} value={caseId} onValueChange={setSelectedCase} placeholder="Choose an installed case" />
-            </div>
-            <Button
-              type="button"
-              onClick={startRun}
-              disabled={busy}
-            >
-              {busy ? <LoaderCircle data-icon="inline-start" /> : <FlaskConical data-icon="inline-start" />}
-              Run case summary
-            </Button>
-            </CardContent>
-          </Card>
           {error && (
             <Alert variant="destructive"><CircleAlert/><AlertTitle>Research operation unavailable</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>
           )}
-          {selectedRun?.results && (
-            <Card className="my-3">
-              <CardHeader className="px-4 pt-4 sm:px-5">
-                <CardTitle>
-                  <h2 className="m-0 text-sm font-semibold">OpenKBP case summary</h2>
-                </CardTitle>
-                <CardDescription>
-                  {selectedRun.case_id} · run {selectedRun.id} ·{" "}
-                  {selectedRun.source_kind} reference data
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="mb-3 mt-1 text-xs text-muted-foreground">
-                  Grid {selectedRun.results.grid_shape.join(" × ")} · voxel
-                  spacing {selectedRun.results.voxel_dimensions_mm.join(" × ")}{" "}
-                  mm · source revision{" "}
-                  {String(
-                    selectedRun.provenance.source_revision ?? "unrecorded",
-                  ).slice(0, 12)}
-                </p>
-                <Table className="min-w-[650px]">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead scope="col" className="text-left">Structure</TableHead>
-                        <TableHead scope="col" className="text-right">Voxels</TableHead>
-                        <TableHead scope="col" className="text-right">Mean (Gy)</TableHead>
-                        <TableHead scope="col" className="text-right">D0.1cc (Gy)</TableHead>
-                        <TableHead scope="col" className="text-right">D95 (Gy)</TableHead>
-                        <TableHead scope="col" className="text-right">V20Gy (%)</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {Object.entries(metrics ?? {}).map(([name, value]) => (
-                        <TableRow key={name}>
-                          <TableHead scope="row" className="text-left">{name}</TableHead>
-                          <TableCell className="text-right tabular-nums">{value.voxels.toLocaleString()}</TableCell>
-                          <TableCell className="text-right tabular-nums">{value.dmean_gy?.toFixed(2) ?? "—"}</TableCell>
-                          <TableCell className="text-right tabular-nums">{value.d0_1cc_gy_openkbp?.toFixed(2) ?? "—"}</TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {value.d95_gy_interpolated?.toFixed(2) ?? "—"}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums">{value.v20gy_percent?.toFixed(1) ?? "—"}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => saveReport(selectedRun.id)}
-                    disabled={busy}
-                  >
-                    <FileText data-icon="inline-start" />
-                    Save evidence report
+          <Tabs
+            value={activeView}
+            onValueChange={(value) => {
+              if (value === "configure" || value === "history") setActiveView(value);
+            }}
+            className="mt-4 min-w-0 flex-col gap-4"
+          >
+            <div className="flex min-w-0 flex-col gap-3 border-b border-border pb-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="m-0 text-xs font-medium text-primary">Research workflow</p>
+                <h2 className="m-0 mt-1 text-lg font-semibold tracking-tight">Analysis workspace</h2>
+              </div>
+              <TabsList aria-label="Analysis workspace views" className="h-10 w-full sm:w-auto">
+                <TabsTrigger value="configure" className="gap-2 px-3">
+                  <Workflow data-icon="inline-start" />Configure analysis
+                </TabsTrigger>
+                <TabsTrigger value="history" className="gap-2 px-3">
+                  <Clock3 data-icon="inline-start" />Run history
+                  <Badge variant="secondary" className="ml-1 tabular-nums">{runs.length}</Badge>
+                </TabsTrigger>
+              </TabsList>
+            </div>
+            <TabsContent value="configure" className="min-w-0">
+              <Alert className="mb-4 border-primary/25 bg-primary/5 [&>svg]:mt-0.5">
+                <Workflow />
+                <AlertTitle>Enabled operation · OpenKBP reference summary</AlertTitle>
+                <AlertDescription>
+                  Validates the installed sparse arrays, computes per-ROI benchmark
+                  metrics, records source hashes and reuses an identical saved run for
+                  the same input. It does not run a prediction model.
+                </AlertDescription>
+              </Alert>
+              <Card className="border-border bg-card shadow-none">
+                <CardHeader className="gap-3 px-4 pt-4 sm:px-5">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <CardTitle>OpenKBP reference summary</CardTitle>
+                      <CardDescription className="mt-1">Calculate benchmark dose metrics from one installed, source-verified case.</CardDescription>
+                    </div>
+                    <Badge variant="secondary">Available</Badge>
+                  </div>
+                  <p className="m-0 font-mono text-xs text-muted-foreground">openkbp.case_summary · deterministic · same input reuses saved run</p>
+                </CardHeader>
+                <CardContent className="flex min-w-0 flex-col items-stretch justify-between gap-4 border-t border-border pt-4 sm:flex-row sm:items-end">
+                  <div className="min-w-0 flex-1 sm:max-w-xl">
+                    <ResearchCasePicker id="run-case-select" label="Source case" cases={cases} value={caseId} onValueChange={setSelectedCase} placeholder="Choose an installed case" />
+                  </div>
+                  <Button type="button" onClick={startRun} disabled={busy}>
+                    {busy ? <LoaderCircle data-icon="inline-start" /> : <FlaskConical data-icon="inline-start" />}
+                    Run case summary
                   </Button>
-                  {report && (
-                    <Link className="inline-flex items-center gap-1.5 text-[13px] font-medium text-primary hover:underline" to="/studio/reports">
-                      Report {report.id.slice(0, 16)} saved{" "}
-                      <ArrowRight size={14} />
-                    </Link>
-                  )}
+                </CardContent>
+                <CardFooter className="border-t border-border px-4 py-3 sm:px-5">
+                  <p className="m-0 text-xs leading-relaxed text-muted-foreground">Results describe the benchmark reference array. They are not a delivered clinical plan and do not establish model or clinical validity.</p>
+                </CardFooter>
+              </Card>
+            </TabsContent>
+            <TabsContent value="history" className="min-w-0">
+              {selectedRun?.results && (
+                <Card className="mb-5 border-border bg-card shadow-none">
+                  <CardHeader className="px-4 pt-4 sm:px-5">
+                    <CardTitle><h2 className="m-0 text-sm font-semibold">OpenKBP case summary</h2></CardTitle>
+                    <CardDescription>{selectedRun.case_id} · run {selectedRun.id} · {selectedRun.source_kind} reference data</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="mb-3 mt-1 text-xs text-muted-foreground">
+                      Grid {selectedRun.results.grid_shape.join(" × ")} · voxel spacing {selectedRun.results.voxel_dimensions_mm.join(" × ")} mm · source revision {String(selectedRun.provenance.source_revision ?? "unrecorded").slice(0, 12)}
+                    </p>
+                    <p className="mb-2 text-xs text-muted-foreground sm:hidden">Swipe the table horizontally to inspect every dose metric.</p>
+                    <div className="overflow-x-auto rounded-md border border-border">
+                      <Table className="min-w-[650px]">
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead scope="col" className="text-left">Structure</TableHead>
+                            <TableHead scope="col" className="text-right">Voxels</TableHead>
+                            <TableHead scope="col" className="text-right">Mean (Gy)</TableHead>
+                            <TableHead scope="col" className="text-right">D0.1cc (Gy)</TableHead>
+                            <TableHead scope="col" className="text-right">D95 (Gy)</TableHead>
+                            <TableHead scope="col" className="text-right">V20Gy (%)</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {Object.entries(metrics ?? {}).map(([name, value]) => (
+                            <TableRow key={name}>
+                              <TableHead scope="row" className="text-left">{name}</TableHead>
+                              <TableCell className="text-right tabular-nums">{value.voxels.toLocaleString()}</TableCell>
+                              <TableCell className="text-right tabular-nums">{value.dmean_gy?.toFixed(2) ?? "—"}</TableCell>
+                              <TableCell className="text-right tabular-nums">{value.d0_1cc_gy_openkbp?.toFixed(2) ?? "—"}</TableCell>
+                              <TableCell className="text-right tabular-nums">{value.d95_gy_interpolated?.toFixed(2) ?? "—"}</TableCell>
+                              <TableCell className="text-right tabular-nums">{value.v20gy_percent?.toFixed(1) ?? "—"}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+                      <Button variant="ghost" size="sm" onClick={() => saveReport(selectedRun.id)} disabled={busy}>
+                        <FileText data-icon="inline-start" />Save evidence report
+                      </Button>
+                      {report && (
+                        <Link className="inline-flex items-center gap-1.5 text-[13px] font-medium text-primary hover:underline" to="/studio/reports">
+                          Report {report.id.slice(0, 16)} saved <ArrowRight size={14} />
+                        </Link>
+                      )}
+                    </div>
+                    <p className="mt-3 text-xs leading-relaxed text-muted-foreground">Per-ROI metrics follow the pinned OpenKBP evaluator&apos;s percentile convention.</p>
+                  </CardContent>
+                </Card>
+              )}
+              <section aria-label="Saved analysis runs">
+                <div className="mb-2 flex items-end justify-between gap-4">
+                  <div>
+                    <p className="m-0 text-xs font-medium text-muted-foreground">Run history</p>
+                    <h3 className="m-0 mt-1 text-lg font-semibold tracking-tight">{runs.length ? `${runs.length} saved run${runs.length === 1 ? "" : "s"}` : "No analysis runs yet"}</h3>
+                  </div>
                 </div>
-                <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                  Per-ROI metrics follow the pinned OpenKBP evaluator's
-                  percentile convention. Reference dose is not a delivered
-                  clinical plan; this summary does not establish model or
-                  clinical validity.
-                </p>
-              </CardContent>
-            </Card>
-          )}
-          <div className="mt-6 flex items-end justify-between gap-4">
-            <div>
-              <div className="text-xs font-medium text-muted-foreground">Saved operations</div>
-              <h2 className="mt-1 text-lg font-semibold tracking-tight">
-                {runs.length
-                  ? `${runs.length} saved run${runs.length === 1 ? "" : "s"}`
-                  : "No analysis runs yet"}
-              </h2>
-            </div>
-          </div>
-          {runs.length ? (
-            <div className="border-t border-border">
-              {runs.map((run) => (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  key={run.id}
-                  className="h-auto min-h-[62px] w-full justify-start gap-3 rounded-none border-b border-border px-3 py-3 text-left whitespace-normal hover:bg-accent/50 aria-pressed:bg-accent max-sm:gap-2 max-sm:px-1"
-                  aria-pressed={selectedRun?.id === run.id}
-                  onClick={() => {
-                    setSelectedRun(run);
-                    setReport(null);
-                  }}
-                >
-                  <span className="grid size-8 shrink-0 place-items-center rounded-md bg-muted text-primary">
-                    <FlaskConical size={17} />
-                  </span>
-                  <span className="grid min-w-0 flex-1 gap-1">
-                    <b className="truncate text-sm font-medium">{run.operation_id}</b>
-                    <small className="truncate text-xs text-muted-foreground">
-                      {run.case_id} · {run.source_kind} · {run.status}
-                    </small>
-                  </span>
-                  <span className="max-w-[120px] truncate font-mono text-[11px] text-muted-foreground max-sm:max-w-[70px]">{run.id}</span>
-                  <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
-                </Button>
-              ))}
-            </div>
-          ) : (
-            <Empty className="mt-4 min-h-56 border border-dashed border-border bg-card/40">
-              <EmptyHeader>
-                <EmptyMedia variant="icon"><FlaskConical aria-hidden="true" /></EmptyMedia>
-                <EmptyTitle>No saved analysis runs yet</EmptyTitle>
-                <EmptyDescription>
-                Run the enabled OpenKBP summary to save an idempotent result
-                with source provenance.
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
-          )}
+                {runs.length ? (
+                  <div className="border-t border-border">
+                    {runs.map((run) => (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        key={run.id}
+                        className="h-auto min-h-[62px] w-full justify-start gap-3 rounded-none border-b border-border px-3 py-3 text-left whitespace-normal hover:bg-accent/50 aria-pressed:bg-accent max-sm:gap-2 max-sm:px-1"
+                        aria-pressed={selectedRun?.id === run.id}
+                        onClick={() => {
+                          setSelectedRun(run);
+                          setReport(null);
+                        }}
+                      >
+                        <span className="grid size-8 shrink-0 place-items-center rounded-md bg-muted text-primary"><FlaskConical size={17} /></span>
+                        <span className="grid min-w-0 flex-1 gap-1">
+                          <b className="truncate text-sm font-medium">{run.operation_id}</b>
+                          <small className="truncate text-xs text-muted-foreground">{run.case_id} · {run.source_kind} · {run.status}</small>
+                        </span>
+                        <span className="max-w-[120px] truncate font-mono text-[11px] text-muted-foreground max-sm:max-w-[70px]">{run.id}</span>
+                        <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
+                      </Button>
+                    ))}
+                  </div>
+                ) : (
+                  <Empty className="mt-4 min-h-56 border border-dashed border-border bg-card/40">
+                    <EmptyHeader>
+                      <EmptyMedia variant="icon"><FlaskConical aria-hidden="true" /></EmptyMedia>
+                      <EmptyTitle>No saved analysis runs yet</EmptyTitle>
+                      <EmptyDescription>Configure the enabled OpenKBP summary to save an idempotent result with source provenance.</EmptyDescription>
+                    </EmptyHeader>
+                    <Button variant="outline" onClick={() => setActiveView("configure")}>Configure analysis</Button>
+                  </Empty>
+                )}
+              </section>
+            </TabsContent>
+          </Tabs>
         </>
       )}
     </>
