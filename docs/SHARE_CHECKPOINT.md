@@ -2,7 +2,7 @@
 
 **Snapshot date:** 2026-10-10
 **Review branch:** `review/cobalt-dosetwin-d2-d3`
-**Latest pushed commit:** `d8727b3` (`feat(educator): add assignment and submission triage`)
+**Latest feature commit:** `e4c5899` (`feat(home): resume saved dose analysis`)
 **Purpose:** friend/reviewer handoff; development continues after review.
 
 ## Current state
@@ -14,6 +14,7 @@ MEDFORGE is a local-first scientific research and clinician education applicatio
 - **FistulaGuard:** FiSaV waveform, PSD, spectrogram and window-comparison views use the installed checksum-verified recordings and retain source-time and units limitations.
 - **Model Lab and Experiments:** Model Lab now validates a selected registered operation against a compatible installed case and displays the actual API-returned blockers. CVS-AdaptNet inference remains disabled until worker/checkpoint provenance and use terms are resolved. The enabled OpenKBP reference summary remains a real benchmark calculation, not model prediction.
 - **Academy and Educator:** local source-backed investigations, learner-safe publications, assignments, manual review, debrief, progress, private opt-in XP/achievements and educator editing are implemented. Educator assignments can be searched and filtered by cohort/due date; submissions can be searched by learner and filtered by review status. Complete instructor-approved competency mapping and final authored curriculum are still open.
+- **Home handoff:** when local run history contains a completed DoseTwin case summary, the primary Home action resumes that exact run and opens its real saved metrics. The desktop/tablet/phone captures and focused browser verification are recorded in [`PR-UX-25`](ui/PR-UX-25-home-resume-analysis.md).
 
 ## Verification in this snapshot
 
@@ -23,6 +24,7 @@ MEDFORGE is a local-first scientific research and clinician education applicatio
 - DoseTwin focused Playwright linked-plane review passed on UI interaction fixtures; a separate running-app review used the installed `pt_201` arrays, clicked a real secondary-plane voxel, checked linked plane values, and captured desktop (1440×900), laptop (1280×800), tablet (768×1024), and phone (390×844) without horizontal overflow or page errors. Screenshots are ignored local artifacts under `.local-review/DOSETWIN-LINKED-MPR-REAL/`.
 - SurgiVision source-backed E2E review passed at desktop/tablet/phone sizes; screenshots are under `.local-review/SURGIVISION-MEDIA-MODES/`.
 - Current focused review slices passed for Model Lab case-aware blockers and Educator assignment/review filters. The educator routes were captured at 1440×900, 1280×800, 768×1024 and 390×844 with no document overflow; `npm run test -- --run` passed all 44 frontend tests, and `npm run build` passed (with the existing large DoseTwin chunk and React Compiler directive warnings). Local captures are ignored under `.local-review/UX-05-model-validation/` and `.local-review/UX-24-educator-triage/`.
+- Home saved-run continuation: focused Playwright passed and confirmed the exact run ID, case summary, and Brainstem values; screenshots show the real app shell with an explicitly test-only API fixture at desktop 1440×900, tablet 768×1024, and phone 390×844 under ignored `.local-review/UX-25-home-resume/`. Lint, typecheck, 44 frontend tests, and build passed.
 - Fresh full API recheck: `python3 -m pytest -q apps/api/tests` — **42 passed**. `npm run contracts:check` — passed. Live source smoke against ports 18098/4174 checked 2 DoseTwin cases, 1,933 SurgiVision cases, 59 FiSaV records, CholecT50 source labels, all ten `pt_201` ROI DVHs, 36 source planes and all 19 app routes. The first smoke invocation used its default port while no default-port API was listening; the run against the active review services passed. API readiness still correctly reports public deployment disabled.
 - Exact per-milestone commands, component sources/licenses, images, and caveats are recorded in [`PR-FIX-08`](ui/PR-FIX-08-dosetwin-linked-orthogonal-planes.md) and [`PR-UX-22`](ui/PR-UX-22-surgivision-media-modes.md). Full history is in [`STATUS.md`](STATUS.md) and the current gates are in [`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md).
 
