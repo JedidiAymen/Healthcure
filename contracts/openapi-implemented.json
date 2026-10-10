@@ -4515,6 +4515,13 @@
       "ViewerEvidenceState": {
         "additionalProperties": false,
         "properties": {
+          "axis": {
+            "default": 2,
+            "maximum": 2.0,
+            "minimum": 0.0,
+            "title": "Axis",
+            "type": "integer"
+          },
           "case_id": {
             "title": "Case Id",
             "type": "string"

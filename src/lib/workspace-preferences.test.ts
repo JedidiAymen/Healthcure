@@ -9,6 +9,7 @@ describe('DoseTwin workspace preferences', () => {
   const saved = {
     case_id: 'openkbp:pt_201',
     voxel: [81, 63, 47],
+    axis: 1 as const,
     roi: 'Brainstem',
     dose_overlay: true,
     roi_overlay: false,
@@ -17,6 +18,8 @@ describe('DoseTwin workspace preferences', () => {
 
   it('restores a valid case-scoped voxel and display state', () => {
     expect(parseDoseWorkspacePreferences('openkbp:pt_201', saved)).toEqual(saved)
+    expect(parseDoseWorkspacePreferences('openkbp:pt_201', { ...saved, axis: 8 })).toBeNull()
+    expect(parseDoseWorkspacePreferences('openkbp:pt_201', { ...saved, axis: undefined })?.axis).toBe(2)
   })
 
   it('rejects state belonging to another case or invalid array coordinates', () => {

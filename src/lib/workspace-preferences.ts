@@ -8,6 +8,7 @@ export const FISTULA_CHANNELS = ['ECG', 'raw PZT1', 'raw PZT2', 'raw PZT3', 'raw
 export type DoseWorkspacePreferences = {
   case_id: string
   voxel: [number, number, number]
+  axis: 0 | 1 | 2
   roi: typeof DOSE_ROIS[number]
   dose_overlay: boolean
   roi_overlay: boolean
@@ -38,6 +39,7 @@ export function parseDoseWorkspacePreferences(caseId: string, value: unknown): D
   const state = objectValue(value)
   if (!state || state.case_id !== caseId || !Array.isArray(state.voxel) || state.voxel.length !== 3
       || !state.voxel.every(index => Number.isInteger(index) && Number(index) >= 0 && Number(index) <= 127)
+      || !(state.axis === undefined || state.axis === 0 || state.axis === 1 || state.axis === 2)
       || typeof state.roi !== 'string' || !DOSE_ROIS.includes(state.roi as typeof DOSE_ROIS[number])
       || typeof state.dose_overlay !== 'boolean' || typeof state.roi_overlay !== 'boolean'
       || typeof state.dose_opacity !== 'number' || !Number.isFinite(state.dose_opacity)
@@ -45,6 +47,7 @@ export function parseDoseWorkspacePreferences(caseId: string, value: unknown): D
   return {
     case_id: caseId,
     voxel: state.voxel as [number, number, number],
+    axis: (state.axis ?? 2) as 0 | 1 | 2,
     roi: state.roi as typeof DOSE_ROIS[number],
     dose_overlay: state.dose_overlay,
     roi_overlay: state.roi_overlay,

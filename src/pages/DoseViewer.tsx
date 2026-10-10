@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { useQueries, useQuery } from '@tanstack/react-query'
+import { useSearchParams } from 'react-router-dom'
 import { Activity, CircleAlert, Database, Expand, Eye, EyeOff, Layers3, LoaderCircle, Move, ZoomIn, ZoomOut } from 'lucide-react'
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts'
 import { api, type DvhSummary, type StudentDoseViewerEvidence, type VoxelSlice, type ViewerEvidenceState } from '../lib/api'
@@ -94,12 +95,20 @@ function DvhPlot({data}:{data:DvhSummary[]}){
 }
 
 export function DoseViewer({caseId,onEvidenceChange,viewerEvidence,locked=false,guided=false}:{caseId:string;onEvidenceChange?:(evidence:StudentDoseViewerEvidence)=>void;viewerEvidence?:StudentDoseViewerEvidence|null;locked?:boolean;guided?:boolean}){
- const savedState=useMemo(()=>guided?null:readDoseWorkspaceState(caseId),[caseId,guided])
+ const [searchParams]=useSearchParams(),reviewReportId=searchParams.get('report')
+ const reportQuery=useQuery({queryKey:[...queryKeys.reports,'review-source',reviewReportId],queryFn:api.reports,enabled:!!reviewReportId})
+ const reviewState=useMemo(()=>{
+  const report=reportQuery.data?.find(item=>item.id===reviewReportId&&item.case_id===caseId)
+  const saved=report?.document.viewer_state
+  const parsed=saved?parseDoseWorkspacePreferences(caseId,saved):null
+  return parsed?{...parsed,axis:saved?.axis===0||saved?.axis===1||saved?.axis===2?saved.axis:2}:null
+ },[caseId,reportQuery.data,reviewReportId])
+ const savedState=useMemo(()=>reviewReportId?null:guided?null:readDoseWorkspaceState(caseId),[caseId,guided,reviewReportId])
  const [coordinates,setCoordinates]=useState<Voxel>(()=>savedState?.voxel??[64,64,64]),[roi,setRoi]=useState(()=>savedState?.roi??'Brainstem'),[showDose,setShowDose]=useState(()=>savedState?.dose_overlay??true),[showRoi,setShowRoi]=useState(()=>savedState?.roi_overlay??true),[opacity,setOpacity]=useState(()=>savedState?.dose_opacity??.56)
  const [selectedRois,setSelectedRois]=useState<string[]>(()=>[savedState?.roi??'Brainstem'])
  const [ctWindow,setCtWindow]=useState<{caseId:string;range:[number,number]}|null>(null)
  const [ctHash,setCtHash]=useState('')
- const [activeAxis,setActiveAxis]=useState<Axis>(2)
+ const [activeAxis,setActiveAxis]=useState<Axis>(savedState?.axis??2)
  const [is3dOpen,setIs3dOpen]=useState(false)
  const [isCompareOpen,setIsCompareOpen]=useState(false)
  const [zoom,setZoom]=useState(1)
@@ -111,7 +120,7 @@ export function DoseViewer({caseId,onEvidenceChange,viewerEvidence,locked=false,
  const dvhBusy=dvhQueries.some(query=>query.isPending),dvhError=dvhQueries.find(query=>query.isError)?.error?.message??''
  const ctDisplayRange=ctWindow?.caseId===caseId?ctWindow.range:activeDvh?.ct_display_range??null
  useEffect(()=>{if(activeDvh&&ctWindow?.caseId!==caseId)setCtWindow({caseId,range:activeDvh.ct_display_range})},[activeDvh,caseId,ctWindow?.caseId])
- useEffect(()=>{if(guided)return;const state:ViewerEvidenceState={case_id:caseId,voxel:coordinates,roi,dose_overlay:showDose,roi_overlay:showRoi,dose_opacity:opacity};try{localStorage.setItem(`medforge:dose-viewer:${caseId}`,JSON.stringify(state));localStorage.removeItem('medforge-dose-viewer-state')}catch{/* Local persistence is optional when browser storage is unavailable. */}},[caseId,coordinates,roi,showDose,showRoi,opacity,guided])
+ useEffect(()=>{if(reviewReportId){if(reviewState){setCoordinates(reviewState.voxel);setRoi(reviewState.roi);setSelectedRois([reviewState.roi]);setShowDose(reviewState.dose_overlay);setShowRoi(reviewState.roi_overlay);setOpacity(reviewState.dose_opacity);setActiveAxis(reviewState.axis)}return}if(guided)return;const state:ViewerEvidenceState={case_id:caseId,voxel:coordinates,axis:activeAxis,roi,dose_overlay:showDose,roi_overlay:showRoi,dose_opacity:opacity};try{localStorage.setItem(`medforge:dose-viewer:${caseId}`,JSON.stringify(state));localStorage.removeItem('medforge-dose-viewer-state')}catch{/* Local persistence is optional when browser storage is unavailable. */}},[caseId,coordinates,activeAxis,roi,showDose,showRoi,opacity,guided,reviewReportId,reviewState])
  useEffect(()=>{if(viewerEvidence?.kind==='dosetwin'&&viewerEvidence.case_id===caseId){setCoordinates(viewerEvidence.voxel);setRoi(viewerEvidence.roi);setSelectedRois([viewerEvidence.roi]);setShowDose(viewerEvidence.dose_overlay);setShowRoi(viewerEvidence.roi_overlay);setOpacity(viewerEvidence.dose_opacity)}},[caseId,viewerEvidence])
  const emitSelection=(patch:Partial<StudentDoseViewerEvidence>={})=>onEvidenceChange?.({kind:'dosetwin',case_id:caseId,voxel:coordinates,roi,dose_overlay:showDose,roi_overlay:showRoi,dose_opacity:opacity,...patch})
  const updateFromPlane=(axis:Axis,row:number,column:number)=>{const next=voxelFromPlaneSelection(coordinates,axis,row,column);setCoordinates(next);emitSelection({voxel:next})}
@@ -120,6 +129,7 @@ export function DoseViewer({caseId,onEvidenceChange,viewerEvidence,locked=false,
  const toggleRoi=(name:string)=>{if(selectedRois.includes(name)){if(selectedRois.length===1)return;const next=selectedRois.filter(item=>item!==name);setSelectedRois(next);if(roi===name){setRoi(next[0]);emitSelection({roi:next[0]})}return}if(selectedRois.length<5)setSelectedRois([...selectedRois,name])}
  const activeDescriptor=axisDescriptors[activeAxis]
  return <section className="grid gap-5">
+  {reviewReportId&&<div role={reportQuery.isError||(!reportQuery.isPending&&!reviewState)?'alert':'status'} className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-muted-foreground">{reportQuery.isPending?'Loading the saved DoseTwin view…':reportQuery.isError?'The saved report could not be loaded; this viewer is not showing its recorded state.':reviewState?'Reopened the voxel, plane, ROI and display settings saved with this report.':'This report has no compatible DoseTwin view for the selected case.'}</div>}
   <header className="flex min-w-0 flex-wrap items-end justify-between gap-4 border-b border-border pb-4">
    <div className="min-w-0"><p className="mb-1 text-xs font-medium uppercase tracking-[0.12em] text-primary">DoseTwin · source case</p><h2 className="m-0 text-xl font-semibold tracking-tight">Linked dose review</h2><p className="mb-0 mt-1 max-w-2xl text-sm text-muted-foreground">Inspect the reference arrays in one large, index-faithful view. Selecting a voxel updates the linked location across all planes.</p></div>
    <span className="rounded-md border border-border bg-card px-3 py-2 font-mono text-xs tabular-nums text-muted-foreground">x {coordinates[0]} <span className="text-border">/</span> y {coordinates[1]} <span className="text-border">/</span> z {coordinates[2]}</span>

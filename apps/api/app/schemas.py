@@ -771,6 +771,7 @@ class RunRecord(StrictModel):
 class ViewerEvidenceState(StrictModel):
     case_id: str
     voxel: tuple[Annotated[int,Field(ge=0,le=127)],Annotated[int,Field(ge=0,le=127)],Annotated[int,Field(ge=0,le=127)]]
+    axis: int = Field(default=2, ge=0, le=2)
     roi: Literal['Brainstem','SpinalCord','RightParotid','LeftParotid','Esophagus','Larynx','Mandible','PTV56','PTV63','PTV70']
     dose_overlay: bool
     roi_overlay: bool

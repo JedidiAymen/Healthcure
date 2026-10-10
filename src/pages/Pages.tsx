@@ -1628,7 +1628,7 @@ export function Reports() {
                   <p className="mt-3 border-l-2 border-primary/60 bg-muted/50 px-2.5 py-2 text-[11px] tabular-nums text-muted-foreground">
                     Reviewed voxel x {report.document.viewer_state.voxel[0]} / y{" "}
                     {report.document.viewer_state.voxel[1]} / z{" "}
-                    {report.document.viewer_state.voxel[2]} ·{" "}
+                    {report.document.viewer_state.voxel[2]} · {['X', 'Y', 'Z'][report.document.viewer_state.axis ?? 2]} plane ·{" "}
                     {report.document.viewer_state.roi} · dose overlay{" "}
                     {report.document.viewer_state.dose_overlay ? "on" : "off"} ·
                     ROI boundary{" "}
@@ -1640,6 +1640,7 @@ export function Reports() {
                     %
                   </p>
                 )}
+                {report.document.viewer_state && <Link to={`/studio/dosetwin/cases/${encodeURIComponent(report.case_id)}?report=${encodeURIComponent(report.id)}`} className="mt-3 inline-flex h-9 w-fit items-center gap-2 rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent hover:text-accent-foreground"><ExternalLink className="size-4"/>Open reviewed DoseTwin view</Link>}
                 {report.document.results && (
                   <div className="mt-3 border-b">
                     <Table className="min-w-[650px]">

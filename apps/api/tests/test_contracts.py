@@ -653,7 +653,7 @@ def test_report_is_saved_idempotently_with_run_provenance_and_limitations(client
     cid=client.get('/api/v1/cases').json()[0]['id']
     run=client.post('/api/v1/runs',json={'case_id':cid,'operation_id':'openkbp.case_summary'}).json()
     assert client.get('/api/v1/runs').json()[0]['id']==run['id']
-    viewer={'case_id':cid,'voxel':[11,22,33],'roi':'Brainstem','dose_overlay':True,'roi_overlay':False,'dose_opacity':0.55}
+    viewer={'case_id':cid,'voxel':[11,22,33],'axis':1,'roi':'Brainstem','dose_overlay':True,'roi_overlay':False,'dose_opacity':0.55}
     created=client.post('/api/v1/reports',json={'run_id':run['id'],'viewer_state':viewer})
     assert created.status_code==200,created.text
     report=created.json()
@@ -662,6 +662,7 @@ def test_report_is_saved_idempotently_with_run_provenance_and_limitations(client
     assert report['document']['source']['files_sha256']['dose.csv']==run['provenance']['input_sha256']['dose.csv']
     assert report['document']['results']['available_rois']['Brainstem']['dmean_gy']==17.0
     assert report['document']['viewer_state']['voxel']==[11,22,33]
+    assert report['document']['viewer_state']['axis']==1
     assert any('not for diagnosis' in item for item in report['document']['limitations'])
     repeated=client.post('/api/v1/reports',json={'run_id':run['id'],'viewer_state':viewer})
     assert repeated.json()['id']==report['id']

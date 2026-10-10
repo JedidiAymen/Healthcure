@@ -65,6 +65,7 @@ export type ModelValidation = ApiSchemas['ModelValidationResponse'];
 export type ViewerEvidenceState = {
   case_id: string;
   voxel: [number, number, number];
+  axis?: 0 | 1 | 2;
   roi: string;
   dose_overlay: boolean;
   roi_overlay: boolean;

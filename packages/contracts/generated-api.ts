@@ -2701,6 +2701,11 @@ export interface components {
         };
         /** ViewerEvidenceState */
         ViewerEvidenceState: {
+            /**
+             * Axis
+             * @default 2
+             */
+            axis: number;
             /** Case Id */
             case_id: string;
             /** Dose Opacity */
