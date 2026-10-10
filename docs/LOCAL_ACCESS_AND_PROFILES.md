@@ -24,7 +24,14 @@ Open <http://127.0.0.1:5173>. Leave the terminal running; press Ctrl+C there to 
 | Student Academy | <http://127.0.0.1:5173/academy> | Student account | Assigned source-backed investigations, learner progress and optional private gamification. A lesson appears only after an educator publishes and assigns it. |
 | Educator Studio | <http://127.0.0.1:5173/educator> | Educator account | Author and review lessons, manage cohorts, publish learner-safe versions, assign work and grade submissions. |
 
-The app currently provisions **student** and **educator** local accounts. Research browsing is an unauthenticated local profile, not a separate researcher login. The UI does not provide admin or researcher account provisioning; those labels in API types are not supported sign-in profiles. No default usernames/passwords or shareable demo credentials are seeded in a fresh database.
+The app supports **Professional Studio** research browsing without sign-in and local **student** and **educator** accounts for learning workflows. Professional Studio is not a separate researcher login. There are no default or shared passwords in a fresh database. To prepare an isolated Academy/Educator demo, seed its database after installing the desired source data:
+
+```sh
+export MEDFORGE_DB_PATH="$PWD/data/jury-demo.sqlite3"
+apps/api/.venv/bin/python scripts/seed_demo.py
+```
+
+When new accounts are created, this prints one randomly generated password for `demo-educator` and one for `demo-student`. Save them locally in a password manager or provide them to the people using this local demo; the script will not print them again if the accounts already exist. The seeder also creates a demo cohort, adds the student to it, and creates source-backed lesson **drafts** for installed datasets. Drafts still require educator review and publishing before they appear in Academy. Do not put generated passwords in Git, issues, screenshots, or a shared database. A friend setting up their own checkout should run the command on that machine to get separate credentials.
 
 ## Direct review routes
 

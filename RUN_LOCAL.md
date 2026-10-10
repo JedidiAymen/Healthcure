@@ -29,13 +29,14 @@ apps/api/.venv/bin/python scripts/acquire_cholect50_challenge_validation.py
 
 These commands fetch data from official sources and verify the installed assets. CholecT50 Challenge Validation is pinned by ETag, archive SHA-256 and per-file hashes; its terms are CC BY-NC-SA 4.0, so keep it local and non-commercial. Its 1 fps sampled images are not continuous footage. The full Endoscapes archive is 6.29 GB and expands to about 7.28 GB; reserve at least 1 GB beyond the archive and extracted payload. The Appendix300 installer uses pinned HTTP ranges to retrieve one 38-second, 27 MB MP4 excerpt from its 80.77 GB CC BY 4.0 collection without downloading the full archive. OpenKBP-Opt remains a separate blocked 10.19 GB download; the installed single `pt_201` case does not include a second-dose prediction archive. Endoscapes is restricted to non-commercial scientific research under CC BY-NC-SA 4.0; FiSaV is CC BY 4.0. Keep the demo local, retain source attribution and do not redistribute raw assets. See [`docs/DEMO_ASSETS.md`](docs/DEMO_ASSETS.md) and [`docs/BLOCKERS.md`](docs/BLOCKERS.md).
 
-For an Academy/Educator demonstration, provision dedicated local accounts before the event. This prompts for a password twice; only a salted hash is stored. See [`docs/LOCAL_ACCESS_AND_PROFILES.md`](docs/LOCAL_ACCESS_AND_PROFILES.md) for profile descriptions, sign-in steps and credential handling. Use the same database path for provisioning and launch:
+For an Academy/Educator demonstration, create an isolated database and seed the local demo before launch. This creates one educator and one student, adds the student to a cohort, and adds source-bounded lesson drafts for the data installed on this computer. New random passwords are printed once in the terminal; save them locally for the demo. Only salted password hashes are stored, and no credentials or learner records are committed to Git. If an account already exists in that database, its password is not changed or shown again. See [`docs/LOCAL_ACCESS_AND_PROFILES.md`](docs/LOCAL_ACCESS_AND_PROFILES.md) for profile descriptions and sign-in steps.
 
 ```sh
 export MEDFORGE_DB_PATH="$PWD/data/jury-demo.sqlite3"
-apps/api/.venv/bin/python scripts/create_local_learning_user.py --username educator --display-name "Demo Educator" --role educator
-apps/api/.venv/bin/python scripts/create_local_learning_user.py --username learner --display-name "Demo Learner" --role student
+apps/api/.venv/bin/python scripts/seed_demo.py
 ```
+
+Keep `MEDFORGE_DB_PATH` set to this same path when launching. To create only custom accounts instead, use `scripts/create_local_learning_user.py`; it prompts for each password and does not seed a cohort or lesson drafts.
 
 Do not use these sample names on a shared or production service. The API has no general research-route RBAC or production identity system.
 
