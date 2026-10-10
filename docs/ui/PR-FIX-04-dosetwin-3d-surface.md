@@ -1,6 +1,6 @@
 # DoseTwin D2 — source-derived 3D ROI surfaces
 
-**Status:** isolated vtk.js spike, real-source verified on `pt_201`; not merged into the review branch.
+**Status:** implemented on `review/cobalt-dosetwin-d2-d3`; real-source verified on `pt_201` and kept behind the explicit 3D control.
 **Input:** the approved DoseTwin workstation correction and its D2 acceptance criteria.
 
 ## What is included
@@ -24,9 +24,9 @@ Automated fixture checks compare two known voxel indices through C-order decodin
 ## Verification performed
 
 - `npm run test -- src/features/dosetwin/DoseTwinSurfaceViewer.test.tsx` — 3 passed.
-- `python3 -m pytest -q apps/api/tests` — 33 passed, 1 skipped. The spike worktree used the existing ignored local dataset/reference assets through temporary symlinks; those symlinks were removed afterward.
+- `python3 -m pytest -q apps/api/tests` — 34 passed, 1 skipped on the combined review branch. The CVS-AdaptNet submodule was initialized at its pinned source revision for the run.
 - `npm run test:e2e -- --grep 'DoseTwin reconstructs' --workers=1` — 1 passed.
 - `npm run typecheck`, `npm run lint`, `npm run build` — passed.
 - Actual `pt_201` source surfaces loaded through the local API in Chromium at 1440×900 and 768×1024; 390×844 confirmed the explicit 2D fallback. No horizontal overflow or browser page errors at any captured size. `python3 scripts/crosscheck_openkbp_pt201.py` passed 23 official metrics (maximum difference 0.0000076471 Gy); `npm run audit:endoscapes-cvs` passed 1,933/1,933 source frames.
 
-The vtk.js version and source/license references are recorded in [`library-spikes.md`](library-spikes.md). D3 remains blocked until an independently sourced compatible second dose array is available; D4 model inference remains blocked until a verified checkpoint/runtime and source rights are established.
+The vtk.js version and source/license references are recorded in [`library-spikes.md`](library-spikes.md). D3's local artifact import, validation, comparison and evidence-report workflow is now implemented in the same review branch; the actual source-backed comparison remains gated until an independently sourced compatible second dose array is available. D4 model inference remains blocked until a verified checkpoint/runtime and source rights are established.
