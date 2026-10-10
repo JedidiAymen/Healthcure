@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { api, type CaseRecord } from '@/lib/api'
 import { queryKeys } from '@/lib/query-client'
@@ -35,6 +36,11 @@ const workspaceLinks = [
   { label: 'Student Academy', to: '/academy', icon: GraduationCap },
   { label: 'Educator studio', to: '/educator', icon: BookOpenCheck },
 ]
+const workspaceOptions = [
+  { value: 'professional', label: 'Professional Studio', shortLabel: 'Professional', to: '/studio' },
+  { value: 'academy', label: 'Student Academy', shortLabel: 'Student', to: '/academy' },
+  { value: 'educator', label: 'Educator Studio', shortLabel: 'Educator', to: '/educator' },
+] as const
 
 function MedforgeMark() {
   // The three intersecting planes echo the linked voxel selection used in DoseTwin.
@@ -67,8 +73,6 @@ export function Shell() {
   const learning = workspace === 'academy'
     ? [{ label: 'Learning paths', to: '/academy', icon: GraduationCap }, { label: 'Progress & awards', to: '/academy/progress', icon: Trophy }]
     : [{ label: 'Lesson library', to: '/educator', icon: BookOpenCheck }, { label: 'Assignments', to: '/educator/assignments', icon: ClipboardCheck }, { label: 'Submissions', to: '/educator/submissions', icon: FileText }]
-  const roleLabel = workspace === 'academy' ? 'Student Academy' : workspace === 'educator' ? 'Educator Studio' : 'Professional Studio'
-  const roleDestination = workspace === 'academy' ? '/academy' : workspace === 'educator' ? '/educator' : '/studio'
   const normalizedSearch = searchText.trim().toLocaleLowerCase()
   const matchingCases = useMemo(() => {
     if (normalizedSearch.length < 2) return []
@@ -130,7 +134,17 @@ export function Shell() {
       <header className="medforge-toolbar flex h-[60px] shrink-0 items-center justify-between gap-3 border-b border-border bg-card px-3 sm:px-6 lg:px-8">
         <div className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground sm:gap-3"><SidebarTrigger aria-label="Toggle navigation"/><span className="hidden sm:inline">MEDFORGE</span><span aria-hidden="true" className="hidden text-border sm:inline">/</span><b className="truncate font-medium text-foreground">{title}</b></div>
         <div className="flex shrink-0 items-center gap-2">
-          <Button render={<NavLink to={roleDestination} />} nativeButton={false} variant="outline" size="sm" className="hidden max-w-40 truncate sm:inline-flex">{roleLabel}</Button>
+          <Select items={workspaceOptions} value={workspace} onValueChange={(value) => {
+            const option = workspaceOptions.find((item) => item.value === value)
+            if (option && option.value !== workspace) navigate(option.to)
+          }}>
+            <SelectTrigger aria-label="Switch workspace" size="sm" className="max-w-[152px] sm:max-w-48">
+              <SelectValue>{(value) => workspaceOptions.find((item) => item.value === value)?.shortLabel ?? 'Workspace'}</SelectValue>
+            </SelectTrigger>
+            <SelectContent align="end">
+              {workspaceOptions.map(({ value, label }) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
+            </SelectContent>
+          </Select>
           <Button ref={searchTriggerRef} variant="outline" size="sm" className="w-8 px-0 sm:w-auto sm:justify-start sm:px-2.5" aria-label="Find a research case or workspace" onClick={() => { setSearchText(''); setSearchOpen(true) }}>
             <Search data-icon="inline-start" />
             <span className="hidden sm:inline">Find case or workspace</span>

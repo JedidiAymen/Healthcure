@@ -11,6 +11,37 @@ test('home exposes the MEDFORGE app shell and role workspaces', async ({ page })
   await expect(page.getByRole('link', { name: /educator studio/i })).toBeAttached()
 })
 
+test('header workspace switcher reaches each role while learning sign-in gates stay active', async ({ page }) => {
+  for (const endpoint of ['cases', 'runs', 'reports']) {
+    await page.route(`**/api/v1/${endpoint}**`, route => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }))
+  }
+  for (const viewport of [{ width: 1440, height: 900 }, { width: 768, height: 1024 }, { width: 390, height: 844 }]) {
+    await page.setViewportSize(viewport)
+    await page.goto('/studio')
+    const switcher = page.getByRole('combobox', { name: 'Switch workspace' })
+    await expect(switcher).toBeVisible()
+    await expect(switcher).toContainText('Professional')
+
+    await switcher.click()
+    await page.getByRole('option', { name: 'Student Academy' }).click()
+    await expect(page).toHaveURL(/\/academy$/)
+    await expect(page.getByText('Student sign in', { exact: true })).toBeVisible()
+    await expect(page.getByRole('combobox', { name: 'Switch workspace' })).toContainText('Student')
+
+    await page.getByRole('combobox', { name: 'Switch workspace' }).click()
+    await page.getByRole('option', { name: 'Educator Studio' }).click()
+    await expect(page).toHaveURL(/\/educator$/)
+    await expect(page.getByText('Educator sign in', { exact: true })).toBeVisible()
+    await expect(page.getByRole('combobox', { name: 'Switch workspace' })).toContainText('Educator')
+
+    await page.getByRole('combobox', { name: 'Switch workspace' }).click()
+    await page.getByRole('option', { name: 'Professional Studio' }).click()
+    await expect(page).toHaveURL(/\/studio$/)
+    await expect(page.getByRole('heading', { name: /built around the work clinicians actually do/i })).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(viewport.width)
+  }
+})
+
 test('home resumes the latest completed source-backed case summary', async ({ page }) => {
   const runId = 'run-home-resume'
   await page.route('**/api/v1/cases', route => route.fulfill({
