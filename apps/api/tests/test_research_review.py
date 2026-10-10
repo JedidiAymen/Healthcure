@@ -132,6 +132,35 @@ def test_every_research_review_route_enforces_the_documented_role_matrix(setup):
             assert request(headers).status_code == 403, f'{role} must be denied on {route}'
 
 
+def test_research_reviews_are_scoped_to_the_author_with_admin_oversight(setup):
+    client, reviewer_one, case_id, artifact_id = setup
+    own_review = _create(client, reviewer_one, case_id, artifact_id).json()
+    reviewer_two = auth_headers(client, 'reviewer-two', 'clinical_reviewer')
+    other_review = _create(client, reviewer_two, case_id, artifact_id).json()
+
+    list_url = f'/api/v1/research-reviews?case_id={case_id}&artifact_id={artifact_id}'
+    own_history = client.get(list_url, headers=reviewer_one)
+    assert own_history.status_code == 200
+    assert [item['id'] for item in own_history.json()] == [own_review['id']]
+    assert [item['id'] for item in client.get('/api/v1/research-reviews', headers=reviewer_one).json()] == [own_review['id']]
+
+    foreign_routes = (
+        f"/api/v1/research-reviews/{other_review['id']}",
+        f"/api/v1/research-reviews/{other_review['id']}/export",
+        f"/api/v1/research-reviews/{other_review['id']}/fhir",
+    )
+    for path in foreign_routes:
+        assert client.get(path, headers=reviewer_one).status_code == 404
+    assert _create(client, reviewer_one, case_id, artifact_id, supersedes_id=other_review['id']).status_code == 404
+
+    admin = auth_headers(client, 'review-admin-oversight', 'admin')
+    assert len(client.get(list_url, headers=admin).json()) == 2
+    for path in foreign_routes:
+        assert client.get(path, headers=admin).status_code == 200
+    override = _create(client, admin, case_id, artifact_id, supersedes_id=other_review['id'])
+    assert override.status_code == 201, override.text
+
+
 def test_rationale_and_decision_are_validated(setup):
     client, reviewer, case_id, artifact_id = setup
     assert _create(client, reviewer, case_id, artifact_id, rationale='too short').status_code == 422

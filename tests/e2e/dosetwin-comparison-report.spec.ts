@@ -112,6 +112,8 @@ test('authentic pt_241 comparison report reopens with ROI evidence and source ha
     { width: 390, height: 844, name: 'phone' },
   ]) {
     await page.setViewportSize({ width: viewport.width, height: viewport.height })
+    await page.getByRole('tab', { name: 'Comparison' }).click()
+    await expect(comparison.getByText('Same-slice dose and Δ-dose')).toBeVisible()
     const dock = page.getByRole('region', { name: 'DoseTwin measurements and evidence' })
     await dock.evaluate(element => element.scrollIntoView({ block: 'start' }))
     await page.waitForTimeout(100)
@@ -121,6 +123,7 @@ test('authentic pt_241 comparison report reopens with ROI evidence and source ha
     await comparison.screenshot({ path: `${captureDir}/dosetwin-${viewport.name}-comparison.png` })
   }
   await page.setViewportSize({ width: 1440, height: 900 })
+  await page.getByRole('tab', { name: 'Comparison' }).click()
   await comparison.getByRole('button', { name: 'Save comparison report' }).evaluate(element => element.scrollIntoView({ block: 'center' }))
 
   const saveResponsePromise = page.waitForResponse(response =>

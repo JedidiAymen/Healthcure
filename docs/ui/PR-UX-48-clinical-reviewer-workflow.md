@@ -4,7 +4,7 @@
 
 Implemented the newer platform enhancement proposal's separate local DoseTwin research-review workflow. A workspace operator may provision the `clinical_reviewer` role. This is a local account designation only: the app does not verify a medical license, clinical qualifications, or authority to treat patients.
 
-The reviewer can inspect a same-case archived prediction against its source reference, inspect a voxel delta, create immutable source-backed research-review records, inspect their history, and export review evidence. Admin remains an override. Educator/admin retain general research preparation and writes (including prediction imports and comparison reports), while educator, student, researcher, and anonymous accounts cannot create or inspect DoseTwin review records. Students cannot use general research-write routes. Review decisions are explicitly for further expert assessment, never patient treatment.
+The reviewer can inspect a same-case archived prediction against its source reference, inspect a voxel delta, create immutable source-backed research-review records, inspect their history, and export review evidence. Review records are scoped to their author: other reviewers receive the same 404 for a foreign ID as an unknown ID, and each history query returns only the caller's records. Only the author or an admin can supersede a review; admins can read all review records and retain oversight. Source artifacts and case-level voxel comparisons remain shared among authorized reviewers because dose artifacts do not carry an uploader-owner field. Educator/admin retain general research preparation and writes (including prediction imports and comparison reports), while educator, student, researcher, and anonymous accounts cannot create or inspect DoseTwin review records. Students cannot use general research-write routes. Review decisions are explicitly for further expert assessment, never patient treatment.
 
 The migration is forward-only and idempotent; it preserves existing role grants and rejects unknown roles. Accounts with multiple grants resolve deterministically, with admin precedence. Provision separate accounts for student, educator, and reviewer work.
 
@@ -46,6 +46,7 @@ These captures are local review artifacts under an ignored QA folder and are not
 - `docs/LOCAL_ACCESS_AND_PROFILES.md`
 - `docs/MVP_SCOPE.md`
 - `docs/PROGRESS.md`
+- `docs/RELEASE_CHECKLIST.md`
 - `docs/SHARE_CHECKPOINT.md`
 - `docs/STATUS.md`
 - `docs/ui/PR-UX-47-review-route-authorization.md` (marked superseded)
@@ -63,10 +64,12 @@ These captures are local review artifacts under an ignored QA folder and are not
 
 ## Verification
 
-- API: `/tmp/medforge-validation-venv/bin/python -m pytest apps/api/tests -q` — **154 passed, 2 skipped**. The only warning is the existing Starlette TestClient/AnyIO deprecation.
+- API: `/tmp/medforge-validation-venv/bin/python -m pytest apps/api/tests -q` — **155 passed, 2 skipped**. The only warning is the existing Starlette TestClient/AnyIO deprecation. The focused review suite passes **10 tests**.
 - Frontend: `npm run lint`, `npm run typecheck`, and `npm run test` — passed; **69 tests across 20 files**.
 - Contracts: `MEDFORGE_PYTHON=/tmp/medforge-validation-venv/bin/python npm run contracts:check` — passed.
 - Production build: `npm run build` — passed. Existing warnings remain for the 835 KB `DoseTwinSurfaceViewer` chunk and the bundled React compiler directive.
 - Browser suite: `MEDFORGE_API_PORT=18300 PLAYWRIGHT_BASE_URL=http://127.0.0.1:18301 npm run test:e2e:ci -- --workers=1` — **20 passed**. This confirmed the anonymous educator-only preparation gate and the constrained editor popup check.
 - Authentic source workflow: `npm run test:e2e -- tests/e2e/dosetwin-comparison-report.spec.ts --workers=1` — **1 passed** using authentic OpenKBP pt_241 arrays, source hashes, saved comparison report, reviewer sign-in and immutable review on a clean isolated local database.
 - `git diff --check` — passed.
+
+Author-scope regressions cover both filtered and unfiltered history, detail, JSON and FHIR exports, cross-author supersession denial, and admin oversight/supersession. Review artifacts are private to their author; case-level arrays and voxel comparisons are shared with authorized reviewers because the existing dose-artifact schema has no uploader-owner field.
