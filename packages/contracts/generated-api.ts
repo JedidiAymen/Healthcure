@@ -276,6 +276,61 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/cases/{case_id}/dose-artifacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Dose Artifacts */
+        get: operations["list_dose_artifacts_api_v1_cases__case_id__dose_artifacts_get"];
+        /**
+         * Import Dose Artifact
+         * @description Install a user-supplied, same-grid prediction CSV for local research comparison.
+         */
+        put: operations["import_dose_artifact_api_v1_cases__case_id__dose_artifacts_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cases/{case_id}/dose-artifacts/{artifact_id}/comparison": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dose Artifact Comparison */
+        get: operations["dose_artifact_comparison_api_v1_cases__case_id__dose_artifacts__artifact_id__comparison_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cases/{case_id}/dose-artifacts/{artifact_id}/slice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dose Artifact Slice */
+        get: operations["dose_artifact_slice_api_v1_cases__case_id__dose_artifacts__artifact_id__slice_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/cases/{case_id}/viewer-manifest": {
         parameters: {
             query?: never;
@@ -744,6 +799,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/reports/dosetwin-comparison": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Dose Comparison Report */
+        post: operations["create_dose_comparison_report_api_v1_reports_dosetwin_comparison_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/reports/surgivision-frame": {
         parameters: {
             query?: never;
@@ -1010,6 +1082,152 @@ export interface components {
             mean_one_frames: number;
             /** Mean Zero Frames */
             mean_zero_frames: number;
+        };
+        /** DoseArtifact */
+        DoseArtifact: {
+            /** Case Id */
+            case_id: string;
+            /** Checkpoint Sha256 */
+            checkpoint_sha256: string;
+            /** Created At */
+            created_at: string;
+            /**
+             * Dose Unit
+             * @constant
+             */
+            dose_unit: "Gy";
+            /** Id */
+            id: string;
+            /**
+             * Index Convention
+             * @constant
+             */
+            index_convention: "x-major-y-middle-z-fastest";
+            /** Model Revision */
+            model_revision: string;
+            /**
+             * Origin
+             * @constant
+             */
+            origin: "archived_model_prediction";
+            /** Rights Basis */
+            rights_basis: string;
+            /** Shape */
+            shape: [
+                number,
+                number,
+                number
+            ];
+            /** Size Bytes */
+            size_bytes: number;
+            /** Source Case Id */
+            source_case_id: string;
+            /** Source File Name */
+            source_file_name: string;
+            /** Source File Sha256 */
+            source_file_sha256: string;
+            /** Source Revision */
+            source_revision: string;
+            /** Spacing Mm */
+            spacing_mm: [
+                number,
+                number,
+                number
+            ];
+            /**
+             * Validation Status
+             * @constant
+             */
+            validation_status: "grid-validated-local-only";
+        };
+        /** DoseArtifactComparison */
+        DoseArtifactComparison: {
+            artifact: components["schemas"]["DoseArtifact"];
+            /** Case Id */
+            case_id: string;
+            /** Limitations */
+            limitations: string[];
+            /** Reference Dose Sha256 */
+            reference_dose_sha256: string;
+            /** Roi Comparisons */
+            roi_comparisons: components["schemas"]["DoseArtifactRoiComparison"][];
+        };
+        /** DoseArtifactRoiComparison */
+        DoseArtifactRoiComparison: {
+            /** Maximum Absolute Delta Gy */
+            maximum_absolute_delta_gy: number;
+            /** Mean Absolute Delta Gy */
+            mean_absolute_delta_gy: number;
+            /** Mean Delta Gy */
+            mean_delta_gy: number;
+            /** Prediction Dvh */
+            prediction_dvh: components["schemas"]["DvhPoint"][];
+            /** Prediction Mean Gy */
+            prediction_mean_gy: number;
+            /** Prediction Metrics */
+            prediction_metrics: {
+                [key: string]: unknown;
+            };
+            /** Reference Dvh */
+            reference_dvh: components["schemas"]["DvhPoint"][];
+            /** Reference Mean Gy */
+            reference_mean_gy: number;
+            /** Reference Metrics */
+            reference_metrics: {
+                [key: string]: unknown;
+            };
+            /** Roi */
+            roi: string;
+            /** Voxel Count */
+            voxel_count: number;
+        };
+        /** DoseArtifactSlice */
+        DoseArtifactSlice: {
+            artifact: components["schemas"]["DoseArtifact"];
+            /** Axis */
+            axis: number;
+            /** Case Id */
+            case_id: string;
+            /**
+             * Coordinate Frame
+             * @constant
+             */
+            coordinate_frame: "openkbp-processed-voxel-grid";
+            /** Delta Display Max Gy */
+            delta_display_max_gy: number;
+            /** Delta Gy */
+            delta_gy: number[];
+            /** Index */
+            index: number;
+            /** Prediction Gy */
+            prediction_gy: number[];
+            /** Reference Gy */
+            reference_gy: number[];
+            /** Shape */
+            shape: [
+                number,
+                number
+            ];
+            /** Shared Display Max Gy */
+            shared_display_max_gy: number;
+            /**
+             * Unit
+             * @constant
+             */
+            unit: "Gy";
+        };
+        /** DoseTwinComparisonReportCreateRequest */
+        DoseTwinComparisonReportCreateRequest: {
+            /** Artifact Id */
+            artifact_id: string;
+            /** Axis */
+            axis: number;
+            /** Case Id */
+            case_id: string;
+            /** Index */
+            index: number;
+            /** Roi */
+            roi: string;
         };
         /** DvhMetrics */
         DvhMetrics: {
@@ -3026,6 +3244,179 @@ export interface operations {
             };
         };
     };
+    list_dose_artifacts_api_v1_cases__case_id__dose_artifacts_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DoseArtifact"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_dose_artifact_api_v1_cases__case_id__dose_artifacts_put: {
+        parameters: {
+            query: {
+                file_name: string;
+            };
+            header?: never;
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DoseArtifact"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Content Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    dose_artifact_comparison_api_v1_cases__case_id__dose_artifacts__artifact_id__comparison_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                case_id: string;
+                artifact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DoseArtifactComparison"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    dose_artifact_slice_api_v1_cases__case_id__dose_artifacts__artifact_id__slice_get: {
+        parameters: {
+            query?: {
+                axis?: number;
+                index?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                case_id: string;
+                artifact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DoseArtifactSlice"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     manifest_api_v1_cases__case_id__viewer_manifest_get: {
         parameters: {
             query?: never;
@@ -4089,6 +4480,48 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["ReportCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportRecord"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    create_dose_comparison_report_api_v1_reports_dosetwin_comparison_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DoseTwinComparisonReportCreateRequest"];
             };
         };
         responses: {

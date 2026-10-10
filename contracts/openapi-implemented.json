@@ -235,6 +235,381 @@
         "title": "CvsCriterionCoverage",
         "type": "object"
       },
+      "DoseArtifact": {
+        "additionalProperties": false,
+        "properties": {
+          "case_id": {
+            "title": "Case Id",
+            "type": "string"
+          },
+          "checkpoint_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Checkpoint Sha256",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "dose_unit": {
+            "const": "Gy",
+            "title": "Dose Unit",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "index_convention": {
+            "const": "x-major-y-middle-z-fastest",
+            "title": "Index Convention",
+            "type": "string"
+          },
+          "model_revision": {
+            "title": "Model Revision",
+            "type": "string"
+          },
+          "origin": {
+            "const": "archived_model_prediction",
+            "title": "Origin",
+            "type": "string"
+          },
+          "rights_basis": {
+            "title": "Rights Basis",
+            "type": "string"
+          },
+          "shape": {
+            "maxItems": 3,
+            "minItems": 3,
+            "prefixItems": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "title": "Shape",
+            "type": "array"
+          },
+          "size_bytes": {
+            "exclusiveMinimum": 0.0,
+            "maximum": 67108864.0,
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "source_case_id": {
+            "title": "Source Case Id",
+            "type": "string"
+          },
+          "source_file_name": {
+            "title": "Source File Name",
+            "type": "string"
+          },
+          "source_file_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Source File Sha256",
+            "type": "string"
+          },
+          "source_revision": {
+            "title": "Source Revision",
+            "type": "string"
+          },
+          "spacing_mm": {
+            "maxItems": 3,
+            "minItems": 3,
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Spacing Mm",
+            "type": "array"
+          },
+          "validation_status": {
+            "const": "grid-validated-local-only",
+            "title": "Validation Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "case_id",
+          "source_case_id",
+          "source_file_name",
+          "source_file_sha256",
+          "source_revision",
+          "shape",
+          "spacing_mm",
+          "index_convention",
+          "dose_unit",
+          "origin",
+          "model_revision",
+          "checkpoint_sha256",
+          "rights_basis",
+          "validation_status",
+          "size_bytes",
+          "created_at"
+        ],
+        "title": "DoseArtifact",
+        "type": "object"
+      },
+      "DoseArtifactComparison": {
+        "additionalProperties": false,
+        "properties": {
+          "artifact": {
+            "$ref": "#/components/schemas/DoseArtifact"
+          },
+          "case_id": {
+            "title": "Case Id",
+            "type": "string"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
+          },
+          "reference_dose_sha256": {
+            "title": "Reference Dose Sha256",
+            "type": "string"
+          },
+          "roi_comparisons": {
+            "items": {
+              "$ref": "#/components/schemas/DoseArtifactRoiComparison"
+            },
+            "title": "Roi Comparisons",
+            "type": "array"
+          }
+        },
+        "required": [
+          "artifact",
+          "case_id",
+          "reference_dose_sha256",
+          "roi_comparisons",
+          "limitations"
+        ],
+        "title": "DoseArtifactComparison",
+        "type": "object"
+      },
+      "DoseArtifactRoiComparison": {
+        "additionalProperties": false,
+        "properties": {
+          "maximum_absolute_delta_gy": {
+            "title": "Maximum Absolute Delta Gy",
+            "type": "number"
+          },
+          "mean_absolute_delta_gy": {
+            "title": "Mean Absolute Delta Gy",
+            "type": "number"
+          },
+          "mean_delta_gy": {
+            "title": "Mean Delta Gy",
+            "type": "number"
+          },
+          "prediction_dvh": {
+            "items": {
+              "$ref": "#/components/schemas/DvhPoint"
+            },
+            "title": "Prediction Dvh",
+            "type": "array"
+          },
+          "prediction_mean_gy": {
+            "title": "Prediction Mean Gy",
+            "type": "number"
+          },
+          "prediction_metrics": {
+            "additionalProperties": true,
+            "title": "Prediction Metrics",
+            "type": "object"
+          },
+          "reference_dvh": {
+            "items": {
+              "$ref": "#/components/schemas/DvhPoint"
+            },
+            "title": "Reference Dvh",
+            "type": "array"
+          },
+          "reference_mean_gy": {
+            "title": "Reference Mean Gy",
+            "type": "number"
+          },
+          "reference_metrics": {
+            "additionalProperties": true,
+            "title": "Reference Metrics",
+            "type": "object"
+          },
+          "roi": {
+            "title": "Roi",
+            "type": "string"
+          },
+          "voxel_count": {
+            "minimum": 1.0,
+            "title": "Voxel Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "roi",
+          "voxel_count",
+          "reference_mean_gy",
+          "prediction_mean_gy",
+          "mean_delta_gy",
+          "mean_absolute_delta_gy",
+          "maximum_absolute_delta_gy",
+          "reference_dvh",
+          "prediction_dvh",
+          "reference_metrics",
+          "prediction_metrics"
+        ],
+        "title": "DoseArtifactRoiComparison",
+        "type": "object"
+      },
+      "DoseArtifactSlice": {
+        "additionalProperties": false,
+        "properties": {
+          "artifact": {
+            "$ref": "#/components/schemas/DoseArtifact"
+          },
+          "axis": {
+            "maximum": 2.0,
+            "minimum": 0.0,
+            "title": "Axis",
+            "type": "integer"
+          },
+          "case_id": {
+            "title": "Case Id",
+            "type": "string"
+          },
+          "coordinate_frame": {
+            "const": "openkbp-processed-voxel-grid",
+            "title": "Coordinate Frame",
+            "type": "string"
+          },
+          "delta_display_max_gy": {
+            "minimum": 0.0,
+            "title": "Delta Display Max Gy",
+            "type": "number"
+          },
+          "delta_gy": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Delta Gy",
+            "type": "array"
+          },
+          "index": {
+            "exclusiveMaximum": 128.0,
+            "minimum": 0.0,
+            "title": "Index",
+            "type": "integer"
+          },
+          "prediction_gy": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Prediction Gy",
+            "type": "array"
+          },
+          "reference_gy": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Reference Gy",
+            "type": "array"
+          },
+          "shape": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "title": "Shape",
+            "type": "array"
+          },
+          "shared_display_max_gy": {
+            "exclusiveMinimum": 0.0,
+            "title": "Shared Display Max Gy",
+            "type": "number"
+          },
+          "unit": {
+            "const": "Gy",
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "artifact",
+          "case_id",
+          "axis",
+          "index",
+          "shape",
+          "reference_gy",
+          "prediction_gy",
+          "delta_gy",
+          "shared_display_max_gy",
+          "delta_display_max_gy",
+          "unit",
+          "coordinate_frame"
+        ],
+        "title": "DoseArtifactSlice",
+        "type": "object"
+      },
+      "DoseTwinComparisonReportCreateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "artifact_id": {
+            "pattern": "^dose_[0-9a-f]{32}$",
+            "title": "Artifact Id",
+            "type": "string"
+          },
+          "axis": {
+            "maximum": 2.0,
+            "minimum": 0.0,
+            "title": "Axis",
+            "type": "integer"
+          },
+          "case_id": {
+            "title": "Case Id",
+            "type": "string"
+          },
+          "index": {
+            "exclusiveMaximum": 128.0,
+            "minimum": 0.0,
+            "title": "Index",
+            "type": "integer"
+          },
+          "roi": {
+            "pattern": "^(Brainstem|SpinalCord|RightParotid|LeftParotid|Esophagus|Larynx|Mandible|PTV56|PTV63|PTV70)$",
+            "title": "Roi",
+            "type": "string"
+          }
+        },
+        "required": [
+          "case_id",
+          "artifact_id",
+          "roi",
+          "axis",
+          "index"
+        ],
+        "title": "DoseTwinComparisonReportCreateRequest",
+        "type": "object"
+      },
       "DvhMetrics": {
         "additionalProperties": false,
         "properties": {
@@ -5128,6 +5503,306 @@
         "summary": "Get Case"
       }
     },
+    "/api/v1/cases/{case_id}/dose-artifacts": {
+      "get": {
+        "operationId": "list_dose_artifacts_api_v1_cases__case_id__dose_artifacts_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "title": "Case Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DoseArtifact"
+                  },
+                  "title": "Response List Dose Artifacts Api V1 Cases  Case Id  Dose Artifacts Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Dose Artifacts"
+      },
+      "put": {
+        "description": "Install a user-supplied, same-grid prediction CSV for local research comparison.",
+        "operationId": "import_dose_artifact_api_v1_cases__case_id__dose_artifacts_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "title": "Case Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "file_name",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "title": "File Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DoseArtifact"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Content Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Import Dose Artifact"
+      }
+    },
+    "/api/v1/cases/{case_id}/dose-artifacts/{artifact_id}/comparison": {
+      "get": {
+        "operationId": "dose_artifact_comparison_api_v1_cases__case_id__dose_artifacts__artifact_id__comparison_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "title": "Case Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "artifact_id",
+            "required": true,
+            "schema": {
+              "title": "Artifact Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DoseArtifactComparison"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Dose Artifact Comparison"
+      }
+    },
+    "/api/v1/cases/{case_id}/dose-artifacts/{artifact_id}/slice": {
+      "get": {
+        "operationId": "dose_artifact_slice_api_v1_cases__case_id__dose_artifacts__artifact_id__slice_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "title": "Case Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "artifact_id",
+            "required": true,
+            "schema": {
+              "title": "Artifact Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "axis",
+            "required": false,
+            "schema": {
+              "default": 2,
+              "maximum": 2,
+              "minimum": 0,
+              "title": "Axis",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "index",
+            "required": false,
+            "schema": {
+              "default": 64,
+              "exclusiveMaximum": 128,
+              "minimum": 0,
+              "title": "Index",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DoseArtifactSlice"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Dose Artifact Slice"
+      }
+    },
     "/api/v1/cases/{case_id}/viewer-manifest": {
       "get": {
         "operationId": "manifest_api_v1_cases__case_id__viewer_manifest_get",
@@ -6908,6 +7583,54 @@
           }
         },
         "summary": "Create Report"
+      }
+    },
+    "/api/v1/reports/dosetwin-comparison": {
+      "post": {
+        "operationId": "create_dose_comparison_report_api_v1_reports_dosetwin_comparison_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DoseTwinComparisonReportCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportRecord"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Create Dose Comparison Report"
       }
     },
     "/api/v1/reports/surgivision-frame": {
