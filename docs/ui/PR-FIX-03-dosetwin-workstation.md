@@ -14,8 +14,8 @@
 
 ## Real-source and component evidence
 
-- Opened the running application on the installed source case `pt_201`; its real source-derived API values include `72.2979965 Gy` case maximum and `[5.422, 5.422, 3.0] mm` spacing. The visible shot shows its processed array, not a generated image. The pre-existing independent parity record documents agreement with the 23 official evaluator metrics to `<0.000008 Gy`; the displayed case remains labeled benchmark reference data.
-- Added regression coverage for shared Gy color across slices, distinct concurrent ROI contours, anisotropic plane mapping, zoom/pan coordinate selection, fullscreen, and operation-level blocked states. E2E route fixtures are synthetic test data and are explicitly identified as such in their API responses; they are not the screenshots below.
+- Opened the running application on the installed source case `pt_201`; its real source-derived API values include `72.2979965 Gy` case maximum and `[5.422, 5.422, 3.0] mm` spacing. The visible shot shows its processed array, not a generated image. A fresh `python3 scripts/crosscheck_openkbp_pt201.py` run passed all 23 official evaluator comparisons, maximum absolute difference `0.0000076471 Gy`; official same-dose and DVH scores are both `0.0`. The displayed case remains labeled benchmark reference data.
+- Added regression coverage for shared Gy color across slices, distinct concurrent ROI contours, anisotropic plane mapping, keyboard/wheel slice stepping, fullscreen, zoom/pan pointer selection in all three orientations, tablet-resized pointer mapping, a large primary viewport, and operation-level blocked states. E2E route fixtures are synthetic test data and are explicitly identified as such in their API responses; they are not the screenshots below.
 - Existing components only: React 19, shadcn Base UI, Tailwind 4, Recharts 3.10.1, TanStack Query 5.104.1 and Lucide. No new package was installed. vtk.js/Cornerstone3D are not part of this D1 correction.
 - Actual running-app screenshots at 1440×900, 768×1024 and 390×844 are in ignored `.local-review/FIX-03/`. The capture report records viewport dimensions, HTTP 200 responses, no horizontal overflow, and no browser page errors.
 
@@ -24,7 +24,7 @@
 - **D2 real 3D:** not implemented. No mesh or anatomy is fabricated; a vtk.js/Cornerstone3D spike requires explicit processed-index mapping, mask-to-surface validation, parity, memory and fallback checks before adoption.
 - **D3 dose comparison:** blocked. No authentic second compatible `pt_201` dose is in the repository, and a local dose import/validation UI is not implemented. The workspace names this gap instead of displaying pretend Model A/Model B results.
 - **D4 inference/optimization:** blocked by missing validated checkpoints, rights and worker execution.
-- D1 follow-up validation still includes student-view permission parity, keyboard-specific wheel/arrow cases, and a fresh standalone `pt_201` official-metric comparison run. Existing tests cover pointer selection in all three plane orientations after desktop pan/zoom and a tablet resize, case-specific display scale, source API metrics, and the viewer behavior exercised here; the listed remaining checks are not represented as completed.
+- D1 follow-up validation still includes student-view permission parity. The learner viewer continues using the assigned-case lock path and existing API authorization tests; those protections were not reworked in this change.
 
 ## Verification
 
