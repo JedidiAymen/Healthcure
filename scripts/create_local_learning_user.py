@@ -1,4 +1,4 @@
-"""Provision one local educator or student account using an interactive password prompt."""
+"""Provision one local educator, student or admin account using an interactive password prompt."""
 from __future__ import annotations
 
 import argparse
@@ -10,21 +10,23 @@ from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'apps'/'api'))
-from app.auth import password_record
-from app.main import _db, init_db
 
 
 def main() -> None:
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--username',required=True)
     parser.add_argument('--display-name',required=True)
-    parser.add_argument('--role',choices=('educator','student'),required=True)
+    parser.add_argument('--role',choices=('educator','student','admin'),required=True,
+        help='admin can save research evidence and use educator routes; it is not production identity')
     args=parser.parse_args()
     username=args.username.strip()
     if not re.fullmatch(r'[A-Za-z0-9._-]{3,64}',username):
         parser.error('username must be 3–64 letters, numbers, dots, underscores or hyphens')
     if not args.display_name.strip() or len(args.display_name)>100:
         parser.error('display name must contain 1–100 characters')
+    # Imported after argument parsing: importing the app initialises the database.
+    from app.auth import password_record
+    from app.main import _db, init_db
     password=getpass.getpass('Password (12+ characters): ')
     confirmation=getpass.getpass('Confirm password: ')
     if len(password)<12:

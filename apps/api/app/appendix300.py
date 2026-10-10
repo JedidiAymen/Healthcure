@@ -57,7 +57,11 @@ def _load_record(signature: tuple[Any, ...]) -> tuple[dict[str, Any], Path] | No
             return None
         if _sha256(path) != manifest.get("video_sha256"):
             return None
-        duration = float(manifest.get("video_duration_seconds") or 0)
+        duration = manifest.get("video_duration_seconds")
+        # Without a measured duration the clip is not verified, so it stays hidden.
+        if isinstance(duration, bool) or not isinstance(duration, (int, float)) or duration <= 0:
+            return None
+        duration = float(duration)
         source_annotation = manifest.get("source_annotation")
         if not isinstance(source_annotation, dict):
             source_annotation = None

@@ -67,6 +67,7 @@ const blockTypes: LessonBlockType[] = [
   "Measurement",
   "Question",
   "Reveal",
+  "CVS self-check",
 ];
 
 function emptyDraft(): LessonDraft {
@@ -581,7 +582,7 @@ export function LessonEditorPage() {
                 </div>
                 <div className="my-3 grid gap-1 border-t border-border pt-3"><span className="text-sm font-semibold">Lesson blocks</span><small className="text-xs leading-relaxed text-muted-foreground">Arrange by drag, keyboard, or move controls.</small></div>
                 <div className="grid gap-2 [&_button]:min-h-10">
-                  {blockTypes.map((type) => (
+                  {blockTypes.filter((type) => type !== "CVS self-check" || selectedCase?.module === "surgivision").map((type) => (
                     <Button type="button" variant="outline" size="sm" className="w-full justify-start" key={type} onClick={() => add(type)}>
                       <Plus data-icon="inline-start" />
                       {type}

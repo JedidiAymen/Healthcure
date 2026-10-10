@@ -226,3 +226,17 @@ The API is local-only reference software. Selected education routes use provisio
 1. Review DoseTwin coordinate labels only if original geometry becomes available. Keep competency claims unavailable pending instructor-approved mapping; activity badges must remain distinct from skill mastery.
 2. Obtain independent checkpoint checksum/provenance and checkpoint-specific research-use terms before opening CVS-AdaptNet execution; its local source-bound adapter and persistence tests are already implemented.
 3. Expand research capabilities from the pinned upstream inventories: evaluate other model workers and the OpenKBP-Opt/PortPy inputs only after source, license and environment gates are satisfied; keep every unavailable capability visible in `PARITY.md`.
+
+## 2026-10-10: compliance branch `upgrade/hackcure-compliance`
+
+Added on this branch (details in `docs/DECISIONS.md` and `docs/PROGRESS.md`):
+
+- **DoseTwin research review:** voxel difference inspector, immutable reviews with required rationale and supersession, JSON report export, and a FHIR R4 export validated against the official schema.
+- **Security:** hash-chained audit log with a verifier, research write protection, SQLCipher at rest in Docker, and a TLS 1.3 proxy.
+- **Packaging:** Docker stack (proxy, web, api, mqtt, on-demand worker, simulated device), with proof scripts for TLS and encryption.
+- **FistulaGuard:** signal tools (filters, beats, overlay, annotations, quality checks with abstention) and a simulated telemetry device with frame integrity checks.
+- **SurgiVision:** frame filters, frame compare, CVS self-check.
+- **Learner degraded mode:** device drafts, queued idempotent submit with replay, offline banner, app-shell service worker.
+- **Privacy:** account export and erasure (pseudonymisation).
+- **Quality gate:** claims checker in CI.
+- **FiSaV risk index:** protocol frozen at v1.1 and not run, deferred.

@@ -2,6 +2,7 @@
 """Compare MEDFORGE case calculations with the pinned official OpenKBP evaluator."""
 from __future__ import annotations
 
+import argparse
 import json
 import math
 import sys
@@ -15,11 +16,13 @@ sys.path.insert(0, str(ROOT / "apps" / "api"))
 sys.path.insert(0, str(UPSTREAM))
 
 from app.openkbp import read_sparse_csv, sha256, validate_case
-from provided_code.data_loader import DataLoader
-from provided_code.dose_evaluation_class import DoseEvaluator
 
 
 def main() -> int:
+    argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter).parse_args()
+    # The pinned official evaluator and its dependencies are needed only for the cross-check itself.
+    from provided_code.data_loader import DataLoader
+    from provided_code.dose_evaluation_class import DoseEvaluator
     if not CASE.is_dir():
         raise SystemExit(f"Missing local source case: {CASE}; run scripts/acquire_openkbp_pt201.py")
     derived = validate_case(CASE)

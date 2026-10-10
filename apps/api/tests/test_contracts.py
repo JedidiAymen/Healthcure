@@ -15,6 +15,7 @@ import app.main as main
 from app.main import create_app, _db
 from app.auth import password_record
 from app.schemas import SurgicalFrameRecord, ViewerManifest
+from helpers import authorize_research_writer
 
 RUBRIC = [
     {'id':'evidence','title':'Evidence use','description':'Connect observations to source data.','max_points':60},
@@ -80,6 +81,7 @@ def test_manifest_marked_synthetic_and_geometry_not_invented(client):
 
 
 def test_dose_artifact_import_requires_real_reference_and_preserves_source_provenance(client,monkeypatch,tmp_path):
+    authorize_research_writer(client)
     cid=client.get('/api/v1/cases').json()[0]['id']
     payload=b',data\n0,18\n1,25\n3,41\n'
     digest=hashlib.sha256(payload).hexdigest()
@@ -141,6 +143,7 @@ def test_dose_artifact_import_requires_real_reference_and_preserves_source_prove
 
 
 def test_dose_artifact_import_rejects_wrong_grid_unit_and_negative_values(client,monkeypatch,tmp_path):
+    authorize_research_writer(client)
     cid=client.get('/api/v1/cases').json()[0]['id']
     monkeypatch.setenv('MEDFORGE_SOURCE_KIND','benchmark')
     monkeypatch.setenv('MEDFORGE_DOSE_ARTIFACT_DIR',str(tmp_path/'dose-artifacts'))
@@ -177,6 +180,7 @@ def test_dose_artifact_import_rejects_wrong_grid_unit_and_negative_values(client
 
 
 def test_run_is_real_calculation_of_synthetic_fixture_and_idempotent(client):
+    authorize_research_writer(client)
     cid=client.get('/api/v1/cases').json()[0]['id']
     payload={'case_id':cid,'operation_id':'openkbp.case_summary'}
     r1=client.post('/api/v1/runs',json=payload)
@@ -191,6 +195,7 @@ def test_run_is_real_calculation_of_synthetic_fixture_and_idempotent(client):
 
 
 def test_inference_unavailable_fails_safe(client,monkeypatch):
+    authorize_research_writer(client)
     gate_blockers=[
         'The test checkpoint is intentionally unavailable.',
         'Checkpoint-specific test terms are intentionally unconfirmed.',
@@ -207,6 +212,7 @@ def test_inference_unavailable_fails_safe(client,monkeypatch):
 
 
 def test_cvs_frame_run_persists_source_hashes_and_model_output(client,monkeypatch,tmp_path):
+    authorize_research_writer(client)
     image_path=tmp_path/'endoscapes'/'val'/'125_13175.jpg'
     image_path.parent.mkdir(parents=True)
     image_path.write_bytes(b'validated-source-frame')
@@ -254,6 +260,7 @@ def test_cvs_frame_run_persists_source_hashes_and_model_output(client,monkeypatc
 
 
 def test_unknown_case_and_extra_fields_rejected(client):
+    authorize_research_writer(client)
     assert client.get('/api/v1/cases/nosuchcase').status_code==404
     cid=client.get('/api/v1/cases').json()[0]['id']
     response=client.post('/api/v1/runs',json={'case_id':cid,'operation_id':'openkbp.case_summary','shell':'rm -rf /'})
@@ -663,6 +670,7 @@ def test_authentic_fisav_learning_delivery_with_delayed_reference_release(client
 
 
 def test_report_is_saved_idempotently_with_run_provenance_and_limitations(client):
+    authorize_research_writer(client)
     cid=client.get('/api/v1/cases').json()[0]['id']
     run=client.post('/api/v1/runs',json={'case_id':cid,'operation_id':'openkbp.case_summary'}).json()
     assert client.get('/api/v1/runs').json()[0]['id']==run['id']
@@ -763,7 +771,7 @@ def test_trusted_dosetwin_case_profiles_isolate_runs_predictions_and_reports(mon
     monkeypatch.setenv('MEDFORGE_OPENKBP_CASE_DIR',str(case_a))
     monkeypatch.setenv('MEDFORGE_DB_PATH',str(tmp_path/'case-registry.sqlite3'))
     monkeypatch.setenv('MEDFORGE_SOURCE_KIND','synthetic-test')
-    api=TestClient(create_app())
+    api=authorize_research_writer(TestClient(create_app()))
 
     cases={item['id']:item for item in api.get('/api/v1/cases').json() if item['module']=='dosetwin'}
     id_a='openkbp:'+case_a.name
@@ -905,7 +913,7 @@ def test_endoscapes_frame_requires_matching_local_hashes_and_keeps_identity(monk
     monkeypatch.setenv('MEDFORGE_ENDOSCAPES_ROOT',str(root))
     monkeypatch.delenv('MEDFORGE_OPENKBP_CASE_DIR',raising=False)
     monkeypatch.setenv('MEDFORGE_DB_PATH',str(tmp_path/'endoscapes.sqlite3'))
-    client=TestClient(create_app())
+    client=authorize_research_writer(TestClient(create_app()))
     cases=client.get('/api/v1/cases').json()
     assert len(cases)==1 and cases[0]['module']=='surgivision'
     assert cases[0]['reference_kind']=='research'
@@ -1027,7 +1035,7 @@ def test_fisav_sample_exposes_real_signal_contract_and_calculated_spectrum(monke
     monkeypatch.delenv('MEDFORGE_ENDOSCAPES_ROOT',raising=False)
     monkeypatch.setenv('MEDFORGE_FISAV_ROOT',str(root))
     monkeypatch.setenv('MEDFORGE_DB_PATH',str(tmp_path/'fisav.sqlite3'))
-    client=TestClient(create_app())
+    client=authorize_research_writer(TestClient(create_app()))
     cases=client.get('/api/v1/cases').json()
     assert [row['id'] for row in cases]==['fisav:pat001','fisav:pat002']
     assert client.get('/api/v1/cases/fisav:pat002').json()['source_case_id']=='pat002'

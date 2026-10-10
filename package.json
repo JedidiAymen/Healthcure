@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
+    "start": "node scripts/dev.mjs",
     "lint": "eslint src vite.config.ts eslint.config.js",
     "test": "vitest run",
     "test:e2e": "playwright test",
@@ -12,11 +13,11 @@
     "capture:ui-review": "node scripts/capture_ui_review.mjs",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --pretty false",
-    "contracts:generate": "python3 scripts/export_openapi.py && openapi-typescript contracts/openapi-implemented.json -o packages/contracts/generated-api.ts",
-    "contracts:check": "python3 scripts/export_openapi.py && openapi-typescript contracts/openapi-implemented.json --check -o packages/contracts/generated-api.ts",
-    "doctor": "python3 scripts/doctor.py",
-    "audit:endoscapes-cvs": "python3 scripts/audit_endoscapes_cvs_coverage.py",
-    "smoke:local": "python3 scripts/smoke_local.py",
+    "contracts:generate": "node scripts/py.mjs scripts/export_openapi.py && openapi-typescript contracts/openapi-implemented.json -o packages/contracts/generated-api.ts",
+    "contracts:check": "node scripts/py.mjs scripts/export_openapi.py && openapi-typescript contracts/openapi-implemented.json --check -o packages/contracts/generated-api.ts",
+    "doctor": "node scripts/py.mjs scripts/doctor.py",
+    "audit:endoscapes-cvs": "node scripts/py.mjs scripts/audit_endoscapes_cvs_coverage.py",
+    "smoke:local": "node scripts/py.mjs scripts/smoke_local.py",
     "preview": "vite preview --host 127.0.0.1"
   },
   "dependencies": {

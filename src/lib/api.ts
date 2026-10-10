@@ -1,5 +1,6 @@
 import type { components } from '../../packages/contracts/generated-api'
 import { queryClient } from './query-client'
+import { withResearchSignIn } from './research-write-auth'
 
 type ApiSchemas = components['schemas']
 
@@ -141,7 +142,8 @@ export type LessonBlockType =
   | "Observation"
   | "Measurement"
   | "Question"
-  | "Reveal";
+  | "Reveal"
+  | "CVS self-check";
 export type EducatorLessonBlock = {
   id: string;
   type: LessonBlockType;
@@ -239,6 +241,32 @@ export type EducatorAttemptReview = {
   rubric_criteria: RubricCriterion[]; criterion_scores: RubricCriterionScore[];
   viewer_evidence: StudentViewerEvidence | null;
   assigned_case: { module: "surgivision" | "dosetwin" | "fistulaguard"; case_id: string; case_label: string } | null;
+  cvs_self_checks?: CvsSelfCheckResult[];
+};
+export type CvsSelfCheckResult = ApiSchemas['CvsSelfCheckResult'];
+export type SignalFilterResult = ApiSchemas['SignalFilterResult'];
+export type SignalQuality = ApiSchemas['SignalQuality'];
+export type TelemetryStatus = ApiSchemas['TelemetryStatus'];
+export type TelemetryWindow = ApiSchemas['TelemetryWindow'];
+export type ResearchReview = ApiSchemas['ResearchReview'];
+export type VoxelDifference = ApiSchemas['VoxelDifference'];
+export type ResearchReviewDecision = ResearchReview['decision'];
+export type ResearchReviewCreate = ApiSchemas['ResearchReviewCreate'];
+export type BeatAnalysis = ApiSchemas['BeatAnalysis'];
+export type SignalAnnotation = ApiSchemas['SignalAnnotation'];
+export type SignalAnnotationCreate = ApiSchemas['SignalAnnotationCreate'];
+export type SignalFilterQuery = { mode: "bandpass"; low_hz: number; high_hz: number } | { mode: "notch"; notch_hz: number; q: number };
+export type SurgicalFrameBrowse = ApiSchemas['SurgicalFrameBrowse'];
+export type SurgicalFrameSummary = ApiSchemas['SurgicalFrameSummary'];
+export type SurgicalFrameFilters = {
+  split?: "train" | "val" | "test";
+  category?: string;
+  criterion?: "two_structures" | "hepatocystic_triangle" | "cystic_plate";
+  min_value?: number;
+  max_value?: number;
+  agreement?: "unanimous" | "disputed";
+  limit?: number;
+  offset?: number;
 };
 export type StudentReferenceEvidence = {
   kind: "expert_reference";
@@ -277,10 +305,10 @@ export function setApiSessionToken(token: string | null) {
   if (sessionToken !== token) queryClient.clear()
   sessionToken = token;
 }
-async function request<T>(path: string): Promise<T> {
+async function request<T>(path: string, timeoutMs = 3500): Promise<T> {
   const response = await fetch(`${API}${path}`, {
     headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {},
-    signal: AbortSignal.timeout(3500),
+    signal: AbortSignal.timeout(timeoutMs),
   });
   if (!response.ok) {
     const detail = await response.json().catch(() => null);
@@ -289,16 +317,18 @@ async function request<T>(path: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 async function post<T>(path: string, body: unknown, extraHeaders: Record<string, string> = {}, timeoutMs = 15000): Promise<T> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...extraHeaders,
-  };
-  if (sessionToken) headers.Authorization = `Bearer ${sessionToken}`;
-  const response = await fetch(`${API}${path}`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(timeoutMs),
+  const response = await withResearchSignIn(path, () => {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      ...extraHeaders,
+    };
+    if (sessionToken) headers.Authorization = `Bearer ${sessionToken}`;
+    return fetch(`${API}${path}`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
   });
   if (!response.ok) {
     const detail = await response.json().catch(() => null);
@@ -419,6 +449,52 @@ export const api = {
   surgicalMediaRecord: (mediaId: string) => request<SurgicalMediaRecord>(`/api/v1/surgivision/media/${encodeURIComponent(mediaId)}`),
   surgicalSequenceFrames: (mediaId: string) => request<SurgicalSequenceFrame[]>(`/api/v1/surgivision/media/${encodeURIComponent(mediaId)}/sampled-frames`),
   surgicalClips: () => request<SurgicalClipRecord[]>("/api/v1/surgivision/clips"),
+  signalFiltered: (recordId: string, channel: string, startSec: number, durationSec: number, filter: SignalFilterQuery) => {
+    const query = new URLSearchParams({ channel, start_sec: String(startSec), duration_sec: String(durationSec), ...Object.fromEntries(Object.entries(filter).map(([key, value]) => [key, String(value)])) });
+    return request<SignalFilterResult>(`/api/v1/fistulaguard/records/${encodeURIComponent(recordId)}/filtered?${query}`, 30000);
+  },
+  signalBeats: (recordId: string, channel: string, startSec: number, durationSec: number) =>
+    request<BeatAnalysis>(`/api/v1/fistulaguard/records/${encodeURIComponent(recordId)}/beats?${new URLSearchParams({ channel, start_sec: String(startSec), duration_sec: String(durationSec) })}`, 30000),
+  signalAnnotations: (recordId: string) => request<SignalAnnotation[]>(`/api/v1/fistulaguard/records/${encodeURIComponent(recordId)}/annotations`),
+  createSignalAnnotation: (recordId: string, input: SignalAnnotationCreate) =>
+    post<SignalAnnotation>(`/api/v1/fistulaguard/records/${encodeURIComponent(recordId)}/annotations`, input),
+  deleteSignalAnnotation: async (annotationId: string) => {
+    const response = await fetch(`${API}/api/v1/fistulaguard/annotations/${encodeURIComponent(annotationId)}`, {
+      method: "DELETE", headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}, signal: AbortSignal.timeout(15000),
+    });
+    if (!response.ok) {
+      const detail = await response.json().catch(() => null);
+      throw new Error(detail?.detail?.message ?? `API returned ${response.status}`);
+    }
+  },
+  signalQuality: (recordId: string, channel: string, startSec: number, durationSec: number) =>
+    request<SignalQuality>(`/api/v1/fistulaguard/records/${encodeURIComponent(recordId)}/quality?${new URLSearchParams({ channel, start_sec: String(startSec), duration_sec: String(durationSec) })}`, 30000),
+  telemetryDevices: () => request<TelemetryStatus>('/api/v1/telemetry/devices'),
+  telemetryWindow: (deviceId: string, seconds = 5) => request<TelemetryWindow>(`/api/v1/telemetry/devices/${encodeURIComponent(deviceId)}/window?seconds=${seconds}`),
+  doseVoxel: (caseId: string, artifactId: string, voxel: [number, number, number]) =>
+    request<VoxelDifference>(`/api/v1/cases/${encodeURIComponent(caseId)}/dose-artifacts/${encodeURIComponent(artifactId)}/voxel?x=${voxel[0]}&y=${voxel[1]}&z=${voxel[2]}`, 15000),
+  researchReviews: (caseId: string, artifactId: string) =>
+    request<ResearchReview[]>(`/api/v1/research-reviews?case_id=${encodeURIComponent(caseId)}&artifact_id=${encodeURIComponent(artifactId)}`, 15000),
+  createResearchReview: (input: ResearchReviewCreate) => post<ResearchReview>('/api/v1/research-reviews', input, {}, 30000),
+  researchReviewDocument: (reviewId: string, format: 'export' | 'fhir') =>
+    request<unknown>(`/api/v1/research-reviews/${encodeURIComponent(reviewId)}/${format}`, 15000),
+  surgicalFrames: (filters: SurgicalFrameFilters = {}) => {
+    const query = new URLSearchParams(Object.entries(filters).filter(([, value]) => value !== undefined && value !== "").map(([key, value]) => [key, String(value)]));
+    return request<SurgicalFrameBrowse>(`/api/v1/surgivision/frames${query.size ? `?${query}` : ""}`);
+  },
+  cvsSelfCheck: async (attemptId: string, blockId: string): Promise<CvsSelfCheckResult | null> => {
+    const response = await fetch(`${API}/api/v1/academy/attempts/${encodeURIComponent(attemptId)}/cvs-self-check/${encodeURIComponent(blockId)}`, {
+      headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}, signal: AbortSignal.timeout(3500),
+    });
+    if (response.status === 404) return null;
+    if (!response.ok) {
+      const detail = await response.json().catch(() => null);
+      throw new Error(detail?.detail?.message ?? `API returned ${response.status}`);
+    }
+    return response.json() as Promise<CvsSelfCheckResult>;
+  },
+  commitCvsSelfCheck: (attemptId: string, blockId: string, judgements: [0 | 1, 0 | 1, 0 | 1]) =>
+    post<CvsSelfCheckResult>(`/api/v1/academy/attempts/${encodeURIComponent(attemptId)}/cvs-self-check/${encodeURIComponent(blockId)}`, { judgements }),
   surgicalClipVideoUrl: (clipId: string) => `${API}/api/v1/surgivision/clips/${encodeURIComponent(clipId)}/video`,
   cholecT50Videos: () => request<CholecT50VideoRecord[]>("/api/v1/surgivision/cholect50"),
   cholecT50Frames: (videoId: string) => request<CholecT50FrameRecord[]>(`/api/v1/surgivision/cholect50/${encodeURIComponent(videoId)}/frames`),
@@ -550,10 +626,11 @@ export const api = {
       'X-Dose-Index-Convention': 'x-major-y-middle-z-fastest', 'X-Dose-Array-Shape': '128,128,128',
       'X-Dose-Spacing-MM': metadata.spacingMm.join(','), 'X-Dose-File-SHA256': fileHash,
     };
-    if (sessionToken) headers.Authorization = `Bearer ${sessionToken}`;
-    const response = await fetch(`${API}/api/v1/cases/${encodeURIComponent(caseId)}/dose-artifacts?file_name=${encodeURIComponent(file.name)}`, {
-      method: 'PUT', headers, body: bytes, signal: AbortSignal.timeout(90000),
-    });
+    const path = `/api/v1/cases/${encodeURIComponent(caseId)}/dose-artifacts?file_name=${encodeURIComponent(file.name)}`;
+    const response = await withResearchSignIn(path, () => fetch(`${API}${path}`, {
+      method: 'PUT', headers: sessionToken ? { ...headers, Authorization: `Bearer ${sessionToken}` } : headers,
+      body: bytes, signal: AbortSignal.timeout(90000),
+    }));
     if (!response.ok) {
       const detail = await response.json().catch(() => null);
       throw new Error(detail?.detail?.message ?? `API returned ${response.status}`);
