@@ -187,7 +187,7 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
   if(loading)return <div className="my-6 grid min-h-40 content-center gap-3"><Skeleton className="h-24 w-full"/><p className="text-sm text-muted-foreground">Loading verified image and annotation record…</p></div>
   if(error||!frame)return <Alert variant="destructive" className="my-6 min-h-36 items-center"><AlertCircle/><AlertDescription><strong className="block font-semibold">Endoscapes sample is unavailable</strong>{error||'No validated frame record was returned.'}</AlertDescription></Alert>
   return <section className="mt-4 grid min-w-0 gap-3" aria-label="SurgiVision frame review">
-    <div className="flex min-w-0 flex-col gap-3 rounded-xl border bg-card p-3 md:flex-row md:items-center md:justify-between">
+    <div className="flex min-w-0 flex-col gap-3 rounded-xl border bg-card p-3 xl:flex-row xl:items-center xl:justify-between">
       <div className="min-w-0 flex-1">
         {guided ? (
           <>

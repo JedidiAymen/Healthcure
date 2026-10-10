@@ -83,6 +83,28 @@ test('educator lesson editor loads as a real route and switches its phone panes'
     await expect(page.getByRole('option')).toHaveCount(1)
     await page.screenshot({ path: `.local-review/FIX-01/educator-picker-${viewport.width}x${viewport.height}.png` })
   }
+  // Emulate the 720×450 CSS viewport produced by 1440×900 at 200% zoom. Keep
+  // DPR at 2 so popup geometry and text wrapping are checked at that scale.
+  await page.keyboard.press('Escape')
+  const zoomCdp = await page.context().newCDPSession(page)
+  await zoomCdp.send('Emulation.setDeviceMetricsOverride', { width: 720, height: 450, deviceScaleFactor: 2, mobile: false })
+  await expect.poll(() => page.evaluate(() => ({ width: innerWidth, dpr: devicePixelRatio }))).toEqual({ width: 720, dpr: 2 })
+  const zoomedCaseSearch = page.getByLabel(/Research source; search by case/)
+  await zoomedCaseSearch.fill('video 162 frame 6575')
+  const zoomedPopup = page.locator('[data-slot="combobox-content"]')
+  await expect(page.getByRole('option', { name: /Endoscapes test.*frame 6575/ })).toBeVisible()
+  const zoomedGeometry = await zoomedPopup.evaluate((element) => {
+    const rect = element.getBoundingClientRect()
+    const style = getComputedStyle(element)
+    return { left: rect.left, right: rect.right, bottom: rect.bottom, maxHeight: Number.parseFloat(style.maxHeight), background: style.backgroundColor, width: innerWidth }
+  })
+  expect(zoomedGeometry.background).toBe('rgb(255, 255, 255)')
+  expect(zoomedGeometry.left).toBeGreaterThanOrEqual(0)
+  expect(zoomedGeometry.right).toBeLessThanOrEqual(zoomedGeometry.width)
+  expect(zoomedGeometry.maxHeight).toBeLessThanOrEqual(180)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(720)
+  await page.screenshot({ path: '.local-review/FIX-01/educator-picker-200-percent-720x450.png' })
+  await zoomCdp.detach()
   await page.setViewportSize({ width: 1440, height: 900 })
   await expect(page.getByRole('option', { name: /Blocked source case/ })).toHaveCount(0)
   await page.getByRole('option', { name: /Endoscapes test.*frame 6575/ }).click()
@@ -156,6 +178,61 @@ test('educator teaching desk shows real work and opens the selected assignment r
   await expect(page).toHaveURL(new RegExp(`/educator/submissions\\?assignmentId=${assignmentId}`))
   await expect(page.getByRole('combobox', { name: 'Assignment' })).toContainText(lessonTitle)
   await expect(page.getByText('Learner One')).toBeVisible()
+})
+
+test('SurgiVision frame picker stays readable beside the professional sidebar at tablet width', async ({ page }) => {
+  await page.setViewportSize({ width: 768, height: 1024 })
+  const fixtureCase = (frame: number) => ({
+    id: `endoscapes:test:162_${frame}`, module: 'surgivision', dataset_id: 'Endoscapes-BBox201',
+    source_case_id: `video-162:frame-${frame}`, reference_kind: 'research', status: 'ready',
+    label: `Endoscapes test · video 162 · frame ${frame}`,
+  })
+  await page.route('**/api/v1/cases', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify([fixtureCase(6575), fixtureCase(7325)]),
+  }))
+  await page.route('**/api/v1/surgivision/frames/**', (route) => {
+    if (route.request().url().endsWith('/image')) {
+      return route.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="854" height="480"><rect width="854" height="480" fill="#101624"/></svg>' })
+    }
+    const frameNumber = route.request().url().includes('7325') ? 7325 : 6575
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: `endoscapes:test:162_${frameNumber}`, dataset_id: 'Endoscapes-BBox201', split: 'test', video_id: 162,
+        frame_number: frameNumber, file_name: `162_${frameNumber}.jpg`, width: 854, height: 480,
+        image_sha256: '0'.repeat(64), annotation_sha256: '1'.repeat(64),
+        annotations: [{ id: 1, category_id: 1, category_name: 'tool', bbox: [20, 30, 80, 60], segmentation: null }],
+        cvs_criteria: [0, 0, 0],
+      }),
+    })
+  })
+  await page.route('**/api/v1/surgivision/media/**', (route) => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ detail: 'No video media fixture is installed.' }) }))
+  await page.route('**/api/v1/surgivision/cvs-coverage', (route) => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ detail: 'Coverage fixture is not installed.' }) }))
+  await page.route('**/api/v1/models/cvs-adaptnet/validate', (route) => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ detail: 'Checkpoint remains gated.' }) }))
+  await page.route('**/api/v1/runs', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }))
+
+  await page.goto('/studio/surgivision/cases/endoscapes%3Atest%3A162_6575')
+  const input = page.getByRole('combobox', { name: 'Jump to surgical frame by split, video, or frame number' })
+  await input.fill('test 162')
+  const popup = page.locator('[data-slot="combobox-content"]')
+  await expect(popup).toBeVisible()
+  await expect(page.getByRole('option')).toHaveCount(2)
+  const geometry = await popup.evaluate((element) => {
+    const rect = element.getBoundingClientRect()
+    const style = getComputedStyle(element)
+    return { left: rect.left, right: rect.right, width: rect.width, background: style.backgroundColor, maxHeight: Number.parseFloat(style.maxHeight), scrollWidth: document.documentElement.scrollWidth }
+  })
+  expect(geometry.background).toBe('rgb(255, 255, 255)')
+  expect(geometry.width).toBeGreaterThanOrEqual(240)
+  expect(geometry.left).toBeGreaterThanOrEqual(0)
+  expect(geometry.right).toBeLessThanOrEqual(768)
+  expect(geometry.maxHeight).toBeLessThanOrEqual(320)
+  expect(geometry.scrollWidth).toBeLessThanOrEqual(768)
+  await mkdir('.local-review/FIX-01', { recursive: true })
+  await page.screenshot({ path: '.local-review/FIX-01/surgi-picker-tablet-fixture-768x1024.png' })
 })
 
 test('model lab filters source-linked methods and explains an execution gate', async ({ page }) => {
