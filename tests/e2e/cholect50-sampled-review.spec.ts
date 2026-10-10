@@ -35,11 +35,11 @@ test('SurgiVision routes reviewers from native video to source-matched labels', 
   await page.goto('/studio/surgivision/cases/current')
 
   await expect(page.getByRole('heading', { name: 'SurgiVision surgical media review' })).toBeVisible()
-  await expect(page.getByText(/Appendix300 native appendectomy video without aligned labels/)).toBeVisible()
+  await expect(page.getByText(/Appendix300 appendectomy video with one publisher-timed source event/)).toBeVisible()
   const modes = page.getByRole('tablist', { name: 'Surgical media modes' })
-  await expect(modes.getByRole('tab', { name: 'Native video · no aligned labels' })).toHaveAttribute('aria-selected', 'true')
-  await expect(page.getByRole('region', { name: 'Unannotated native Appendix300 surgical video' })).toBeVisible()
-  await expect(page.getByText('Playback only · no aligned results')).toBeVisible()
+  await expect(modes.getByRole('tab', { name: 'Appendix300 · source event' })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByRole('region', { name: 'Appendix300 video with a source-timed annotation' })).toBeVisible()
+  await expect(page.getByText(/no instrument masks, action triplets, phase labels or model output/)).toBeVisible()
   await expect(page.getByRole('img', { name: /published tool-tip boxes/ })).toHaveCount(0)
   await page.getByRole('button', { name: 'View CholecT50 labeled samples' }).click()
   await expect(modes.getByRole('tab', { name: 'Sampled replay · source labels' })).toHaveAttribute('aria-selected', 'true')
@@ -65,8 +65,8 @@ test('SurgiVision routes reviewers from native video to source-matched labels', 
   for (const viewport of [{ width: 1440, height: 900 }, { width: 768, height: 1024 }, { width: 390, height: 844 }]) {
     const suffix = `${viewport.width}x${viewport.height}`
     await page.setViewportSize(viewport)
-    await modes.getByRole('tab', { name: 'Native video · no aligned labels' }).click()
-    await expect(page.getByRole('region', { name: 'Unannotated native Appendix300 surgical video' })).toBeVisible()
+    await modes.getByRole('tab', { name: 'Appendix300 · source event' }).click()
+    await expect(page.getByRole('region', { name: 'Appendix300 video with a source-timed annotation' })).toBeVisible()
     await expect(page.getByRole('img', { name: /published tool-tip boxes/ })).toHaveCount(0)
     await expect(page.locator('html')).toHaveJSProperty('scrollWidth', viewport.width)
     if (sourceBacked) await page.screenshot({ path: `.local-review/SURGIVISION-MEDIA-MODES/native-video-${suffix}.png`, fullPage: true })

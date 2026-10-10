@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { mkdir } from 'node:fs/promises'
 
 type SurgicalClip = {
   clip_id: string
@@ -37,9 +38,18 @@ test('Appendix300 source event and grade appear at their video timestamp @source
   await expect(inVideoAnnotation).toContainText('Final laparoscopic grade: 2 · Gomes scale')
   const video = page.locator('video[aria-label="Appendix300 laparoscopic appendectomy source video"]')
   await expect.poll(() => video.evaluate(element => (element as HTMLVideoElement).currentTime)).toBeGreaterThan(23)
+  await expect.poll(async () => {
+    const videoBox = await video.boundingBox()
+    const overlayBox = await inVideoAnnotation.boundingBox()
+    return Boolean(videoBox && overlayBox && videoBox.y >= 0 && overlayBox.y >= videoBox.y && overlayBox.y + overlayBox.height <= videoBox.y + videoBox.height)
+  }).toBe(true)
+  await mkdir('.local-review/UX-32', { recursive: true })
 
   for (const viewport of [{ width: 1440, height: 900 }, { width: 768, height: 1024 }, { width: 390, height: 844 }]) {
     await page.setViewportSize(viewport)
+    await page.getByRole('button', { name: 'Jump to source event' }).click()
+    await expect(inVideoAnnotation).toBeVisible()
     await expect(page.locator('html')).toHaveJSProperty('scrollWidth', viewport.width)
+    await page.screenshot({ path: `.local-review/UX-32/surgivision-source-event-${viewport.width}x${viewport.height}.png` })
   }
 })
