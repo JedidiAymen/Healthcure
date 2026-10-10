@@ -48,3 +48,5 @@ jobs:
         run: npm run contracts:check
       - name: Production build
         run: npm run build
+      - name: Offline Academy production-shell browser test
+        run: npm run test:e2e:offline -- --workers=1

@@ -3,6 +3,7 @@ import { api, type StudentViewerEvidence } from "./api"
 import { drainQueue, indexedDbStore, memoryStore, queuedSubmits, type KeyValueStore, type QueuedSubmit } from "./offline-queue"
 
 let store: KeyValueStore | null = null
+let replayInFlight: Promise<Awaited<ReturnType<typeof drainQueue>> > | null = null
 export function offlineStore(): KeyValueStore {
   // IndexedDB can be unavailable (private windows, tests); fall back to memory for this tab.
   store ??= typeof indexedDB === "undefined" ? memoryStore() : indexedDbStore()
@@ -20,7 +21,14 @@ async function replay(item: QueuedSubmit) {
 }
 
 export async function replayQueuedSubmits() {
-  return drainQueue(offlineStore(), replay)
+  if (!replayInFlight) {
+    replayInFlight = Promise.resolve()
+      .then(() => drainQueue(offlineStore(), replay))
+      .finally(() => { replayInFlight = null })
+  }
+  const result = await replayInFlight
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("medforge:offline-queue-updated"))
+  return result
 }
 
 export function useOfflineStatus() {
@@ -32,11 +40,13 @@ export function useOfflineStatus() {
     const flush = async () => { if (navigator.onLine) { try { await replayQueuedSubmits() } catch { /* retried later */ } } await refresh() }
     const goOnline = () => { setOnline(true); void flush() }
     const goOffline = () => setOnline(false)
+    const queueUpdated = () => { void refresh() }
     window.addEventListener("online", goOnline)
     window.addEventListener("offline", goOffline)
+    window.addEventListener("medforge:offline-queue-updated", queueUpdated)
     void flush()
     const timer = window.setInterval(() => void flush(), 15000)
-    return () => { live = false; window.removeEventListener("online", goOnline); window.removeEventListener("offline", goOffline); window.clearInterval(timer) }
+    return () => { live = false; window.removeEventListener("online", goOnline); window.removeEventListener("offline", goOffline); window.removeEventListener("medforge:offline-queue-updated", queueUpdated); window.clearInterval(timer) }
   }, [])
   return { online, queued }
 }

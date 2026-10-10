@@ -106,8 +106,8 @@ import { queryKeys } from "@/lib/query-client";
 import { renderDoseSlicePixels } from "@/lib/dose-visualization";
 import { filterModelCatalog, type ModelReadinessFilter } from "@/lib/model-catalog";
 import { canSubmitMission, getMissionProgress } from "@/lib/academy-mission-progress";
-import { offlineStore } from "@/lib/mission-offline";
-import { clearDraft, enqueueSubmit, isNetworkError, loadDraft, saveDraft } from "@/lib/offline-queue";
+import { offlineStore, replayQueuedSubmits } from "@/lib/mission-offline";
+import { clearDraft, enqueueSubmit, isNetworkError, loadDraft, queuedSubmits, saveDraft } from "@/lib/offline-queue";
 import { CvsSelfCheck, CvsSelfCheckSummary } from "@/features/surgivision/CvsSelfCheck";
 import clinicalTeamImage from "../assets/clinical-team.jpg";
 
@@ -2339,7 +2339,7 @@ export function Mission() {
     setCommittedSelfChecks({});
     setDebrief(null);
     setError("");
-    api.studentStartAttempt(missionId).then(value => {
+    api.studentStartAttempt(missionId).then(async value => {
       if (!live) return;
       setAttempt(value);
       const serverAnswers = Object.fromEntries(value.observations.map(item => [item.block_id, item.response]));
@@ -2349,6 +2349,15 @@ export function Mission() {
         if (live && draft) { setAnswers({ ...serverAnswers, ...Object.fromEntries(Object.entries(draft.answers).filter(([, text]) => text.trim())) }); setOfflineNotice("Restored unsaved answers from this device."); }
       }).catch(() => undefined);
       setViewerEvidence(value.viewer_evidence);
+      if (value.state === "started") {
+        const pending = await queuedSubmits(offlineStore());
+        if (live && pending.some(item => item.attemptId === value.attempt_id)) {
+          const replayed = await replayQueuedSubmits();
+          if (live && replayed.sent.some(item => item.attemptId === value.attempt_id)) {
+            setAttempt(await api.studentAttempt(value.attempt_id));
+          }
+        }
+      }
     }).catch(e => { if (live) setError(e instanceof Error ? e.message : "The assigned lesson could not be opened"); }).finally(() => { if (live) setBusy(false); });
     return () => { live = false; };
   }, [missionId]);
