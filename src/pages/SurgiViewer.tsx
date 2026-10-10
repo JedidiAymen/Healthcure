@@ -66,6 +66,7 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
   const [publicClip,setPublicClip]=useState<SurgicalClipRecord|null>(null)
   const [publicClipLoading,setPublicClipLoading]=useState(true)
   const [showPublicClip,setShowPublicClip]=useState(false)
+  const [mediaMode,setMediaMode]=useState(guided?'annotated-frames':'native-video')
   const sampledMediaId=sourceMedia?.media_id
   const sampledMediaCount=sourceMedia?.sampled_frame_count
   const [imageUrl,setImageUrl]=useState('')
@@ -235,7 +236,7 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
   return <section className="mt-4 grid min-w-0 gap-3" aria-label="SurgiVision frame review">
     {openedReportError&&<div role="alert" className="rounded-md border border-destructive/40 p-3 text-sm text-destructive">{openedReportError}</div>}
     {reportId&&!openedReportError&&<div role="status" className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm">Reopened the saved Endoscapes frame and annotation view.</div>}
-    <Tabs defaultValue={guided?'annotated-frames':'native-video'} className="min-w-0 flex-col gap-3">
+    <Tabs value={mediaMode} onValueChange={value=>{if(value)setMediaMode(value)}} className="min-w-0 flex-col gap-3">
       <TabsList aria-label={guided?'Assigned surgical source':'Surgical media modes'} className={`!grid h-auto w-full grid-cols-1 gap-1 sm:grid-cols-3 ${guided?'sr-only':''}`}>
         {guided?<TabsTrigger className="!h-10" value="annotated-frames">Assigned source frame</TabsTrigger>:<><TabsTrigger className="!h-10" value="native-video">Native video · no aligned labels</TabsTrigger><TabsTrigger className="!h-10" value="sampled-replay">Sampled replay · source labels</TabsTrigger><TabsTrigger className="!h-10" value="annotated-frames">Annotated stills</TabsTrigger></>}
       </TabsList>
@@ -244,6 +245,10 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
       <CardHeader className="gap-1"><div className="flex flex-wrap items-center gap-2"><Badge variant="outline">Playback only · no aligned results</Badge><Badge variant="secondary">{publicClip.procedure_label} · {publicClip.duration_sec.toFixed(1)} sec</Badge></div><CardTitle className="mt-1">Separate source footage</CardTitle><CardDescription>Authentic, de-identified Appendix300 laparoscopic appendectomy footage. This clip has no synchronized annotations, masks or model predictions. It is a different procedure and recording from both annotated cholecystectomy frame sets shown in this workspace.</CardDescription></CardHeader>
       <CardContent className="grid gap-3">
         {showPublicClip?<VideoPlayer><NeutralVideoSkin className="w-full overflow-hidden rounded-lg bg-[#101624]" style={{aspectRatio:'16 / 9'}}><Video className="size-full" src={api.surgicalClipVideoUrl(publicClip.clip_id)} playsInline preload="metadata" aria-label="Appendix300 laparoscopic appendectomy source video"/></NeutralVideoSkin></VideoPlayer>:<Button variant="outline" className="w-fit" onClick={()=>setShowPublicClip(true)}>Load licensed video excerpt</Button>}
+        <div className="flex flex-col gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0"><p className="m-0 text-sm font-semibold">No results are aligned to this footage</p><p className="m-0 text-xs leading-5 text-muted-foreground">Published labels are available on separate, sparse CholecT50 cholecystectomy samples—not on this appendectomy clip.</p></div>
+          <Button variant="outline" className="shrink-0" onClick={()=>setMediaMode('sampled-replay')}>View CholecT50 labeled samples<ChevronRight data-icon="inline-end"/></Button>
+        </div>
         <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-2 text-xs text-muted-foreground"><span>{publicClip.license_label} · SHA-256 {publicClip.sha256.slice(0,12)}…</span><a className="text-primary hover:underline" href={publicClip.source_url} target="_blank" rel="noreferrer">OPARA dataset and citation ↗</a></div>
         <p className="m-0 text-xs leading-relaxed text-muted-foreground">{publicClip.citation}</p>
       </CardContent>
