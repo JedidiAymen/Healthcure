@@ -500,3 +500,85 @@ Still to do:
 - **FiSaV risk index (if shipped):** a linear model on unit-free features, evaluated by nested cross-validation, shown with confidence, an explanation and a clinician accept or reject step.
 - **Launcher:** `npm start` runs both services on any OS, and a watchdog stops them if the launcher dies.
 - **Contract and tests:** generated TypeScript types from OpenAPI, plus pytest, Vitest and Playwright in CI.
+
+---
+
+## Reconciliation with teammate review
+
+**Review being reconciled:** `docs/review/MEDFORGE_HackCure_Cahier_des_Charges_Gap_Assessment (1).docx`. It assessed GitHub commit `d91632b` and dated itself 10 October 2026. Our local work sits on branch `upgrade/hackcure-compliance`: commits up to the `716cb43` merge, plus uncommitted Docker, encryption and audit-log work.
+
+**How claims were checked:** against code and script output on 2026-10-10, not from memory.
+
+**Numbers in this section, all from fresh runs:**
+- pytest: 122 passed, 1 skipped (the SQLCipher-only test). Command: `python -m pytest -q apps/api/tests`, uncommitted working tree.
+- Vitest: 60 passed in 18 files. Command: `npx vitest run`.
+- DoseTwin cross-check: 23 comparisons, maximum absolute difference 7.647e-06 Gy. Source: `docs/openkbp-pt201-validation.json`, written by `scripts/crosscheck_openkbp_pt201.py`.
+
+### Item by item
+
+| Teammate statement | Agree / disagree / outdated | Evidence (verified) |
+|---|---|---|
+| No single qualified clinical problem (major gap) | Agree | Still true in code and README. Our section 3 proposes framings, but nothing is implemented. |
+| Medical MVP functionality is a strong basis | Agree | Viewers, reports and learning flows exist and are tested. |
+| Track 3: only an archived `pt_241` prediction; in-app inference gated | Agree for `d91632b`. Partly outdated locally. | `pt_241` comparison is archived output, not our inference (`apps/api/app/dose_artifacts.py`). Locally, an isolated FiSaV evaluation worker exists (`workers/fisav-stenosis/evaluate.py`), protocol frozen in `docs/FISAV_EVALUATION_PROTOCOL.md`, **not yet run**, and no UI exists. |
+| Explainability and measurable confidence missing | Agree | No confidence or explanation display exists yet. |
+| No clinician accept/reject record | Agree | Not built on either side. Educator grading is not clinical review (we agree with their section 10 wording). |
+| TLS 1.3 and AES-256 not demonstrated | Outdated in progress, but still not demonstrated | Uncommitted: `docker-compose.yml`, `docker/Caddyfile.proxy` (TLS 1.3 only), `scripts/check-tls.mjs`, `apps/api/app/db_driver.py` (SQLCipher), `scripts/docker-secrets.mjs`. Images built, but the TLS check and the in-container encryption test have not run. Treat as "not demonstrated" until those pass. |
+| Audit and non-repudiation not shown | Outdated (uncommitted) | `db/migrations/0102_audit_log.sql`, `apps/api/app/audit.py`, and hooks in the auth, learning, report, comparison, annotation and self-check routes. `apps/api/tests/test_audit_log.py` (5 tests) covers trigger blocking, tamper detection after a bypass, and flow coverage. |
+| General research routes lack RBAC | Outdated | Research POST/PUT routes require an educator or admin since commit `b0f3999` (`require_research_writer` in `main.py`, `apps/api/tests/test_write_auth.py`). Research reads remain open on loopback, so that part still stands. |
+| Layer separation exists; Docker and offline missing | Partly outdated | Compose with proxy, web, api, an on-demand worker (`network_mode: none`) and volumes exists uncommitted. Offline mode is still missing. |
+| HL7/FHIR not demonstrated | Agree | Nothing exists. |
+| UX 3-step audit not demonstrated | Agree | Educator grading still needs several inputs (section 9). |
+| L1 largely met; workflow red | Agree on upstream; outdated for our branch on the contract | See CI section below. |
+| L2 major gap; L3 missing | Agree | Nothing changed. |
+| DoseTwin facts (23 metric comparisons, maximum difference about 0.0000076471 Gy; `pt_241` only for the real comparison) | Agree, verified | `docs/openkbp-pt201-validation.json`: comparison_count 23, max_absolute_difference_gy 7.647058822612962e-06. |
+| SurgiVision counts (1,933 BBox201; CholecT50 1,318 sampled and 1,128 labelled) | Cannot verify locally | Endoscapes is still downloading on this machine and CholecT50 is not installed. These figures come from upstream docs. |
+| FistulaGuard: "no supported labeled stenosis outcome" | **Disagree in part; open question** | See the fact check below. A patient-level stenosis Y/N field exists in the official patient sheet. Its criterion is undocumented. |
+| FistulaGuard: the occlusion field must not be repurposed as a label | Agree, verified | The sheet's separate column N "OCCLUSION TEST (Y/N)" and its location column show `Occlusion` marks a protocol manoeuvre. The app labels it that way (`OCCLUSION_MEANING` in `apps/api/app/fistulaguard_tools.py`). |
+| FistulaGuard feature list | Outdated | Not mentioned in the review: zero-phase filters, ECG beat detection, per-beat features, occlusion marker, educator annotations (`fistulaguard_tools.py`, `signal_processing.py`, `src/features/fistulaguard/SignalTools.tsx`). |
+| Academy and Educator: impressive, but not clinical human-in-the-loop | Agree | Unchanged. Also added locally: the CVS self-check block and starter lessons as data. |
+| Preferred positioning: DoseTwin as a Track 3 flagship | **Disagree with our earlier choice; decision pending** | Our audit preferred FiSaV (Option A). See `docs/FLAGSHIP_DECISION.md`. |
+| CI: contract check failed at `d91632b`, production build skipped | Agree, reproduced; upstream has since changed; fixed on our branch | See below. |
+
+### FiSaV label fact check (answers the critical question)
+
+| Question | Finding | Source |
+|---|---|---|
+| What is the label? | A patient-level "STENOSIS: Presence (Y/N)" field, column BA of `patient_information.xlsx` | OSF project HYPFR. File SHA-256 `a180e669...e6b1`, equal to the OSF-published hash. |
+| How was it obtained? | It sits inside the sheet's "ECHOGRAPHIC EXAMINATION" section (columns Y to BD). Next to it are "Distance from anastomotic chamber (mm)", "Residual diameter (mm)" and "Normal diameter (mm)". The sheet does not say who assigned it or how. | Header cells of the sheet |
+| Criterion and threshold | **Not documented** in the README or the sheet. The descriptor paper could not be retrieved here. Under the obvious reading, only 14 of the 38 positive patients with both diameters reach 50% diameter reduction, and some values are negative. So a simple 50% rule does not reproduce the label, or the columns mean something else. | Aggregate computation from the sheet on 2026-10-10 |
+| Patient-level? | Yes. 59 rows with 59 unique patient IDs. Each patient has exactly one recording. | Sheet plus `data/fisav/medforge-source-manifest.json` |
+| Class counts | 40 Y, 19 N | Sheet; also the README: "59 end-stage renal disease patients (40 with stenoses and 19 without stenoses, all without multi-branch fistulas)" |
+| Licence | CC BY 4.0. README: "The FiSaV dataset is provided with a Creative Commons Attribution International license (see the CC-BY license file)". OSF project licence id `563c1cf88c5e4a3877f9e96a` (CC BY 4.0). | `README.pdf` on OSF; OSF API |
+| Intended uses named by the authors | Includes "development of algorithms and artificial intelligence models for the detection of haemodynamic changes and ominous signs of AVFs dysfunctions, such as stenoses" | `README.pdf` |
+
+**Conclusion.** The teammate is right that the repo, at `d91632b`, had no supported label: the app only used the CSVs, and the occlusion column is not a label. A real patient-level stenosis label does exist in the official dataset, and its authors name stenosis detection as an intended use.
+
+Our audit assumed an "ultrasound reference label". That assumption is **only partly confirmed**:
+- The field sits in the echographic section.
+- But the defining criterion and threshold are not documented and cannot be reconstructed from the sheet.
+
+Until a clinician or the dataset authors confirm the criterion, any risk index must say "reference label: stenosis presence as recorded in the dataset sheet (criterion not documented)". It must not say "ultrasound-confirmed stenosis".
+
+### CI reproduction
+
+Clean worktrees in the scratchpad: fresh Python 3.13 venv with `apps/api/requirements-test.txt`, then `npm ci`. Local Node is 24.13.0, while CI uses 22.16.0 from `.nvmrc`. `openapi-typescript` 7.13.0 comes from the lockfile in both.
+
+| Checkout | `contracts:check` | Production build | Diagnosis |
+|---|---|---|---|
+| `d91632b` | Fails: "Generated types are not up-to-date!" | Passes locally | **Real drift.** Regenerating with FastAPI 0.128.2 adds the `ctx` and `input` fields to `ValidationError` in `contracts/openapi-implemented.json` (+7 lines), so the TypeScript types are stale. Still fails after normalising line endings. Matches the teammate's CI log. |
+| Our branch `716cb43` | Fails on a Windows checkout only; **passes with LF line endings** | Passes | **Not drift.** The committed contract was regenerated in `b0f3999`. The Windows checkout converts the generated file to CRLF (`core.autocrlf=true`), and `--check` compares bytes. On Linux CI the file is LF. |
+| Upstream tip `7f151cc` (GitHub run 38068667902) | Skipped | Skipped | Now fails earlier: "Browser shell tests" with 2 failed, 14 passed. The failing tests are "SurgiVision frame picker stays readable beside the professional sidebar at tablet width" and "SurgiVision routes reviewers from native video to source-matched labels". The tip's committed contract still lacks `ctx`, so the contract check would fail next. |
+
+**Proposed fix** (not applied; it touches the shared branch and needs your approval):
+1. Merge our regenerated contract.
+2. Regenerate again after merging the upstream tip, since `7f151cc` changed the contract (+64 JSON lines).
+3. Add `.gitattributes` with `contracts/openapi-implemented.json text eol=lf` and `packages/contracts/generated-api.ts text eol=lf`, so the check is deterministic on every OS.
+4. Ask the collaborator to fix the two SurgiVision browser tests, or quarantine them with a reason.
+5. Confirm a green run before tagging a baseline.
+
+### Open questions where evidence cannot settle the disagreement
+
+1. **Flagship:** DoseTwin (teammate) or FistulaGuard (our audit)? Scored in `docs/FLAGSHIP_DECISION.md`, for your decision.
+2. **FiSaV label criterion:** what defines "stenosis present", and was it assigned from ultrasound? This needs the dataset authors (contact emails are in the README) or a nephrologist.
+3. **SurgiVision counts and CholecT50 licence:** cannot be verified on this machine until those datasets are installed here.
