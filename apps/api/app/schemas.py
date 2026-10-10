@@ -261,6 +261,11 @@ class EducatorGradeRequest(StrictModel):
     feedback: str = Field(min_length=10, max_length=4000)
     reason: str = Field(min_length=10, max_length=1000)
 
+class EducatorAssignedCase(StrictModel):
+    module: Module
+    case_id: str
+    case_label: str
+
 class EducatorAttemptReview(StrictModel):
     attempt_id: str
     student_id: str
@@ -272,6 +277,7 @@ class EducatorAttemptReview(StrictModel):
     rubric_criteria: list[RubricCriterion] = Field(default_factory=list)
     criterion_scores: list[GradedRubricCriterion] = Field(default_factory=list)
     viewer_evidence: StudentViewerEvidence | None = None
+    assigned_case: EducatorAssignedCase | None = None
 
 class StudentDebrief(StrictModel):
     attempt_id: str

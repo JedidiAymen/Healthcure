@@ -236,6 +236,7 @@ export type EducatorAttemptReview = {
   score: number | null; observations: StudentObservation[];
   rubric_criteria: RubricCriterion[]; criterion_scores: RubricCriterionScore[];
   viewer_evidence: StudentViewerEvidence | null;
+  assigned_case: { module: "surgivision" | "dosetwin" | "fistulaguard"; case_id: string; case_label: string } | null;
 };
 export type StudentReferenceEvidence = {
   kind: "expert_reference";

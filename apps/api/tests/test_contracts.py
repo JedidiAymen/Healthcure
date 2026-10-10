@@ -523,6 +523,7 @@ def test_authentic_fisav_learning_delivery_with_delayed_reference_release(client
     assert [observation['block_id'] for observation in review.json()[0]['observations']]==['z-question','a-question']
     assert review.json()[0]['observations'][0]['response']=='The measured record varies over time.'
     assert review.json()[0]['viewer_evidence']['case_id']==case['id']
+    assert review.json()[0]['assigned_case']=={'module':'fistulaguard','case_id':case['id'],'case_label':case['label']}
     grade_payload={'criterion_scores':[{'criterion_id':'evidence','earned_points':52,'note':'Clear links to the trace.'},{'criterion_id':'limits','earned_points':36,'note':'A relevant limitation is identified.'}],'feedback':'Good source-grounded observation and a clear limitation.','reason':'Reviewed against the lesson rubric.'}
     invalid_grade=client.post(f'/api/v1/educator/attempts/{attempt_id}/grade',headers=educator,json={**grade_payload,'criterion_scores':[{'criterion_id':'evidence','earned_points':61,'note':''},{'criterion_id':'limits','earned_points':36,'note':''}]})
     assert invalid_grade.status_code==422 and any(error['loc']==['header','Idempotency-Key'] for error in invalid_grade.json()['detail'])
@@ -531,6 +532,7 @@ def test_authentic_fisav_learning_delivery_with_delayed_reference_release(client
     grade_headers={**educator,'Idempotency-Key':'grade-original-001'}
     grade=client.post(f'/api/v1/educator/attempts/{attempt_id}/grade',headers=grade_headers,json=grade_payload)
     assert grade.status_code==200 and grade.json()['state']=='graded'
+    assert grade.json()['assigned_case']==review.json()[0]['assigned_case']
     replay=client.post(f'/api/v1/educator/attempts/{attempt_id}/grade',headers=grade_headers,json=grade_payload)
     assert replay.status_code==200 and replay.json()==grade.json()
     changed_replay=client.post(f'/api/v1/educator/attempts/{attempt_id}/grade',headers=grade_headers,json={**grade_payload,'feedback':'A changed review with the same key.'})

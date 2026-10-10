@@ -1355,6 +1355,18 @@ export interface components {
             /** Voxel Count */
             voxel_count: number;
         };
+        /** EducatorAssignedCase */
+        EducatorAssignedCase: {
+            /** Case Id */
+            case_id: string;
+            /** Case Label */
+            case_label: string;
+            /**
+             * Module
+             * @enum {string}
+             */
+            module: "surgivision" | "dosetwin" | "fistulaguard";
+        };
         /** EducatorAssignment */
         EducatorAssignment: {
             /** Cohort Id */
@@ -1381,6 +1393,7 @@ export interface components {
         };
         /** EducatorAttemptReview */
         EducatorAttemptReview: {
+            assigned_case?: components["schemas"]["EducatorAssignedCase"] | null;
             /** Attempt Id */
             attempt_id: string;
             /** Criterion Scores */

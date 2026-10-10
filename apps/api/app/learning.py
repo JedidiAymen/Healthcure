@@ -16,6 +16,7 @@ from . import fisav
 from .schemas import (
     EducatorAssignment,
     EducatorAssignmentCreate,
+    EducatorAssignedCase,
     EducatorAttemptReview,
     EducatorCohort,
     EducatorCohortCreate,
@@ -85,6 +86,11 @@ def _project_manifest(manifest_json: str) -> dict:
         }
     except (ValueError, TypeError, json.JSONDecodeError) as error:
         raise HTTPException(409, detail={"code": "PUBLISHED_MANIFEST_INVALID", "message": "The published lesson projection is invalid"}) from error
+
+
+def _assigned_case(manifest_json: str) -> EducatorAssignedCase:
+    manifest = _project_manifest(manifest_json)
+    return EducatorAssignedCase(module=manifest["module"], case_id=manifest["case_id"], case_label=manifest["case_label"])
 
 
 _LEARNING_PATHS = (
@@ -666,7 +672,7 @@ def register_learning_routes(app: FastAPI, db: Callable, list_cases: Callable[[]
                 raise _not_found("ASSIGNMENT_NOT_FOUND", "No assignment belongs to this educator")
             rows = conn.execute(
                 """SELECT t.id,t.student_id,u.display_name,t.state,t.submitted_at,t.score,
-                          v.secret_rubric_json
+                          v.secret_rubric_json,v.student_manifest_json
                    FROM attempts t JOIN users u ON u.id=t.student_id
                    JOIN assignments a ON a.id=t.assignment_id
                    JOIN lesson_versions v ON v.id=a.lesson_version_id
@@ -689,6 +695,7 @@ def register_learning_routes(app: FastAPI, db: Callable, list_cases: Callable[[]
                     submitted_at=row[4], score=row[5], observations=_student_observations(conn, row[0]),
                     rubric_criteria=secret.get("rubric_criteria", []), criterion_scores=saved_scores,
                     viewer_evidence=json.loads(evidence_row[0]) if evidence_row else None,
+                    assigned_case=_assigned_case(row[7]),
                 ))
         return result
 
@@ -705,7 +712,7 @@ def register_learning_routes(app: FastAPI, db: Callable, list_cases: Callable[[]
             conn.execute("BEGIN IMMEDIATE")
             row = conn.execute(
                 """SELECT t.assignment_id,t.student_id,t.state,t.score,t.submitted_at,a.lesson_version_id,l.created_by,
-                          v.secret_rubric_json
+                          v.secret_rubric_json,v.student_manifest_json
                    FROM attempts t JOIN assignments a ON a.id=t.assignment_id
                    JOIN lesson_versions v ON v.id=a.lesson_version_id JOIN lessons l ON l.id=v.lesson_id
                    WHERE t.id=?""",
@@ -721,7 +728,8 @@ def register_learning_routes(app: FastAPI, db: Callable, list_cases: Callable[[]
             if receipt:
                 if receipt[0] != request_digest:
                     raise _conflict("IDEMPOTENCY_KEY_REUSED", "This Idempotency-Key was already used for a different grading request")
-                return EducatorAttemptReview.model_validate_json(receipt[1])
+                saved_response = EducatorAttemptReview.model_validate_json(receipt[1])
+                return saved_response.model_copy(update={"assigned_case": _assigned_case(row[8])})
             if row[2] not in ("review_required", "graded"):
                 raise _conflict("ATTEMPT_NOT_SUBMITTED", "Only submitted work can be graded")
             secret = json.loads(row[7])
@@ -773,6 +781,7 @@ def register_learning_routes(app: FastAPI, db: Callable, list_cases: Callable[[]
                 state="graded", submitted_at=row[4], score=total_score,
                 observations=_student_observations(conn, attempt_id),
                 rubric_criteria=criteria, criterion_scores=scored_criteria,
+                assigned_case=_assigned_case(row[8]),
             )
             conn.execute(
                 "INSERT INTO learning_grade_receipts(attempt_id,idempotency_key,request_sha256,response_json) VALUES (?,?,?,?)",

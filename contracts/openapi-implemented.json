@@ -877,6 +877,35 @@
         "title": "DvhSummary",
         "type": "object"
       },
+      "EducatorAssignedCase": {
+        "additionalProperties": false,
+        "properties": {
+          "case_id": {
+            "title": "Case Id",
+            "type": "string"
+          },
+          "case_label": {
+            "title": "Case Label",
+            "type": "string"
+          },
+          "module": {
+            "enum": [
+              "surgivision",
+              "dosetwin",
+              "fistulaguard"
+            ],
+            "title": "Module",
+            "type": "string"
+          }
+        },
+        "required": [
+          "module",
+          "case_id",
+          "case_label"
+        ],
+        "title": "EducatorAssignedCase",
+        "type": "object"
+      },
       "EducatorAssignment": {
         "additionalProperties": false,
         "properties": {
@@ -961,6 +990,16 @@
       "EducatorAttemptReview": {
         "additionalProperties": false,
         "properties": {
+          "assigned_case": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EducatorAssignedCase"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "attempt_id": {
             "title": "Attempt Id",
             "type": "string"
