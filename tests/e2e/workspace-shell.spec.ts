@@ -81,6 +81,14 @@ test('home resumes the latest completed source-backed case summary', async ({ pa
   await expect(page.getByRole('heading', { name: 'OpenKBP case summary' })).toBeVisible()
   await expect(page.getByText(`run ${runId}`)).toBeVisible()
   await expect(page.getByRole('row', { name: /Brainstem.*10.*30.25/ })).toBeVisible()
+  const configureTab = page.getByRole('tab', { name: /Configure analysis/ })
+  const historyTab = page.getByRole('tab', { name: /Run history/ })
+  await expect(historyTab).toHaveAttribute('aria-selected', 'true')
+  await configureTab.click()
+  await expect(page.getByRole('button', { name: 'Run case summary' })).toBeVisible()
+  await historyTab.click()
+  await expect(page.getByRole('heading', { name: 'OpenKBP case summary' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Saved analysis runs' })).toContainText(runId)
 })
 
 test('small phone viewport keeps the app shell within the screen', async ({ page }) => {
