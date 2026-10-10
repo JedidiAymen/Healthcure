@@ -318,10 +318,10 @@ export function Home() {
           </Badge>
           <div className="max-w-[760px] space-y-1.5">
             <h1 className="home-title text-3xl leading-[1.06] font-semibold tracking-[-0.045em] text-foreground sm:text-4xl">
-              Choose your MEDFORGE workspace.
+              Clinical research, grounded in evidence.
             </h1>
             <p className="max-w-[680px] text-sm leading-5 text-muted-foreground sm:text-base sm:leading-6">
-              Source-backed scientific viewers for professionals, guided investigations for learners, and lesson tools for educators.
+              Choose a source-backed scientific viewer, a guided learner investigation, or an evidence-based lesson workspace.
             </p>
           </div>
         </div>
@@ -2513,6 +2513,7 @@ export function Mission() {
         {stageControls(1, "Explore source evidence")}
       </div>
       <AcademyAchievementAnnouncement studentId={user?.id} enabled={progress.data.achievements_enabled} achievements={progress.data.achievements}/>
+      {!locked && selfCheckIds.some(id => !committedSelfChecks[id]) && <p className="text-sm text-muted-foreground">Commit your CVS self-check before submitting.</p>}
       <StudentMissionStepper progress={missionProgress} activeStep={activeStep} onStepChange={setActiveMissionStep}/>
       {error && <Alert variant="destructive"><CircleAlert/><AlertTitle>Action could not be completed</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
       {offlineNotice && <Alert role="status"><CircleAlert/><AlertTitle>Saved on this device</AlertTitle><AlertDescription>{offlineNotice}</AlertDescription></Alert>}
@@ -2537,7 +2538,6 @@ export function Mission() {
         {debrief && <Card><CardHeader><CardTitle>Educator debrief</CardTitle><CardDescription>{debrief.score}/{debrief.max_score} · {debrief.xp_awarded} XP</CardDescription></CardHeader><CardContent><p>{debrief.feedback}</p><div className="mt-4 border-t pt-4"><b>Scored criteria</b><div className="mt-3 flex flex-col gap-3">{debrief.criterion_scores.map(criterion => <div className="rounded-lg border bg-muted/20 p-3" key={criterion.id}><div className="flex flex-wrap justify-between gap-2"><b>{criterion.title}</b><b>{criterion.earned_points}/{criterion.max_points}</b></div><p className="text-sm text-muted-foreground">{criterion.description}</p>{criterion.note && <p className="mt-2 whitespace-pre-wrap">{criterion.note}</p>}</div>)}</div><b className="mt-4 block">Rubric notes</b><p>{debrief.rubric}</p></div>{debrief.reveal_blocks.length > 0 && <div className="mt-4 flex flex-col gap-3 border-t pt-4"><b>Educator reference</b>{debrief.reveal_blocks.map(block => <section key={block.id}><h3 className="font-medium">{block.title}</h3><p className="whitespace-pre-wrap text-muted-foreground">{block.content}</p></section>)}</div>}</CardContent></Card>}
         {!locked && <div className="flex flex-wrap gap-2"><Button variant="outline" disabled={saving} onClick={() => void save()}>{saving ? "Saving…" : "Save draft"}</Button><Button disabled={saving || !canSubmitMission(missionProgress, Boolean(viewerEvidence))} onClick={() => void submit()}>{saving ? "Submitting…" : "Submit for educator review"}</Button></div>}
         {!locked && !missionProgress.questionsComplete && questionBlocks.length > 0 && <p className="text-sm text-muted-foreground">Answer all {questionBlocks.length} lesson {questionBlocks.length === 1 ? "question" : "questions"} and select evidence before submitting.</p>}
-        {!locked && selfCheckIds.some(id => !committedSelfChecks[id]) && <p className="text-sm text-muted-foreground">Commit your CVS self-check before submitting.</p>}
       </section>
     </>
   );
