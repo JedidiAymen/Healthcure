@@ -13,8 +13,12 @@ export function getMissionProgress(
   evidenceSelected: boolean,
   questionIds: string[],
   answers: Record<string, string>,
+  selfCheckIds: string[] = [],
+  committedSelfChecks: Record<string, boolean> = {},
 ): MissionProgress {
-  const questionsComplete = questionIds.length > 0 && questionIds.every((id) => (answers[id] ?? "").trim().length > 0);
+  const questionsComplete = questionIds.length + selfCheckIds.length > 0
+    && questionIds.every((id) => (answers[id] ?? "").trim().length > 0)
+    && selfCheckIds.every((id) => committedSelfChecks[id]);
   const submitted = state !== "started";
   const reviewed = state === "graded" || state === "revealed";
   const completed = [true, evidenceSelected, evidenceSelected, questionsComplete, submitted];
