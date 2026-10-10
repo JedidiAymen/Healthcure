@@ -87,6 +87,25 @@ apps/api/.venv/bin/python scripts/create_local_learning_user.py \
 ./scripts/start_local.sh
 ```
 
+### HackCure Docker profile
+
+The Docker rehearsal uses a separate, unencrypted SQLite database. It has **no default credentials** and does not share users or records with `data/local.sqlite3`. Start the stack first, then run these commands from the project root; each command prompts privately for a password of at least 12 characters:
+
+```sh
+docker compose -f docker-compose.yml -f docker-compose.hackcure.yml exec -it api \
+  python /app/scripts/create_local_learning_user.py --username jury-educator \
+  --display-name "Jury Research Educator" --role educator
+docker compose -f docker-compose.yml -f docker-compose.hackcure.yml exec -it api \
+  python /app/scripts/create_local_learning_user.py --username jury-reviewer \
+  --display-name "Jury Research Reviewer" --role clinical_reviewer
+# Optional Academy profile; an educator must still publish and assign a lesson.
+docker compose -f docker-compose.yml -f docker-compose.hackcure.yml exec -it api \
+  python /app/scripts/create_local_learning_user.py --username jury-student \
+  --display-name "Jury Academy Student" --role student
+```
+
+The educator account can import the matching archived `pt_241` prediction and save its comparison report. The clinical-reviewer account can record and reopen the local research-review decision; it cannot import predictions or write comparison reports. This local reviewer role does not verify a medical credential. Keep the database under `data/hackcure-docker/` on a permission-restricted, encrypted host disk. Never place passwords in Git or screenshots. See [`HACKCURE_COMPLIANCE.md`](HACKCURE_COMPLIANCE.md) for the full walkthrough.
+
 Visit the Academy, Educator, or DoseTwin review panel and enter the exact username plus the password you chose during provisioning. Sessions are local and revocable. Student, educator and Clinical Reviewer workflows should use separate accounts; entering another local account replaces the current browser session. Educators add provisioned students to a cohort before assigning a published lesson. A fresh database has no lessons, cohorts, assignments, or learner credentials until an educator/operator creates them.
 
 Passwords are not recoverable from the database. To replace a forgotten local password, provision a new username or remove the local demo database and create the accounts again; deleting the database also deletes its local lessons and learning records. Never commit a database, password, session token, or temporary QA account. Do not reuse these local credentials for another service.

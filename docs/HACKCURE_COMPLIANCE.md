@@ -162,20 +162,23 @@ This is a local readiness snapshot, not a full rehearsal, hosted-CI result, inde
 ### Before the jury arrives
 
 1. Follow [`LOCAL_ACCESS_AND_PROFILES.md`](LOCAL_ACCESS_AND_PROFILES.md) and [`RUN_LOCAL.md`](../RUN_LOCAL.md) on the demo machine. The dataset files, local database, archived-prediction import, and account grants are local state; they are not included in a Git push.
-2. Confirm the full `pt_241` reference and matching archived `prediction-set_1.csv` are installed and checksum-verified. Confirm the local app lists the archived artifact and opens its comparison. Do not use the `pt_201` case as a substitute for `pt_241`.
-3. Provision a separate `clinical_reviewer` account in the same local database the app will use. For the local development profile, use the account-creation commands in [`LOCAL_ACCESS_AND_PROFILES.md`](LOCAL_ACCESS_AND_PROFILES.md). For Docker, with the stack running, provision inside the API container so it uses the encrypted demo database:
+2. Confirm the full `pt_241` reference and matching archived `prediction-set_1.csv` are installed and checksum-verified. Do not use the `pt_201` case as a substitute for `pt_241`.
+3. Provision the needed accounts in the same local database the app will use. The prediction import and comparison-report write require an `educator` or `admin`; the research-review decision requires a `clinical_reviewer` or `admin`. For the local development profile, use the account-creation commands in [`LOCAL_ACCESS_AND_PROFILES.md`](LOCAL_ACCESS_AND_PROFILES.md). For Docker, with the HackCure stack running, provision them interactively inside the API container:
 
    ```sh
-   docker compose exec api python /app/scripts/create_local_learning_user.py \
-     --username jury-reviewer --display-name "Jury Research Reviewer" \
-     --role clinical_reviewer
+   docker compose -f docker-compose.yml -f docker-compose.hackcure.yml exec -it api \
+     python /app/scripts/create_local_learning_user.py --username jury-educator \
+     --display-name "Jury Research Educator" --role educator
+   docker compose -f docker-compose.yml -f docker-compose.hackcure.yml exec -it api \
+     python /app/scripts/create_local_learning_user.py --username jury-reviewer \
+     --display-name "Jury Research Reviewer" --role clinical_reviewer
    ```
 
-   In the HackCure overlay this command writes to its dedicated **unencrypted SQLite** database at `/var/lib/medforge/hackcure/medforge.sqlite3`; it is not the default SQLCipher demo database. Keep that file on a permission-restricted, encrypted host disk, and use the same overlay database for the import, saved report, reviewer account and preflight.
+   The script prompts for each password without displaying it. In the HackCure overlay these accounts write to its dedicated **unencrypted SQLite** database at `/var/lib/medforge/hackcure/medforge.sqlite3`; it is not the default SQLCipher demo database. Keep that file on a permission-restricted, encrypted host disk, and use the same overlay database for the import, saved report, reviewer account and preflight. The optional Academy walkthrough additionally needs a student account plus an educator-published, assigned lesson.
 
    Enter a private password at the prompt and keep it out of the deck, repository and this document. A fresh database has no reviewer credentials. This local role does not verify medical qualifications.
-4. Open <http://127.0.0.1:5173/studio/dosetwin/cases/current> in the local development profile, or the local Docker URL from the README. If using Docker, rehearse with the Docker database and its prepared reviewer profile; do not assume credentials from the development database carry over.
-5. Do one complete rehearsal and confirm the screens render at the demo resolution. If `pt_241`, its archived artifact, or the prepared account is missing, use the clearly labelled fallback at the end; do not invent a result.
+4. Start the selected profile. For Docker, open <https://localhost:8443/studio/dosetwin/cases/openkbp%3Apt_241> after trusting the local Caddy root certificate. Sign in as the educator, open **Compare a real dose prediction**, and import `data/openkbp-opt/pt_241/prediction-set_1.csv` using the exact model revision, source revision, units, spacing, rights basis and confirmation documented in [`LOCAL_ACCESS_AND_PROFILES.md`](LOCAL_ACCESS_AND_PROFILES.md). Select that imported `prediction-set_1.csv` and choose **Save comparison report**. This UI/API workflow validates the same case and grid and saves both records to the active profile database. In Docker, do not assume records or credentials from `data/local.sqlite3` carry over.
+5. Run `./scripts/hackcure_docker_preflight.sh` for Docker (or `npm run doctor -- --hackcure-preflight` for the development profile). Confirm the matching import, comparison report, local reviewer profile and loopback checks pass. Then sign in as the reviewer and rehearse one complete research-review cycle, including reopening the recorded review at the demo resolution. If a required record or profile is missing, use the clearly labelled fallback below; do not invent a result.
 
 ### Walkthrough
 
