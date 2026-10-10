@@ -4,7 +4,7 @@ Idempotent: existing accounts, the cohort and drafts with the same title are lef
 unchanged, and passwords are printed only when an account is first created.
 Starter drafts come from content/lessons/*.json, are built only from datasets
 installed on this computer, and are marked DRAFT pending review by a domain expert. Refuses any database outside the
-project data/ folder or the system temp folder.
+project data/ folder, the system temp folder or MEDFORGE_LOCAL_DB_DIR.
 """
 from __future__ import annotations
 
@@ -46,7 +46,11 @@ def choose_case(lesson: dict, cases: list) -> object | None:
 
 
 def _allowed_database(path: Path) -> bool:
-    for base in (ROOT / 'data', Path(tempfile.gettempdir())):
+    bases = [ROOT / 'data', Path(tempfile.gettempdir())]
+    if os.environ.get('MEDFORGE_LOCAL_DB_DIR'):
+        # Explicit local database folder, for example the Docker state volume.
+        bases.append(Path(os.environ['MEDFORGE_LOCAL_DB_DIR']))
+    for base in bases:
         try:
             path.relative_to(base.resolve())
             return True
