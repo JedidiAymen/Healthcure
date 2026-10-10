@@ -84,6 +84,35 @@ def test_students_and_anonymous_users_cannot_record_reviews(setup):
     assert _create(client, auth_headers(client, 'learner', 'student'), case_id, artifact_id).status_code == 403
 
 
+def test_every_research_review_route_enforces_the_documented_role_matrix(setup):
+    client, educator, case_id, artifact_id = setup
+    review = _create(client, educator, case_id, artifact_id).json()
+    routes = {
+        'voxel': lambda headers: client.get(
+            f'/api/v1/cases/{case_id}/dose-artifacts/{artifact_id}/voxel?x=0&y=0&z=1', headers=headers),
+        'create': lambda headers: _create(client, headers, case_id, artifact_id),
+        'history': lambda headers: client.get(
+            f'/api/v1/research-reviews?case_id={case_id}&artifact_id={artifact_id}', headers=headers),
+        'detail': lambda headers: client.get(f"/api/v1/research-reviews/{review['id']}", headers=headers),
+        'export': lambda headers: client.get(f"/api/v1/research-reviews/{review['id']}/export", headers=headers),
+        'fhir': lambda headers: client.get(f"/api/v1/research-reviews/{review['id']}/fhir", headers=headers),
+    }
+    success_status = {'create': 201, **{name: 200 for name in routes if name != 'create'}}
+
+    for route, request in routes.items():
+        assert request({}).status_code == 401, f'{route} must require a local session'
+        assert request(educator).status_code == success_status[route], f'educator must be allowed on {route}'
+
+    admin = auth_headers(client, 'review-admin', 'admin')
+    for route, request in routes.items():
+        assert request(admin).status_code == success_status[route], f'admin must be allowed on {route}'
+
+    for role in ('student', 'researcher'):
+        headers = auth_headers(client, f'review-{role}', role)
+        for route, request in routes.items():
+            assert request(headers).status_code == 403, f'{role} must be denied on {route}'
+
+
 def test_rationale_and_decision_are_validated(setup):
     client, educator, case_id, artifact_id = setup
     assert _create(client, educator, case_id, artifact_id, rationale='too short').status_code == 422
