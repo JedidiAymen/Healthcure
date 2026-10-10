@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react'
 import { api, type CholecT50FrameRecord, type CholecT50VideoRecord } from '@/lib/api'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -16,6 +16,8 @@ export function CholecT50Review() {
   const [videoId, setVideoId] = useState('')
   const [frames, setFrames] = useState<CholecT50FrameRecord[]>([])
   const [activeIndex, setActiveIndex] = useState(0)
+  const [playing, setPlaying] = useState(false)
+  const activeIndexRef = useRef(0)
   const [selectedAnnotation, setSelectedAnnotation] = useState<number | null>(null)
   const [showBoxes, setShowBoxes] = useState(true)
   const [loading, setLoading] = useState(true)
@@ -39,6 +41,7 @@ export function CholecT50Review() {
   useEffect(() => {
     if (!videoId) return
     let live = true
+    setPlaying(false)
     setLoading(true)
     setFrames([])
     setActiveIndex(0)
@@ -47,7 +50,9 @@ export function CholecT50Review() {
       if (!live) return
       setFrames(records)
       const firstAnnotated = records.findIndex((record) => record.annotations.some((annotation) => annotation.bbox_xywh_px))
-      setActiveIndex(firstAnnotated < 0 ? 0 : firstAnnotated)
+      const firstAvailable = firstAnnotated < 0 ? 0 : firstAnnotated
+      activeIndexRef.current = firstAvailable
+      setActiveIndex(firstAvailable)
       setError('')
     }).catch((reason: unknown) => {
       if (live) setError(reason instanceof Error ? reason.message : 'The verified frame sequence is unavailable.')
@@ -56,6 +61,25 @@ export function CholecT50Review() {
     })
     return () => { live = false }
   }, [videoId])
+
+  useEffect(() => {
+    if (!playing || frames.length < 2) return
+    const timer = window.setInterval(() => {
+      const nextIndex = Math.min(activeIndexRef.current + 1, frames.length - 1)
+      activeIndexRef.current = nextIndex
+      setActiveIndex(nextIndex)
+      setSelectedAnnotation(null)
+      if (nextIndex === frames.length - 1) setPlaying(false)
+    }, 1000)
+    return () => window.clearInterval(timer)
+  }, [playing, frames.length])
+
+  const goToSample = (index: number) => {
+    const nextIndex = Math.max(0, Math.min(index, frames.length - 1))
+    activeIndexRef.current = nextIndex
+    setActiveIndex(nextIndex)
+    setSelectedAnnotation(null)
+  }
 
   const currentVideo = videos.find((video) => video.video_id === videoId)
   const frame = frames[activeIndex]
@@ -89,7 +113,7 @@ export function CholecT50Review() {
         <div className="grid gap-3 sm:grid-cols-[minmax(12rem,20rem)_1fr] sm:items-end">
           <div className="grid gap-1.5">
             <label className="text-sm font-medium" htmlFor="cholect50-video">Source clip</label>
-            <Select value={videoId} onValueChange={(value) => { if (value) setVideoId(value) }}>
+            <Select value={videoId} onValueChange={(value) => { if (value) { setPlaying(false); setVideoId(value) } }}>
               <SelectTrigger id="cholect50-video" className="w-full"><SelectValue placeholder="Choose a source clip" /></SelectTrigger>
               <SelectContent><SelectGroup>{videos.map((video) => <SelectItem key={video.video_id} value={video.video_id}>{video.video_id} · {video.sampled_frame_count} source frames</SelectItem>)}</SelectGroup></SelectContent>
             </Select>
@@ -136,12 +160,13 @@ export function CholecT50Review() {
                   </div>
                   <label className="flex items-center gap-2 text-sm" htmlFor="cholect50-box-toggle"><Checkbox id="cholect50-box-toggle" checked={showBoxes} onCheckedChange={(checked) => setShowBoxes(checked === true)} /><span>Show boxes</span></label>
                 </div>
-                <Slider aria-label="Published source-frame sample index" min={0} max={Math.max(0, frames.length - 1)} step={1} value={[activeIndex]} onValueChange={(value) => { const index = Array.isArray(value) ? value[0] : value; if (typeof index === 'number') setActiveIndex(index) }} />
+                <Slider aria-label="Published source-frame sample index" min={0} max={Math.max(0, frames.length - 1)} step={1} value={[activeIndex]} onValueChange={(value) => { const index = Array.isArray(value) ? value[0] : value; if (typeof index === 'number') goToSample(index) }} />
                 <div className="flex items-center justify-between gap-2">
-                  <Button variant="outline" size="sm" onClick={() => { setActiveIndex((index) => Math.max(0, index - 1)); setSelectedAnnotation(null) }} disabled={activeIndex === 0}><ChevronLeft data-icon="inline-start"/>Previous sample</Button>
-                  <p className="m-0 text-center text-xs text-muted-foreground">Sparse source samples · timestamps use published frame indices · no missing frames are filled in</p>
-                  <Button variant="outline" size="sm" onClick={() => { setActiveIndex((index) => Math.min(frames.length - 1, index + 1)); setSelectedAnnotation(null) }} disabled={activeIndex >= frames.length - 1}>Next sample<ChevronRight data-icon="inline-end"/></Button>
+                  <Button variant="outline" size="sm" onClick={() => goToSample(activeIndex - 1)} disabled={activeIndex === 0}><ChevronLeft data-icon="inline-start"/>Previous sample</Button>
+                  <Button variant={playing ? 'secondary' : 'default'} size="sm" aria-pressed={playing} onClick={() => setPlaying((value) => !value)} disabled={frames.length < 2 || (activeIndex >= frames.length - 1 && !playing)}>{playing ? <Pause data-icon="inline-start"/> : <Play data-icon="inline-start"/>}{playing ? 'Pause samples' : 'Play samples'}</Button>
+                  <Button variant="outline" size="sm" onClick={() => goToSample(activeIndex + 1)} disabled={activeIndex >= frames.length - 1}>Next sample<ChevronRight data-icon="inline-end"/></Button>
                 </div>
+                <p role="status" aria-live="polite" className="m-0 text-center text-xs text-muted-foreground">{playing ? 'Reviewing available source samples at one sample per second.' : 'Sparse source samples · timestamps use published frame indices · no missing frames are filled in.'} Source-time gaps are skipped; this is not continuous video.</p>
               </div>
             </div>
 

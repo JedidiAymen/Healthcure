@@ -77,7 +77,7 @@ The smoke command checks loopback health, the three source-backed module APIs an
 ## Demo boundaries
 
 - DoseTwin shows the installed OpenKBP benchmark reference arrays, not a delivered treatment plan or native DICOM orientation.
-- SurgiVision's CholecT50 review shows official tool-tip boxes, action triplets and phase labels on the exact sparse source frames; these are dataset reference annotations, not MEDFORGE model predictions. Endoscapes shows its own expert annotations, not model predictions or surgical clearance. Both sources are sampled still sequences, not continuous video.
+- SurgiVision's CholecT50 review shows official tool-tip boxes, action triplets and phase labels on the exact sparse source frames; Play samples walks only those available images and preserves the source-time gaps. These are dataset reference annotations, not MEDFORGE model predictions. Endoscapes shows its own expert annotations, not model predictions or surgical clearance. Both sources are sampled still sequences, not continuous video.
 - FistulaGuard shows measured FiSaV signals and descriptive analyses. Units are uncalibrated; no stenosis label or diagnosis is exposed.
 - SurgiVision's continuous player shows one separately attributed CC BY 4.0 Appendix300 laparoscopic appendectomy excerpt (38.1 seconds). It is not cholecystectomy footage and has no aligned annotations, masks or model results. CholecT50's stills have their own authentic source labels, but are not aligned to this player. Endoscapes itself remains a sampled-still sequence, not a playable video.
 - OpenKBP publication, CVS checkpoint execution, external hosting and public/demo data display remain gated by the conditions in `docs/BLOCKERS.md` and `docs/RELEASE_CHECKLIST.md`.
