@@ -54,7 +54,7 @@ Updated 2026-10-09. This is a local-demo checklist. MEDFORGE is **not v1.0 locke
 
 - [ ] Rights reviewer records permission for the intended Endoscapes and OpenKBP display and audience. Current OpenKBP dataset rights are not established; Endoscapes requires scope-specific non-commercial attribution review.
 - [ ] Confirm FiSaV attribution and the planned educational context; keep its excluded demographics workbook excluded.
-- [ ] Review rendered attribution and dataset limitations at demo breakpoints. DoseTwin now includes an OpenKBP code-vs-data-rights notice and pinned-source link; Endoscapes and FiSaV source citations exist in their viewers, but this complete UI requirement still needs interactive visual verification.
+- [x] Review rendered attribution and dataset limitations at desktop (1440×900), tablet (768×1024) and phone (390×844) widths. DoseTwin visibly separates the OpenKBP code license from unconfirmed dataset rights and links the pinned source; SurgiVision names its non-commercial CC BY-NC-SA sample and annotated-stills scope; FistulaGuard displays FiSaV DOI, CC BY 4.0, source hash and analysis limitations. All nine source-panel states returned HTTP 200 with no page errors or horizontal overflow. Private captures are in `.local-review/ATTRIBUTION/`.
 - [ ] Do not expose the API beyond loopback; general research routes do not have production RBAC.
 - [ ] Keep all absent model/solver capability states visible and make no clinical or model-performance claims.
 
