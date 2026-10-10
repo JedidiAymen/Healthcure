@@ -68,7 +68,17 @@ The viewer paths read installed local files and call the local API. They do not 
 
 ## Local preflight
 
-With the launcher running, open another terminal in the project root and check readiness plus source-backed routes:
+Before rehearsal, use the targeted HackCure preflight from the project root:
+
+```sh
+npm run doctor -- --hackcure-preflight
+```
+
+It checks the manifest-hashed `pt_241` source and archived `set_1` file; a matching imported artifact and saved comparison report in the selected local database; a local reviewer/admin role with sign-in credentials; and the local launcher's loopback-only configuration. It also reports whether an optional Academy lesson is already published and assigned to a credentialed student. The Academy check is informational and does not affect the command's exit status. A failed required check exits nonzero and gives a local path plus a short reason.
+
+This mode does not start services, apply migrations, create or change accounts, passwords, learner records, review decisions or the demo database, download assets, or validate clinical credentials or data-display rights. It opens the selected database with SQLite read-only/query-only settings. The default database is `data/local.sqlite3`; set `MEDFORGE_DB_PATH` before running the preflight if the app will use a different database, and keep that same path when launching. The `pt_241` source path follows the local case map when configured, otherwise it checks `data/openkbp-opt/pt_241`. Run the check again after preparing local state. It is not a live-service, visual, keyboard, or screen-size review.
+
+With the launcher running, open another terminal in the project root and check general machine readiness plus source-backed routes:
 
 ```sh
 # Run these commands from the cloned project root.
