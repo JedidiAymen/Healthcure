@@ -18,6 +18,7 @@ Implemented and verified on `feat/experiments-run-workspace`. The browser test u
 - `src/lib/offline-queue.test.ts` — regression coverage for retained submission, draft and original key after 401.
 - `src/lib/mission-offline.ts` — deduplicated replay and queue-state update notification.
 - `src/pages/Pages.tsx` — replay on opening a started assignment after authentication and refresh the attempt state.
+- `contracts/openapi-implemented.json`, `packages/contracts/generated-api.ts` — refresh generated 413/422 descriptions so the checked-in snapshot matches pinned FastAPI 0.128.2; no API behavior or schema fields changed.
 - `tests/e2e/academy-offline-submit.spec.ts` — offline queue, reload, unauthenticated retry, sign-in and single replay using the same key.
 - `playwright.offline.config.ts`, `package.json`, `.github/workflows/ui-and-api.yml` — production-preview E2E configuration, scripts and CI order.
 - `docs/PROGRESS.md`, `docs/STATUS.md` — milestone and gap updates.
@@ -35,6 +36,7 @@ No new production dependency. Uses existing Playwright `@playwright/test` 1.64.0
 - `npm run typecheck` — passed.
 - `npm run build` — passed; Vite retains the pre-existing large vtk.js chunk warning.
 - `python -m pytest -q apps/api/tests` — 143 passed, 2 skipped in a temporary Python 3.12 environment.
+- `MEDFORGE_PYTHON=/tmp/medforge-validation-venv/bin/python npm run contracts:generate` and `MEDFORGE_PYTHON=/tmp/medforge-validation-venv/bin/python npm run contracts:check` — passed with the pinned API dependencies.
 
 The production browser run saves actual-app captures at 1440×900, 768×1024 and 390×844 to the ignored `.local-review/UX46-offline-recovery/` folder. The assignment and learner content in those captures are marked synthetic test fixtures.
 
