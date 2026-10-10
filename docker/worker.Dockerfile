@@ -1,6 +1,6 @@
 # MEDFORGE inference worker: runs models in a separate process and container, never in the API.
 FROM python:3.13-slim
-ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_RETRIES=10 PIP_DEFAULT_TIMEOUT=60
 WORKDIR /app
 COPY workers/fisav-stenosis/requirements.txt workers/fisav-stenosis/requirements.txt
 RUN pip install -r workers/fisav-stenosis/requirements.txt
