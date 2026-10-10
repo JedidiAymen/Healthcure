@@ -109,7 +109,6 @@ import { offlineStore } from "@/lib/mission-offline";
 import { clearDraft, enqueueSubmit, isNetworkError, loadDraft, saveDraft } from "@/lib/offline-queue";
 import { CvsSelfCheck, CvsSelfCheckSummary } from "@/features/surgivision/CvsSelfCheck";
 import clinicalTeamImage from "../assets/clinical-team.jpg";
-import radiologyReviewImage from "../assets/radiology-team.jpg";
 
 const specialtyData = {
   surgivision: {
@@ -349,14 +348,9 @@ export function Home() {
             })}
           </div>
         </div>
-        <figure className="home-clinical-image relative m-0 min-h-[280px] overflow-hidden rounded-xl border border-border bg-muted sm:min-h-[340px] xl:min-h-[400px]">
-          <img src={radiologyReviewImage} alt="A radiologist discussing chest images with clinical colleagues" className="absolute inset-0 size-full object-cover" />
-          <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-[#111827]/85 via-[#111827]/5 to-transparent" />
-          <figcaption className="absolute inset-x-0 bottom-0 flex flex-wrap items-end justify-between gap-4 p-5 text-white sm:p-6">
-            <span className="grid gap-1"><span className="text-xs font-medium uppercase tracking-[.16em] text-white/75">Clinical context</span><span className="max-w-sm text-lg font-medium leading-snug">Tools shaped around the questions research teams investigate.</span></span>
-            <span className="rounded-md border border-white/30 bg-black/25 px-2.5 py-1.5 text-xs backdrop-blur-sm">Illustrative clinical image</span>
-          </figcaption>
-        </figure>
+        <div role="group" aria-label="Live previews of the three independent research sources" className="relative min-h-[280px] overflow-hidden rounded-xl border border-[#34415C] bg-[#101624] sm:min-h-[340px] xl:min-h-[400px]">
+          <ResearchEvidenceMontage cases={cases.data} />
+        </div>
       </section>
 
       <StudioDepartmentAtlas cases={cases.data} />
@@ -441,10 +435,11 @@ function DoseAtlasView({ caseId }: { caseId: string }) {
       return { x, y, fill: `rgb(${rgb[0]} ${rgb[1]} ${rgb[2]})` };
     });
   }, [data]);
+  const caseLabel = caseId.split(":").at(-1) ?? caseId;
   return (
     <div className="relative grid h-full place-items-center overflow-hidden bg-[#0b1420]">
-      {data ? <svg viewBox="0 0 128 128" role="img" aria-label="OpenKBP pt_201 axial index slice z54; source CT, reference dose and PTV70 boundary" className="size-32 sm:size-36 [image-rendering:pixelated]">{cells.map((cell) => <rect key={`${cell.x}-${cell.y}`} x={cell.x} y={cell.y} width="4" height="4" fill={cell.fill} />)}</svg> : <div className="grid size-20 place-items-center rounded-full border border-sky-300/20 text-sky-100"><Activity aria-hidden="true" className="size-7" /></div>}
-      <span className="absolute bottom-2 left-2 rounded-sm bg-black/65 px-2 py-1 font-mono text-[10px] text-white">{data ? "pt_201 · axial z54 · PTV70 boundary" : "Reading verified OpenKBP arrays…"}</span>
+      {data ? <svg viewBox="0 0 128 128" role="img" aria-label={`OpenKBP ${caseLabel} axial slice z54; source CT, reference dose and PTV70 boundary`} className="size-32 sm:size-36 [image-rendering:pixelated]">{cells.map((cell) => <rect key={`${cell.x}-${cell.y}`} x={cell.x} y={cell.y} width="4" height="4" fill={cell.fill} />)}</svg> : <div className="grid size-20 place-items-center rounded-full border border-sky-300/20 text-sky-100"><Activity aria-hidden="true" className="size-7" /></div>}
+      <span className="absolute bottom-2 left-2 rounded-sm bg-black/65 px-2 py-1 font-mono text-[10px] text-white">{data ? `${caseLabel} · axial z54 · PTV70 boundary` : `Reading ${caseLabel} source arrays…`}</span>
     </div>
   );
 }
@@ -471,6 +466,39 @@ function SignalAtlasView({ recordId, compact = false }: { recordId: string; comp
         <span>{data ? `${data.case_id} · raw PZT1 · ${data.source_sample_rate_hz.toLocaleString()} Hz` : error ? "Assigned waveform preview unavailable" : "Loading measured PZT1 samples…"}</span>
         <span className="shrink-0">unit unspecified</span>
       </div>}
+    </div>
+  );
+}
+
+function ResearchEvidenceMontage({ cases }: { cases: CaseRecord[] }) {
+  const surgery = cases.find((record) => record.module === "surgivision");
+  const dose = cases.find((record) => record.module === "dosetwin");
+  const signal = cases.find((record) => record.module === "fistulaguard");
+  const unavailable = (label: string) => (
+    <div className="grid h-full min-h-0 place-items-center bg-[#101624] px-3 text-center text-xs text-slate-300">
+      <span>{label}</span>
+    </div>
+  );
+
+  return (
+    <div className="grid h-full min-h-[280px] grid-cols-[minmax(0,1.45fr)_minmax(112px,0.85fr)] grid-rows-2 gap-px bg-[#34415C] sm:min-h-[340px] xl:min-h-[400px]">
+      <figure className="relative m-0 row-span-2 min-h-0 overflow-hidden bg-[#101624]">
+        {surgery ? <SurgicalAtlasView frameId={surgery.id} /> : unavailable("No verified Endoscapes frame is installed")}
+        <figcaption className="absolute inset-x-0 bottom-0 grid gap-0.5 bg-gradient-to-t from-[#101624]/95 via-[#101624]/75 to-transparent px-3 pb-3 pt-8 text-white sm:px-4 sm:pb-4">
+          <span className="text-xs font-medium">Endoscapes · annotated source frame</span>
+          <span className="font-mono text-[10px] text-slate-200">{surgery?.source_case_id ?? "Source unavailable"} · reference labels, not model output</span>
+        </figcaption>
+      </figure>
+      <figure className="relative m-0 min-h-0 overflow-hidden bg-[#0b1420]">
+        {dose ? <DoseAtlasView caseId={dose.id} /> : unavailable("No verified OpenKBP case is installed")}
+        <figcaption className="sr-only">OpenKBP {dose?.source_case_id ?? "case unavailable"}, reference dose and PTV70 boundary</figcaption>
+      </figure>
+      <figure className="relative m-0 min-h-0 overflow-hidden bg-[#0d1a1c]">
+        {signal ? <SignalAtlasView compact recordId={signal.id.split(":").at(-1) ?? signal.id} /> : unavailable("No verified FiSaV recording is installed")}
+        <figcaption className="absolute inset-x-0 bottom-0 bg-[#0d1a1c]/90 px-2 py-1 font-mono text-[9px] leading-tight text-emerald-50/85">
+          FiSaV · {signal?.source_case_id ?? "source unavailable"} · measured PZT1 · unit unspecified
+        </figcaption>
+      </figure>
     </div>
   );
 }
@@ -662,21 +690,8 @@ export function Studio() {
             <span className="text-xs text-muted-foreground">Research and education · no patient-care advice</span>
           </div>
         </div>
-        <Card className="relative min-h-[250px] min-w-0 overflow-hidden rounded-lg border-sidebar-border bg-muted p-0 sm:min-h-[300px] lg:min-h-0">
-          <div className="absolute inset-0 grid grid-cols-[1.2fr_0.8fr]">
-            <img src={radiologyReviewImage} alt="A clinician discussing medical images with a care team" className="size-full object-cover object-center" />
-            <img src={clinicalTeamImage} alt="A surgical team working together in an operating room" className="size-full object-cover object-[45%_center]" />
-          </div>
-          <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/25 to-slate-950/10" />
-          <div className="relative flex h-full min-h-[250px] flex-col justify-end p-5 text-white sm:min-h-[300px] sm:p-6">
-            <div className="mb-auto flex items-start justify-between gap-3">
-              <Badge variant="outline" className="border-white/45 bg-slate-950/35 text-white backdrop-blur-sm">Clinical teams</Badge>
-              <Stethoscope aria-hidden="true" className="size-5 text-white/85" />
-            </div>
-            <p className="mb-1 text-xl font-medium tracking-tight sm:text-2xl">For people doing the review.</p>
-            <p className="max-w-md text-sm leading-5 text-white/80">Surgical educators · radiation oncology · medical physics · nephrology</p>
-            <p className="mt-3 text-[11px] leading-4 text-white/65">Representative clinical imagery; not MEDFORGE staff or dataset participants.</p>
-          </div>
+        <Card className="relative min-h-[250px] min-w-0 overflow-hidden rounded-lg border-sidebar-border bg-[#101624] p-0 sm:min-h-[300px] lg:min-h-0">
+          <ResearchEvidenceMontage cases={cases.data} />
         </Card>
       </header>
       {cases.error && <Alert variant="destructive"><CircleAlert/><AlertTitle>Source registry unavailable</AlertTitle><AlertDescription>{cases.error}</AlertDescription></Alert>}
