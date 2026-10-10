@@ -89,15 +89,15 @@ export function DoseTwinComparisonPanel({caseId,roi,axis,index,spacingMm}:{caseI
   }catch(reason){setError(reason instanceof Error?reason.message:'The comparison report could not be saved.')}
  }
 
- return <Card className="border-border bg-card shadow-none" aria-label="DoseTwin prediction comparison">
-  <CardHeader>
+ return <Card className="w-full min-w-0 border-border bg-card shadow-none" aria-label="DoseTwin prediction comparison">
+  <CardHeader className="min-w-0">
    <div className="flex flex-wrap items-start justify-between gap-3"><div><CardTitle className="text-base">Compare a real prediction</CardTitle><CardDescription className="mt-1 max-w-3xl">Compare a compatible same-case Gy array against the OpenKBP reference on one processed grid. MEDFORGE validates archived prediction data; it does not run model inference.</CardDescription></div><Badge variant="outline">Local research only</Badge></div>
   </CardHeader>
-  <CardContent className="grid gap-4">
-   <Alert><ShieldCheck/><AlertTitle>Source and rights stay visible</AlertTitle><AlertDescription>The uploaded file is stored in the local MEDFORGE data folder. Its model/source revisions and rights basis are recorded; a checkpoint hash is recorded only when its source publishes one. The app checks the file hash and grid but does not independently verify model identity or usage rights.</AlertDescription></Alert>
+  <CardContent className="grid min-w-0 gap-4">
+   <Alert className="min-w-0"><ShieldCheck/><AlertTitle>Source and rights stay visible</AlertTitle><AlertDescription className="min-w-0 break-words">The uploaded file is stored in the local MEDFORGE data folder. Its model/source revisions and rights basis are recorded; a checkpoint hash is recorded only when its source publishes one. The app checks the file hash and grid but does not independently verify model identity or usage rights.</AlertDescription></Alert>
    {error&&<Alert variant="destructive"><AlertCircle/><AlertTitle>Prediction not imported</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
-   <div className="grid gap-4 lg:grid-cols-[minmax(220px,0.7fr)_minmax(0,1.3fr)]">
-    <form onSubmit={event=>void importPrediction(event)} className="grid content-start gap-3 rounded-lg border border-border bg-muted/20 p-3">
+   <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(220px,0.7fr)_minmax(0,1.3fr)]">
+    <form onSubmit={event=>void importPrediction(event)} className="grid min-w-0 content-start gap-3 rounded-lg border border-border bg-muted/20 p-3">
      <div><h3 className="m-0 text-sm font-semibold">Add compatible artifact</h3><p className="mb-0 mt-1 text-xs leading-5 text-muted-foreground">Accepted format: OpenKBP sparse CSV with a `,data` header and C-order voxel indices. Maximum 64 MiB.</p></div>
      <FieldGroup>
       <Field><FieldLabel htmlFor="dose-model-csv">Prediction CSV</FieldLabel><Input id="dose-model-csv" type="file" accept=".csv,text/csv" onChange={event=>setFile(event.target.files?.[0]??null)} aria-label="Choose an authentic dose prediction CSV"/></Field>
@@ -109,7 +109,7 @@ export function DoseTwinComparisonPanel({caseId,roi,axis,index,spacingMm}:{caseI
      </FieldGroup>
      <Button type="submit" disabled={saving||!file||!rightsConfirmed} className="w-full">{saving?<LoaderCircle className="animate-spin" data-icon="inline-start"/>:<FileUp data-icon="inline-start"/>}{saving?'Validating source grid…':'Validate and add prediction'}</Button>
     </form>
-    <div className="grid content-start gap-3">
+    <div className="grid min-w-0 content-start gap-3">
      <Field><FieldLabel htmlFor="dose-artifact-choice">Installed predictions for this case</FieldLabel><Select items={artifactOptions} value={chosenId} onValueChange={value=>setArtifactId(value??'')}><SelectTrigger id="dose-artifact-choice" aria-label="Select imported dose prediction"><SelectValue placeholder="No prediction imported"/></SelectTrigger><SelectContent><SelectGroup>{artifacts.data?.map(item=><SelectItem key={item.id} value={item.id}>{item.source_file_name} · {item.model_revision}</SelectItem>)}</SelectGroup></SelectContent></Select></Field>
      {artifacts.isLoading&&<p role="status" className="text-sm text-muted-foreground">Loading local prediction records…</p>}
      {artifacts.error&&<Alert variant="destructive"><AlertCircle/><AlertTitle>Local prediction records could not be loaded</AlertTitle><AlertDescription>{artifacts.error.message}</AlertDescription></Alert>}
