@@ -17,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { parseSurgicalViewPreferences, type SurgicalViewPreferences } from '@/lib/workspace-preferences'
 import { buildSurgicalFrameReport } from '@/lib/surgical-evidence'
 import { searchSurgicalFrames, type SurgicalFrameOption } from '@/lib/source-picker'
+import { CholecT50Review } from '@/components/surgivision/CholecT50Review'
 import { NeutralVideoSkin, Video, VideoPlayer } from '@videojs/react/video'
 import '@videojs/react/video/neutral-skin.css'
 
@@ -232,8 +233,9 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
   return <section className="mt-4 grid min-w-0 gap-3" aria-label="SurgiVision frame review">
     {openedReportError&&<div role="alert" className="rounded-md border border-destructive/40 p-3 text-sm text-destructive">{openedReportError}</div>}
     {reportId&&!openedReportError&&<div role="status" className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm">Reopened the saved Endoscapes frame and annotation view.</div>}
-    {!guided&&publicClip&&<Card className="overflow-hidden border-primary/25 shadow-sm" aria-label="Primary native surgical video">
-      <CardHeader className="gap-1"><div className="flex flex-wrap items-center gap-2"><Badge variant="outline" className="border-primary/25 bg-primary/5 text-primary">Native video · licensed source</Badge><Badge variant="secondary">{publicClip.procedure_label} · {publicClip.duration_sec.toFixed(1)} sec</Badge></div><CardTitle className="mt-1">Surgical video review</CardTitle><CardDescription>Authentic, de-identified Appendix300 laparoscopic appendectomy footage. This is a separate procedure dataset from the Endoscapes cholecystectomy stills below; no Endoscapes annotations or masks are aligned to this clip.</CardDescription></CardHeader>
+    {!guided&&<CholecT50Review/>}
+    {!guided&&publicClip&&<Card className="overflow-hidden border-border shadow-sm" aria-label="Unannotated native Appendix300 surgical video">
+      <CardHeader className="gap-1"><div className="flex flex-wrap items-center gap-2"><Badge variant="outline">Playback only · no aligned results</Badge><Badge variant="secondary">{publicClip.procedure_label} · {publicClip.duration_sec.toFixed(1)} sec</Badge></div><CardTitle className="mt-1">Separate source footage</CardTitle><CardDescription>Authentic, de-identified Appendix300 laparoscopic appendectomy footage. This clip has no synchronized annotations, masks or model predictions. It is a different procedure and recording from both annotated cholecystectomy frame sets shown in this workspace.</CardDescription></CardHeader>
       <CardContent className="grid gap-3">
         {showPublicClip?<VideoPlayer><NeutralVideoSkin className="w-full overflow-hidden rounded-lg bg-[#101624]" style={{aspectRatio:'16 / 9'}}><Video className="size-full" src={api.surgicalClipVideoUrl(publicClip.clip_id)} playsInline preload="metadata" aria-label="Appendix300 laparoscopic appendectomy source video"/></NeutralVideoSkin></VideoPlayer>:<Button variant="outline" className="w-fit" onClick={()=>setShowPublicClip(true)}>Load licensed video excerpt</Button>}
         <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-2 text-xs text-muted-foreground"><span>{publicClip.license_label} · SHA-256 {publicClip.sha256.slice(0,12)}…</span><a className="text-primary hover:underline" href={publicClip.source_url} target="_blank" rel="noreferrer">OPARA dataset and citation ↗</a></div>

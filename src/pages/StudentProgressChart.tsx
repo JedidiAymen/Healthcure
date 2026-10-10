@@ -14,6 +14,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import type { StudentProgress } from "@/lib/api";
 
 type RubricHistoryPoint = StudentProgress["rubric_history"][number];
+type ChartHistoryPoint = Omit<RubricHistoryPoint, "percent"> & {
+  percent: number;
+  chartKey: string;
+  reviewNumber: number;
+};
 
 const chartConfig = {
   percent: { label: "Rubric score", color: "var(--chart-1)" },
@@ -39,6 +44,21 @@ function formatAxisTime(value: string) {
   return Number.isNaN(date.getTime()) ? "" : date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 }
 
+function hasRepeatedReviewDay(value: string, repeatedReviewDays: Set<string>) {
+  return repeatedReviewDays.has(formatReviewDate(value));
+}
+
+function formatAxisReview(value: string, repeatedReviewDays: Set<string>) {
+  if (hasRepeatedReviewDay(value, repeatedReviewDays)) return formatAxisTime(value);
+  return formatReviewDate(value).replace(/, \d{4}$/, "");
+}
+
+function formatTableReview(value: string, repeatedReviewDays: Set<string>) {
+  return hasRepeatedReviewDay(value, repeatedReviewDays)
+    ? `${formatReviewDate(value)} · ${formatReviewTime(value)}`
+    : formatReviewDate(value);
+}
+
 export function StudentProgressChart({ history }: { history: RubricHistoryPoint[] }) {
   const [selectedDimensionId, setSelectedDimensionId] = useState("");
   const dimensions = useMemo(() => {
@@ -62,6 +82,14 @@ export function StudentProgressChart({ history }: { history: RubricHistoryPoint[
       .sort((left, right) => parseReviewDate(left.reviewed_at).getTime() - parseReviewDate(right.reviewed_at).getTime()),
     [activeDimensionId, history],
   );
+  const chartPoints = useMemo<ChartHistoryPoint[]>(
+    () => points.map((point, index) => ({ ...point, chartKey: point.id, reviewNumber: index + 1 })),
+    [points],
+  );
+  const chartPointByKey = useMemo(
+    () => new Map(chartPoints.map((point) => [point.chartKey, point])),
+    [chartPoints],
+  );
   const repeatedReviewDays = useMemo(() => {
     const counts = new Map<string, number>();
     for (const point of points) {
@@ -70,14 +98,39 @@ export function StudentProgressChart({ history }: { history: RubricHistoryPoint[
     }
     return new Set([...counts].filter(([, count]) => count > 1).map(([day]) => day));
   }, [points]);
-  const hasRepeatedReviewDay = (value: string) => repeatedReviewDays.has(formatReviewDate(value));
-  const formatAxisReview = (value: string) => {
-    if (hasRepeatedReviewDay(value)) return formatAxisTime(value);
-    return formatReviewDate(value).replace(/, \d{4}$/, "");
+  const axisLabelCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const point of chartPoints) {
+      const label = formatAxisReview(point.reviewed_at, repeatedReviewDays);
+      counts.set(label, (counts.get(label) ?? 0) + 1);
+    }
+    return counts;
+  }, [chartPoints, repeatedReviewDays]);
+  const tableLabelCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const point of chartPoints) {
+      const label = formatTableReview(point.reviewed_at, repeatedReviewDays);
+      counts.set(label, (counts.get(label) ?? 0) + 1);
+    }
+    return counts;
+  }, [chartPoints, repeatedReviewDays]);
+  const formatAxisPoint = (value: string) => {
+    const point = chartPointByKey.get(value);
+    if (!point) return value;
+    const label = formatAxisReview(point.reviewed_at, repeatedReviewDays);
+    return (axisLabelCounts.get(label) ?? 0) > 1 ? `${label} #${point.reviewNumber}` : label;
   };
-  const formatTableReview = (value: string) => hasRepeatedReviewDay(value)
-    ? `${formatReviewDate(value)} · ${formatReviewTime(value)}`
-    : formatReviewDate(value);
+  const formatTooltipPoint = (value: string) => {
+    const point = chartPointByKey.get(value);
+    if (!point) return value;
+    const date = formatReviewDate(point.reviewed_at);
+    const time = hasRepeatedReviewDay(point.reviewed_at, repeatedReviewDays) ? ` · ${formatReviewTime(point.reviewed_at)}` : "";
+    return `${date}${time} · review ${point.reviewNumber}`;
+  };
+  const formatTablePoint = (point: ChartHistoryPoint) => {
+    const label = formatTableReview(point.reviewed_at, repeatedReviewDays);
+    return (tableLabelCounts.get(label) ?? 0) > 1 ? `${label} · review ${point.reviewNumber}` : label;
+  };
   const selectItems = dimensions.map((dimension) => ({ label: dimension.label, value: dimension.id }));
 
   return (
@@ -123,13 +176,13 @@ export function StudentProgressChart({ history }: { history: RubricHistoryPoint[
                     accessibilityLayer
                     title={`Educator-reviewed rubric history for ${activeDimension.label}`}
                     desc="Each point is the latest educator review of one submitted attempt. The score describes authored coursework and is not clinical mastery. Use the arrow keys to inspect reviewed results."
-                    data={points}
+                    data={chartPoints}
                     margin={{ top: 8, right: 12, bottom: 4, left: 0 }}
                   >
                     <CartesianGrid stroke="var(--border)" strokeDasharray="3 4" vertical={false} />
                     <XAxis
-                      dataKey="reviewed_at"
-                      tickFormatter={(value) => formatAxisReview(String(value))}
+                      dataKey="chartKey"
+                      tickFormatter={(value) => formatAxisPoint(String(value))}
                       interval={points.length <= 2 ? 0 : "preserveStartEnd"}
                       padding={{ left: 8, right: 24 }}
                       tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
@@ -151,9 +204,7 @@ export function StudentProgressChart({ history }: { history: RubricHistoryPoint[
                         <ChartTooltipContent
                           indicator="line"
                           labelFormatter={(value) => {
-                            const timestamp = String(value);
-                            const date = formatReviewDate(timestamp);
-                            return repeatedReviewDays.has(date) ? `${date} · ${formatReviewTime(timestamp)}` : date;
+                            return formatTooltipPoint(String(value));
                           }}
                           formatter={(value) => <span className="font-mono tabular-nums">{Number(value).toFixed(1)}%</span>}
                         />
@@ -182,9 +233,9 @@ export function StudentProgressChart({ history }: { history: RubricHistoryPoint[
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {points.map((point) => (
-                          <TableRow key={point.id}>
-                            <TableCell>{formatTableReview(point.reviewed_at)}</TableCell>
+                        {chartPoints.map((point) => (
+                          <TableRow key={point.chartKey}>
+                            <TableCell>{formatTablePoint(point)}</TableCell>
                             <TableCell className="font-mono tabular-nums">{point.earned_points}/{point.available_points} · {point.percent.toFixed(1)}%</TableCell>
                           </TableRow>
                         ))}

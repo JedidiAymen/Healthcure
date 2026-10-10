@@ -444,6 +444,46 @@ class SurgicalClipRecord(StrictModel):
     sha256: str
     limitations: list[str]
 
+class CholecT50VideoRecord(StrictModel):
+    """Installed source-sampled CholecT50 clip with matching source labels."""
+    video_id: str = Field(pattern=r'^VID\d{2}$')
+    dataset_id: Literal['CholecT50 Challenge Validation']
+    procedure_label: Literal['Laparoscopic cholecystectomy']
+    sampling_fps: float = Field(gt=0)
+    sampled_frame_count: int = Field(ge=0)
+    annotated_frame_count: int = Field(ge=0)
+    first_frame_number: int = Field(ge=0)
+    last_frame_number: int = Field(ge=0)
+    source_url: str
+    license_label: str
+    citation: str
+    sha256: str
+    limitations: list[str]
+
+class CholecT50TripletAnnotation(StrictModel):
+    triplet_id: int = Field(ge=0)
+    triplet_label: str
+    instrument_label: str
+    verb_label: str
+    target_label: str
+    confidence: float = Field(ge=0, le=1, allow_inf_nan=False)
+    bbox_xywh_px: tuple[float,float,float,float] | None = None
+    source_kind: Literal['expert reference annotation'] = 'expert reference annotation'
+
+class CholecT50FrameRecord(StrictModel):
+    frame_id: str
+    video_id: str = Field(pattern=r'^VID\d{2}$')
+    frame_number: int = Field(ge=0)
+    sample_time_sec: float = Field(ge=0, allow_inf_nan=False)
+    sampling_fps: float = Field(gt=0, allow_inf_nan=False)
+    width: int = Field(gt=0)
+    height: int = Field(gt=0)
+    image_sha256: str
+    annotation_sha256: str
+    image_url: str
+    phase_label: str | None = None
+    annotations: list[CholecT50TripletAnnotation]
+
 class CvsCriterionCoverage(StrictModel):
     criterion_id: Literal['two_structures','hepatocystic_triangle','cystic_plate']
     criterion_label: str

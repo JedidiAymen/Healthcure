@@ -30,7 +30,7 @@ import numpy as np
 from .schemas import (
     ApiError, Case, Health, ModuleStatus, ModelRecord, ModelValidationRequest,
     DvhPoint, DvhMetrics, DvhSummary, DoseArtifact, DoseArtifactSlice, DoseArtifactComparison, ModelValidationResponse, RunCreateRequest, RunRecord, ViewerManifest, VoxelSlice, RoiMaskVolume, VoxelVolumeArtifact,
-    SurgicalFrameArtifact, SurgicalFrameRecord, SurgicalMediaRecord, SurgicalSequenceFrame, SurgicalClipRecord, CvsCoverage, SignalArtifact, SignalRecord, SignalWindow, SignalSpectrum, SignalSpectrogram, SignalFeatures
+    SurgicalFrameArtifact, SurgicalFrameRecord, SurgicalMediaRecord, SurgicalSequenceFrame, SurgicalClipRecord, CholecT50VideoRecord, CholecT50FrameRecord, CvsCoverage, SignalArtifact, SignalRecord, SignalWindow, SignalSpectrum, SignalSpectrogram, SignalFeatures
 )
 from .schemas import ReportCreateRequest, ReportRecord, SurgicalFrameReportCreateRequest, DoseTwinComparisonReportCreateRequest
 from .schemas import (LocalLoginRequest, LocalSession, LocalUser, EducatorEvidenceItem,
@@ -47,6 +47,7 @@ from .endoscapes import SOURCE_URL as ENDOSCAPES_URL, case_record as _endoscapes
 from . import endoscapes as _endoscapes
 from . import fisav as _fisav
 from . import appendix300 as _appendix300
+from . import cholect50_validation as _cholect50_validation
 
 ROOT = Path(__file__).resolve().parents[3]
 MIGRATIONS = ROOT/'db'/'migrations'
@@ -676,6 +677,39 @@ def create_app() -> FastAPI:
     def surgivision_clips():
         record=_appendix300.clip_record()
         return [record] if record else []
+
+    @app.get('/api/v1/surgivision/cholect50',response_model=list[CholecT50VideoRecord])
+    def surgivision_cholect50_videos():
+        """List checksum-verified sampled frame sequences with matched expert labels."""
+        return _cholect50_validation.video_records()
+
+    @app.get('/api/v1/surgivision/cholect50/{video_id}/frames',response_model=list[CholecT50FrameRecord])
+    def surgivision_cholect50_frames(video_id:str):
+        if not re.fullmatch(r'VID\d{2}',video_id):
+            raise HTTPException(status_code=404,detail={'code':'CHOLECT50_SEQUENCE_NOT_INSTALLED','message':'No verified CholecT50 validation sequence matches this ID'})
+        frames=_cholect50_validation.frame_records(video_id)
+        if frames is None:
+            raise HTTPException(status_code=404,detail={'code':'CHOLECT50_SEQUENCE_NOT_INSTALLED','message':'No verified CholecT50 validation sequence matches this ID'})
+        return frames
+
+    @app.get('/api/v1/surgivision/cholect50/{video_id}/frames/{frame_number}',response_model=CholecT50FrameRecord)
+    def surgivision_cholect50_frame(video_id:str,frame_number:int):
+        if frame_number<0 or not re.fullmatch(r'VID\d{2}',video_id):
+            raise HTTPException(status_code=404,detail={'code':'CHOLECT50_FRAME_NOT_INSTALLED','message':'No matching verified frame is installed'})
+        frames=_cholect50_validation.frame_records(video_id)
+        record=next((item for item in frames or [] if item.frame_number==frame_number),None)
+        if record is None:
+            raise HTTPException(status_code=404,detail={'code':'CHOLECT50_FRAME_NOT_INSTALLED','message':'No matching verified frame is installed'})
+        return record
+
+    @app.get('/api/v1/surgivision/cholect50/{video_id}/frames/{frame_number}/image')
+    def surgivision_cholect50_image(video_id:str,frame_number:int):
+        if frame_number<0 or not re.fullmatch(r'VID\d{2}',video_id):
+            raise HTTPException(status_code=404,detail={'code':'CHOLECT50_FRAME_NOT_INSTALLED','message':'No matching verified frame is installed'})
+        path=_cholect50_validation.image_path(video_id,frame_number)
+        if path is None:
+            raise HTTPException(status_code=404,detail={'code':'CHOLECT50_FRAME_NOT_INSTALLED','message':'No matching verified frame is installed'})
+        return FileResponse(path,media_type='image/png',headers={'Cache-Control':'private, max-age=300','X-Content-Type-Options':'nosniff'})
 
     @app.get('/api/v1/surgivision/clips/{clip_id}/video')
     def surgivision_clip_video(clip_id:str,range_header:str|None=Header(default=None,alias='Range')):

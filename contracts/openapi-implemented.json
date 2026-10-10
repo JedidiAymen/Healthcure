@@ -89,6 +89,251 @@
         "title": "Case",
         "type": "object"
       },
+      "CholecT50FrameRecord": {
+        "additionalProperties": false,
+        "properties": {
+          "annotation_sha256": {
+            "title": "Annotation Sha256",
+            "type": "string"
+          },
+          "annotations": {
+            "items": {
+              "$ref": "#/components/schemas/CholecT50TripletAnnotation"
+            },
+            "title": "Annotations",
+            "type": "array"
+          },
+          "frame_id": {
+            "title": "Frame Id",
+            "type": "string"
+          },
+          "frame_number": {
+            "minimum": 0.0,
+            "title": "Frame Number",
+            "type": "integer"
+          },
+          "height": {
+            "exclusiveMinimum": 0.0,
+            "title": "Height",
+            "type": "integer"
+          },
+          "image_sha256": {
+            "title": "Image Sha256",
+            "type": "string"
+          },
+          "image_url": {
+            "title": "Image Url",
+            "type": "string"
+          },
+          "phase_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase Label"
+          },
+          "sample_time_sec": {
+            "minimum": 0.0,
+            "title": "Sample Time Sec",
+            "type": "number"
+          },
+          "sampling_fps": {
+            "exclusiveMinimum": 0.0,
+            "title": "Sampling Fps",
+            "type": "number"
+          },
+          "video_id": {
+            "pattern": "^VID\\d{2}$",
+            "title": "Video Id",
+            "type": "string"
+          },
+          "width": {
+            "exclusiveMinimum": 0.0,
+            "title": "Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "frame_id",
+          "video_id",
+          "frame_number",
+          "sample_time_sec",
+          "sampling_fps",
+          "width",
+          "height",
+          "image_sha256",
+          "annotation_sha256",
+          "image_url",
+          "annotations"
+        ],
+        "title": "CholecT50FrameRecord",
+        "type": "object"
+      },
+      "CholecT50TripletAnnotation": {
+        "additionalProperties": false,
+        "properties": {
+          "bbox_xywh_px": {
+            "anyOf": [
+              {
+                "maxItems": 4,
+                "minItems": 4,
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ],
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bbox Xywh Px"
+          },
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "instrument_label": {
+            "title": "Instrument Label",
+            "type": "string"
+          },
+          "source_kind": {
+            "const": "expert reference annotation",
+            "default": "expert reference annotation",
+            "title": "Source Kind",
+            "type": "string"
+          },
+          "target_label": {
+            "title": "Target Label",
+            "type": "string"
+          },
+          "triplet_id": {
+            "minimum": 0.0,
+            "title": "Triplet Id",
+            "type": "integer"
+          },
+          "triplet_label": {
+            "title": "Triplet Label",
+            "type": "string"
+          },
+          "verb_label": {
+            "title": "Verb Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "triplet_id",
+          "triplet_label",
+          "instrument_label",
+          "verb_label",
+          "target_label",
+          "confidence"
+        ],
+        "title": "CholecT50TripletAnnotation",
+        "type": "object"
+      },
+      "CholecT50VideoRecord": {
+        "additionalProperties": false,
+        "description": "Installed source-sampled CholecT50 clip with matching source labels.",
+        "properties": {
+          "annotated_frame_count": {
+            "minimum": 0.0,
+            "title": "Annotated Frame Count",
+            "type": "integer"
+          },
+          "citation": {
+            "title": "Citation",
+            "type": "string"
+          },
+          "dataset_id": {
+            "const": "CholecT50 Challenge Validation",
+            "title": "Dataset Id",
+            "type": "string"
+          },
+          "first_frame_number": {
+            "minimum": 0.0,
+            "title": "First Frame Number",
+            "type": "integer"
+          },
+          "last_frame_number": {
+            "minimum": 0.0,
+            "title": "Last Frame Number",
+            "type": "integer"
+          },
+          "license_label": {
+            "title": "License Label",
+            "type": "string"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
+          },
+          "procedure_label": {
+            "const": "Laparoscopic cholecystectomy",
+            "title": "Procedure Label",
+            "type": "string"
+          },
+          "sampled_frame_count": {
+            "minimum": 0.0,
+            "title": "Sampled Frame Count",
+            "type": "integer"
+          },
+          "sampling_fps": {
+            "exclusiveMinimum": 0.0,
+            "title": "Sampling Fps",
+            "type": "number"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "source_url": {
+            "title": "Source Url",
+            "type": "string"
+          },
+          "video_id": {
+            "pattern": "^VID\\d{2}$",
+            "title": "Video Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "video_id",
+          "dataset_id",
+          "procedure_label",
+          "sampling_fps",
+          "sampled_frame_count",
+          "annotated_frame_count",
+          "first_frame_number",
+          "last_frame_number",
+          "source_url",
+          "license_label",
+          "citation",
+          "sha256",
+          "limitations"
+        ],
+        "title": "CholecT50VideoRecord",
+        "type": "object"
+      },
       "CvsCoverage": {
         "additionalProperties": false,
         "properties": {
@@ -8030,6 +8275,166 @@
           }
         },
         "summary": "Get Run"
+      }
+    },
+    "/api/v1/surgivision/cholect50": {
+      "get": {
+        "description": "List checksum-verified sampled frame sequences with matched expert labels.",
+        "operationId": "surgivision_cholect50_videos_api_v1_surgivision_cholect50_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CholecT50VideoRecord"
+                  },
+                  "title": "Response Surgivision Cholect50 Videos Api V1 Surgivision Cholect50 Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Surgivision Cholect50 Videos"
+      }
+    },
+    "/api/v1/surgivision/cholect50/{video_id}/frames": {
+      "get": {
+        "operationId": "surgivision_cholect50_frames_api_v1_surgivision_cholect50__video_id__frames_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "video_id",
+            "required": true,
+            "schema": {
+              "title": "Video Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CholecT50FrameRecord"
+                  },
+                  "title": "Response Surgivision Cholect50 Frames Api V1 Surgivision Cholect50  Video Id  Frames Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Surgivision Cholect50 Frames"
+      }
+    },
+    "/api/v1/surgivision/cholect50/{video_id}/frames/{frame_number}": {
+      "get": {
+        "operationId": "surgivision_cholect50_frame_api_v1_surgivision_cholect50__video_id__frames__frame_number__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "video_id",
+            "required": true,
+            "schema": {
+              "title": "Video Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "frame_number",
+            "required": true,
+            "schema": {
+              "title": "Frame Number",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CholecT50FrameRecord"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Surgivision Cholect50 Frame"
+      }
+    },
+    "/api/v1/surgivision/cholect50/{video_id}/frames/{frame_number}/image": {
+      "get": {
+        "operationId": "surgivision_cholect50_image_api_v1_surgivision_cholect50__video_id__frames__frame_number__image_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "video_id",
+            "required": true,
+            "schema": {
+              "title": "Video Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "frame_number",
+            "required": true,
+            "schema": {
+              "title": "Frame Number",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Surgivision Cholect50 Image"
       }
     },
     "/api/v1/surgivision/clips": {

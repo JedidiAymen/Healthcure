@@ -52,6 +52,9 @@ fi
 if [ -z "${MEDFORGE_FISAV_ROOT+x}" ] && [ -d "$ROOT/data/fisav" ]; then
   export MEDFORGE_FISAV_ROOT="$ROOT/data/fisav"
 fi
+if [ -z "${MEDFORGE_CHOLECT50_VALIDATION_ROOT+x}" ] && [ -d "$ROOT/data/cholect50/challenge-validation" ]; then
+  export MEDFORGE_CHOLECT50_VALIDATION_ROOT="$ROOT/data/cholect50/challenge-validation"
+fi
 export MEDFORGE_BIND=127.0.0.1
 EXPECTED_API_URL="http://127.0.0.1:${API_PORT}"
 if [ -n "${VITE_API_URL:-}" ] && [ "$VITE_API_URL" != "$EXPECTED_API_URL" ]; then

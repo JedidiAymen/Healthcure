@@ -62,6 +62,7 @@ def source_readiness() -> dict[str, object]:
     openkbp = Path(os.environ.get("MEDFORGE_OPENKBP_CASE_DIR", ROOT / "data/openkbp/pt_201"))
     endoscapes = Path(os.environ.get("MEDFORGE_ENDOSCAPES_ROOT", ROOT / "data/endoscapes"))
     fisav = Path(os.environ.get("MEDFORGE_FISAV_ROOT", ROOT / "data/fisav"))
+    cholect50 = Path(os.environ.get("MEDFORGE_CHOLECT50_VALIDATION_ROOT", ROOT / "data/cholect50/challenge-validation"))
     dose_required = ("ct.csv", "dose.csv", "possible_dose_mask.csv", "voxel_dimensions.csv")
     dose_manifest_path = ROOT / "docs/openkbp-pt201-manifest.json"
     try:
@@ -91,6 +92,18 @@ def source_readiness() -> dict[str, object]:
     except (OSError, ValueError, TypeError):
         fisav_names = []
         fisav_count = 0
+    cholect_manifest = cholect50 / "medforge-source-manifest.json"
+    try:
+        cholect_data = json.loads(cholect_manifest.read_text(encoding="utf8"))
+        cholect_files = cholect_data.get("files", [])
+        cholect_videos = sorted((cholect50 / "cholect50-challenge-val" / "labels").glob("VID*.json"))
+        cholect_count = len(cholect_videos)
+        cholect_frames = sum(1 for path in (cholect50 / "cholect50-challenge-val" / "videos").glob("VID*/*.png") if path.is_file())
+    except (OSError, ValueError, TypeError):
+        cholect_data = {}
+        cholect_files = []
+        cholect_count = 0
+        cholect_frames = 0
     return {
         "openkbp_pt201": {
             "directory": str(openkbp),
@@ -114,6 +127,15 @@ def source_readiness() -> dict[str, object]:
             "manifest_record_count": fisav_count,
             "record_files_present": sum(1 for name in fisav_names if (fisav / name).is_file()),
             "ready": fisav_manifest.is_file() and fisav_count > 0 and all((fisav / name).is_file() for name in fisav_names),
+        },
+        "cholect50_challenge_validation": {
+            "directory": str(cholect50),
+            "manifest_present": cholect_manifest.is_file(),
+            "manifest_file_count": len(cholect_files),
+            "archive_sha256": cholect_data.get("archive_sha256"),
+            "video_count": cholect_count,
+            "sampled_frame_count": cholect_frames,
+            "ready": cholect_data.get("dataset") == "CholecT50 Challenge Validation" and cholect_count == 5 and cholect_frames > 0,
         },
     }
 

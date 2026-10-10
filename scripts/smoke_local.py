@@ -130,6 +130,24 @@ def run(api: str, web: str) -> dict[str, object]:
             raise SmokeFailure("SurgiVision source image did not load as image data")
         source_checks.append("SurgiVision frame annotations and source image")
 
+    cholect_videos = json_get(api, "/api/v1/surgivision/cholect50")
+    if cholect_videos:
+        video = cholect_videos[0]
+        frames = json_get(api, f"/api/v1/surgivision/cholect50/{quote(video['video_id'], safe='')}/frames")
+        frame = next((item for item in frames if any(annotation.get("bbox_xywh_px") for annotation in item.get("annotations", []))), None)
+        if frame is None:
+            raise SmokeFailure("CholecT50 validation source has no frame with a source-matched box and action label")
+        if frame.get("annotation_sha256") is None or len(frame.get("image_sha256", "")) != 64:
+            raise SmokeFailure("CholecT50 validation frame is missing source hashes")
+        if any(annotation.get("source_kind") != "expert reference annotation" for annotation in frame["annotations"]):
+            raise SmokeFailure("CholecT50 labels were not identified as source reference annotations")
+        status, body, content_type = fetch(api, frame["image_url"])
+        if status != 200 or not content_type.lower().startswith("image/png") or not body.startswith(b"\x89PNG\r\n\x1a\n"):
+            raise SmokeFailure("CholecT50 source frame image did not load as verified PNG data")
+        if "continuous video footage" not in video.get("limitations", [""])[0]:
+            raise SmokeFailure("CholecT50 sampled stills do not disclose the continuous-video limitation")
+        source_checks.append("CholecT50 matched source-frame image, triplet label, pixel box and provenance hashes")
+
     signals = cases_by_module["fistulaguard"]
     if signals:
         case = signals[0]

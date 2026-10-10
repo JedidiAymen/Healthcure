@@ -885,6 +885,77 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/surgivision/cholect50": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Surgivision Cholect50 Videos
+         * @description List checksum-verified sampled frame sequences with matched expert labels.
+         */
+        get: operations["surgivision_cholect50_videos_api_v1_surgivision_cholect50_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/surgivision/cholect50/{video_id}/frames": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Surgivision Cholect50 Frames */
+        get: operations["surgivision_cholect50_frames_api_v1_surgivision_cholect50__video_id__frames_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/surgivision/cholect50/{video_id}/frames/{frame_number}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Surgivision Cholect50 Frame */
+        get: operations["surgivision_cholect50_frame_api_v1_surgivision_cholect50__video_id__frames__frame_number__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/surgivision/cholect50/{video_id}/frames/{frame_number}/image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Surgivision Cholect50 Image */
+        get: operations["surgivision_cholect50_image_api_v1_surgivision_cholect50__video_id__frames__frame_number__image_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/surgivision/clips": {
         parameters: {
             query?: never;
@@ -1079,6 +1150,99 @@ export interface components {
              * @enum {string}
              */
             status: "ready" | "blocked";
+        };
+        /** CholecT50FrameRecord */
+        CholecT50FrameRecord: {
+            /** Annotation Sha256 */
+            annotation_sha256: string;
+            /** Annotations */
+            annotations: components["schemas"]["CholecT50TripletAnnotation"][];
+            /** Frame Id */
+            frame_id: string;
+            /** Frame Number */
+            frame_number: number;
+            /** Height */
+            height: number;
+            /** Image Sha256 */
+            image_sha256: string;
+            /** Image Url */
+            image_url: string;
+            /** Phase Label */
+            phase_label?: string | null;
+            /** Sample Time Sec */
+            sample_time_sec: number;
+            /** Sampling Fps */
+            sampling_fps: number;
+            /** Video Id */
+            video_id: string;
+            /** Width */
+            width: number;
+        };
+        /** CholecT50TripletAnnotation */
+        CholecT50TripletAnnotation: {
+            /** Bbox Xywh Px */
+            bbox_xywh_px?: [
+                number,
+                number,
+                number,
+                number
+            ] | null;
+            /** Confidence */
+            confidence: number;
+            /** Instrument Label */
+            instrument_label: string;
+            /**
+             * Source Kind
+             * @default expert reference annotation
+             * @constant
+             */
+            source_kind: "expert reference annotation";
+            /** Target Label */
+            target_label: string;
+            /** Triplet Id */
+            triplet_id: number;
+            /** Triplet Label */
+            triplet_label: string;
+            /** Verb Label */
+            verb_label: string;
+        };
+        /**
+         * CholecT50VideoRecord
+         * @description Installed source-sampled CholecT50 clip with matching source labels.
+         */
+        CholecT50VideoRecord: {
+            /** Annotated Frame Count */
+            annotated_frame_count: number;
+            /** Citation */
+            citation: string;
+            /**
+             * Dataset Id
+             * @constant
+             */
+            dataset_id: "CholecT50 Challenge Validation";
+            /** First Frame Number */
+            first_frame_number: number;
+            /** Last Frame Number */
+            last_frame_number: number;
+            /** License Label */
+            license_label: string;
+            /** Limitations */
+            limitations: string[];
+            /**
+             * Procedure Label
+             * @constant
+             */
+            procedure_label: "Laparoscopic cholecystectomy";
+            /** Sampled Frame Count */
+            sampled_frame_count: number;
+            /** Sampling Fps */
+            sampling_fps: number;
+            /** Sha256 */
+            sha256: string;
+            /** Source Url */
+            source_url: string;
+            /** Video Id */
+            video_id: string;
         };
         /** CvsCoverage */
         CvsCoverage: {
@@ -4849,6 +5013,121 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RunRecord"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    surgivision_cholect50_videos_api_v1_surgivision_cholect50_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CholecT50VideoRecord"][];
+                };
+            };
+        };
+    };
+    surgivision_cholect50_frames_api_v1_surgivision_cholect50__video_id__frames_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                video_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CholecT50FrameRecord"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    surgivision_cholect50_frame_api_v1_surgivision_cholect50__video_id__frames__frame_number__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                video_id: string;
+                frame_number: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CholecT50FrameRecord"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    surgivision_cholect50_image_api_v1_surgivision_cholect50__video_id__frames__frame_number__image_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                video_id: string;
+                frame_number: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
