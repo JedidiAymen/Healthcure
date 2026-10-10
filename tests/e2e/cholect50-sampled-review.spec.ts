@@ -31,17 +31,19 @@ async function installReviewFixtures(page: import('@playwright/test').Page) {
 test('SurgiVision routes reviewers from native video to source-matched labels', async ({ page }) => {
   const sourceBacked = process.env.MEDFORGE_E2E_SOURCE_API === '1'
   if (!sourceBacked) await installReviewFixtures(page)
+  const videoDataset = sourceBacked ? 'Cholec80' : 'Appendix300'
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('/studio/surgivision/cases/current')
 
   await expect(page.getByRole('heading', { name: 'SurgiVision surgical media review' })).toBeVisible()
-  await expect(page.getByText(/Appendix300 appendectomy video with one publisher-timed source event/)).toBeVisible()
+  await expect(page.getByText(`${videoDataset} · source video`, { exact: true })).toBeVisible()
   const modes = page.getByRole('tablist', { name: 'Surgical media modes' })
-  await expect(modes.getByRole('tab', { name: 'Appendix300 · source event' })).toHaveAttribute('aria-selected', 'true')
-  await expect(page.getByRole('region', { name: 'Appendix300 video with a source-timed annotation' })).toBeVisible()
-  await expect(page.getByText(/no instrument masks, action triplets, phase labels or model output/)).toBeVisible()
+  await expect(modes.getByRole('tab', { name: 'Continuous video · source labels' })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByRole('region', { name: `${videoDataset} video with source labels` })).toBeVisible()
+  if (sourceBacked) await expect(page.getByRole('group', { name: 'Publisher phase annotation for the current video frame' })).toBeVisible()
+  else await expect(page.getByText(/no tool masks, triplets, phase labels or model output/)).toBeVisible()
   await expect(page.getByRole('img', { name: /published tool-tip boxes/ })).toHaveCount(0)
-  await page.getByRole('button', { name: 'View CholecT50 labeled samples' }).click()
+  await page.getByRole('button', { name: 'View labeled samples' }).click()
   await expect(modes.getByRole('tab', { name: 'Sampled replay · source labels' })).toHaveAttribute('aria-selected', 'true')
   const review = page.locator('[aria-label="CholecT50 annotated cholecystectomy source review"]')
   await expect(review).toBeVisible()
@@ -65,8 +67,8 @@ test('SurgiVision routes reviewers from native video to source-matched labels', 
   for (const viewport of [{ width: 1440, height: 900 }, { width: 768, height: 1024 }, { width: 390, height: 844 }]) {
     const suffix = `${viewport.width}x${viewport.height}`
     await page.setViewportSize(viewport)
-    await modes.getByRole('tab', { name: 'Appendix300 · source event' }).click()
-    await expect(page.getByRole('region', { name: 'Appendix300 video with a source-timed annotation' })).toBeVisible()
+    await modes.getByRole('tab', { name: 'Continuous video · source labels' }).click()
+    await expect(page.getByRole('region', { name: `${videoDataset} video with source labels` })).toBeVisible()
     await expect(page.getByRole('img', { name: /published tool-tip boxes/ })).toHaveCount(0)
     await expect(page.locator('html')).toHaveJSProperty('scrollWidth', viewport.width)
     if (sourceBacked) await page.screenshot({ path: `.local-review/SURGIVISION-MEDIA-MODES/native-video-${suffix}.png`, fullPage: true })

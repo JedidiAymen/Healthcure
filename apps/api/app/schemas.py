@@ -433,7 +433,7 @@ class SurgicalSequenceFrame(StrictModel):
 class SurgicalClipRecord(StrictModel):
     """A locally verified, explicitly licensed continuous surgical video clip."""
     clip_id: str
-    dataset_id: Literal['Appendix300']
+    dataset_id: Literal['Appendix300', 'Cholec80']
     procedure_label: str
     media_kind: Literal['native_video']
     duration_sec: float = Field(gt=0)
@@ -444,6 +444,9 @@ class SurgicalClipRecord(StrictModel):
     sha256: str
     limitations: list[str]
     source_annotation: 'SurgicalClipSourceAnnotation | None' = None
+    frames_per_second: float | None = Field(default=None, gt=0)
+    phase_track_sha256: str | None = Field(default=None, pattern=r'^[0-9a-f]{64}$')
+    phase_track: list['SurgicalPhaseInterval'] = Field(default_factory=list)
 
 class SurgicalClipSourceAnnotation(StrictModel):
     """A source-linked timestamp and grade, never a model-generated output."""
@@ -455,6 +458,12 @@ class SurgicalClipSourceAnnotation(StrictModel):
     metadata_bitstream_id: str
     metadata_bytes: int = Field(gt=0)
     metadata_md5: str = Field(pattern=r'^[0-9a-f]{32}$')
+
+class SurgicalPhaseInterval(StrictModel):
+    """An exact contiguous interval from a source-provided phase track."""
+    first_frame: int = Field(ge=0)
+    last_frame: int = Field(ge=0)
+    phase: Literal['Preparation','CalotTriangleDissection','ClippingCutting','GallbladderDissection','GallbladderRetraction','CleaningCoagulation','GallbladderPackaging']
 
 class CholecT50VideoRecord(StrictModel):
     """Installed source-sampled CholecT50 clip with matching source labels."""

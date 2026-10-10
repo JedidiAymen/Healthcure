@@ -4338,7 +4338,10 @@
             "type": "string"
           },
           "dataset_id": {
-            "const": "Appendix300",
+            "enum": [
+              "Appendix300",
+              "Cholec80"
+            ],
             "title": "Dataset Id",
             "type": "string"
           },
@@ -4346,6 +4349,18 @@
             "exclusiveMinimum": 0.0,
             "title": "Duration Sec",
             "type": "number"
+          },
+          "frames_per_second": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Frames Per Second"
           },
           "license_label": {
             "title": "License Label",
@@ -4362,6 +4377,25 @@
             "const": "native_video",
             "title": "Media Kind",
             "type": "string"
+          },
+          "phase_track": {
+            "items": {
+              "$ref": "#/components/schemas/SurgicalPhaseInterval"
+            },
+            "title": "Phase Track",
+            "type": "array"
+          },
+          "phase_track_sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase Track Sha256"
           },
           "procedure_label": {
             "title": "Procedure Label",
@@ -4765,6 +4799,42 @@
           "limitations"
         ],
         "title": "SurgicalMediaRecord",
+        "type": "object"
+      },
+      "SurgicalPhaseInterval": {
+        "additionalProperties": false,
+        "description": "An exact contiguous interval from a source-provided phase track.",
+        "properties": {
+          "first_frame": {
+            "minimum": 0.0,
+            "title": "First Frame",
+            "type": "integer"
+          },
+          "last_frame": {
+            "minimum": 0.0,
+            "title": "Last Frame",
+            "type": "integer"
+          },
+          "phase": {
+            "enum": [
+              "Preparation",
+              "CalotTriangleDissection",
+              "ClippingCutting",
+              "GallbladderDissection",
+              "GallbladderRetraction",
+              "CleaningCoagulation",
+              "GallbladderPackaging"
+            ],
+            "title": "Phase",
+            "type": "string"
+          }
+        },
+        "required": [
+          "first_frame",
+          "last_frame",
+          "phase"
+        ],
+        "title": "SurgicalPhaseInterval",
         "type": "object"
       },
       "SurgicalSequenceFrame": {

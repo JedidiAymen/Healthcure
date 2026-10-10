@@ -2700,11 +2700,13 @@ export interface components {
             clip_id: string;
             /**
              * Dataset Id
-             * @constant
+             * @enum {string}
              */
-            dataset_id: "Appendix300";
+            dataset_id: "Appendix300" | "Cholec80";
             /** Duration Sec */
             duration_sec: number;
+            /** Frames Per Second */
+            frames_per_second?: number | null;
             /** License Label */
             license_label: string;
             /** Limitations */
@@ -2714,6 +2716,10 @@ export interface components {
              * @constant
              */
             media_kind: "native_video";
+            /** Phase Track */
+            phase_track?: components["schemas"]["SurgicalPhaseInterval"][];
+            /** Phase Track Sha256 */
+            phase_track_sha256?: string | null;
             /** Procedure Label */
             procedure_label: string;
             /** Sha256 */
@@ -2867,6 +2873,21 @@ export interface components {
              * @enum {string}
              */
             split: "train" | "val" | "test";
+        };
+        /**
+         * SurgicalPhaseInterval
+         * @description An exact contiguous interval from a source-provided phase track.
+         */
+        SurgicalPhaseInterval: {
+            /** First Frame */
+            first_frame: number;
+            /** Last Frame */
+            last_frame: number;
+            /**
+             * Phase
+             * @enum {string}
+             */
+            phase: "Preparation" | "CalotTriangleDissection" | "ClippingCutting" | "GallbladderDissection" | "GallbladderRetraction" | "CleaningCoagulation" | "GallbladderPackaging";
         };
         /**
          * SurgicalSequenceFrame

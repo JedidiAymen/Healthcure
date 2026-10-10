@@ -14,6 +14,7 @@ import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, 
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Slider } from '@/components/ui/slider'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { parseSurgicalViewPreferences, type SurgicalViewPreferences } from '@/lib/workspace-preferences'
 import { buildSurgicalFrameReport } from '@/lib/surgical-evidence'
 import { searchSurgicalFrames, type SurgicalFrameOption } from '@/lib/source-picker'
@@ -49,6 +50,7 @@ const cvsCriteria=[
   'Cystic plate visualization with complete separation of the gallbladder body',
 ]
 const formatClipTime=(seconds:number)=>`${Math.floor(seconds/60).toString().padStart(2,'0')}:${Math.floor(seconds%60).toString().padStart(2,'0')}`
+const formatPhaseLabel=(phase:string)=>phase.replace(/([a-z])([A-Z])/g,'$1 $2')
 
 export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedReference,viewerEvidence,onEvidenceChange,locked=false}:{frameId:string;availableFrameIds:string[];guided?:boolean;releasedReference?:StudentReferenceEvidence|null;viewerEvidence?:StudentViewerEvidence|null;onEvidenceChange?:(evidence:StudentSurgiViewerEvidence)=>void;locked?:boolean}) {
   const navigate=useNavigate()
@@ -65,6 +67,7 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
   const [sampledFrames,setSampledFrames]=useState<SurgicalSequenceFrame[]>([])
   const [sampledFramesError,setSampledFramesError]=useState('')
   const [publicClip,setPublicClip]=useState<SurgicalClipRecord|null>(null)
+  const [publicClips,setPublicClips]=useState<SurgicalClipRecord[]>([])
   const [publicClipLoading,setPublicClipLoading]=useState(true)
   const [showPublicClip,setShowPublicClip]=useState(false)
   const publicVideoRef=useRef<HTMLVideoElement>(null)
@@ -76,6 +79,9 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
   const sampledMediaCount=sourceMedia?.sampled_frame_count
   const publicClipAnnotation=publicClip?.source_annotation
   const sourceEventVisible=Boolean(publicClipAnnotation&&Math.abs(publicClipCurrentSecond-publicClipAnnotation.timestamp_seconds)<1.5)
+  const sourcePhaseTrack=publicClip?.phase_track??[]
+  const sourcePhaseFrame=publicClip?.frames_per_second?Math.floor(publicClipCurrentSecond*publicClip.frames_per_second):0
+  const sourcePhase=sourcePhaseTrack.find(interval=>interval.first_frame<=sourcePhaseFrame&&interval.last_frame>=sourcePhaseFrame)
   useEffect(()=>{
     if(!pendingClipSeek||!showPublicClip||!publicClipAnnotation)return
     const video=publicVideoRef.current
@@ -172,7 +178,7 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
     if(guided){setPublicClip(null);setShowPublicClip(false);return}
     let live=true
     setPublicClipLoading(true)
-    api.surgicalClips().then(items=>{if(live){const clip=items[0]??null;setPublicClip(clip);setShowPublicClip(Boolean(clip))}}).catch(()=>{if(live)setPublicClip(null)}).finally(()=>{if(live)setPublicClipLoading(false)})
+    api.surgicalClips().then(items=>{if(live){setPublicClips(items);const clip=items[0]??null;setPublicClip(clip);setPublicClipCurrentSecond(0);setShowPublicClip(Boolean(clip))}}).catch(()=>{if(live){setPublicClip(null);setPublicClips([])}}).finally(()=>{if(live)setPublicClipLoading(false)})
     return()=>{live=false}
   },[guided])
   const referenceIsReleased=Boolean(frame && releasedReference?.case_id===frame.id)
@@ -258,22 +264,23 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
     {reportId&&!openedReportError&&<div role="status" className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm">Reopened the saved Endoscapes frame and annotation view.</div>}
     <Tabs value={mediaMode} onValueChange={value=>{if(value)setMediaMode(value)}} className="min-w-0 flex-col gap-3">
       <TabsList aria-label={guided?'Assigned surgical source':'Surgical media modes'} className={`!grid h-auto w-full grid-cols-1 gap-1 lg:grid-cols-3 ${guided?'sr-only':''}`}>
-        {guided?<TabsTrigger className="!h-10" value="annotated-frames">Assigned source frame</TabsTrigger>:<><TabsTrigger className="!h-10" value="native-video">Appendix300 · source event</TabsTrigger><TabsTrigger className="!h-10" value="sampled-replay">Sampled replay · source labels</TabsTrigger><TabsTrigger className="!h-10" value="annotated-frames">Annotated stills</TabsTrigger></>}
+        {guided?<TabsTrigger className="!h-10" value="annotated-frames">Assigned source frame</TabsTrigger>:<><TabsTrigger className="!h-10" value="native-video">Continuous video · source labels</TabsTrigger><TabsTrigger className="!h-10" value="sampled-replay">Sampled replay · source labels</TabsTrigger><TabsTrigger className="!h-10" value="annotated-frames">Annotated stills</TabsTrigger></>}
       </TabsList>
       {!guided&&<TabsContent value="native-video" className="mt-0 grid min-w-0 gap-3">
-      {publicClip&&<Card role="region" className="overflow-hidden border-border shadow-sm" aria-label="Appendix300 video with a source-timed annotation">
-      <CardHeader className="gap-1"><div className="flex flex-wrap items-center gap-2"><Badge variant="outline">Source event aligned</Badge><Badge variant="secondary">{publicClip.procedure_label} · {publicClip.duration_sec.toFixed(1)} sec</Badge></div><CardTitle className="mt-1">Appendix300 source video</CardTitle><CardDescription>Authentic, de-identified laparoscopic appendectomy footage. The publisher links this file to a timestamped appendix-visibility event and a source-reported laparoscopic grade. It has no instrument masks, action triplets, phase labels or model output. This is separate from the cholecystectomy samples.</CardDescription></CardHeader>
+      {publicClip&&<Card role="region" className="overflow-hidden border-border shadow-sm" aria-label={`${publicClip.dataset_id} video with source labels`}>
+      <CardHeader className="gap-1"><div className="flex flex-wrap items-center gap-2"><Badge variant="outline">{sourcePhaseTrack.length?'Frame-matched source phases':'Source event aligned'}</Badge><Badge variant="secondary">{publicClip.procedure_label} · {publicClip.duration_sec.toFixed(1)} sec</Badge></div><div className="mt-1 flex flex-wrap items-end justify-between gap-3"><div className="min-w-0"><CardTitle>{publicClip.dataset_id} · source video</CardTitle><CardDescription className="mt-1">{publicClip.dataset_id==='Cholec80'?'Full-rate 25 fps cholecystectomy footage with the publisher’s source phase label matched to the exact current frame. Labels are ground truth, not model output or surgical guidance.':'Authentic laparoscopic appendectomy footage with one publisher-timed event and source-reported grade. It has no tool masks, triplets, phase labels or model output.'}</CardDescription></div>{publicClips.length>1&&<Select items={publicClips.map(clip=>({label:`${clip.dataset_id} · ${clip.procedure_label}`,value:clip.clip_id}))} value={publicClip.clip_id} onValueChange={value=>{const next=publicClips.find(item=>item.clip_id===value);if(next){setPublicClip(next);setPublicClipCurrentSecond(0);setPendingClipSeek(false)}}}><SelectTrigger aria-label="Select continuous surgical video" className="w-full sm:w-80"><SelectValue/></SelectTrigger><SelectContent>{publicClips.map(clip=><SelectItem key={clip.clip_id} value={clip.clip_id}>{clip.dataset_id} · {clip.procedure_label}</SelectItem>)}</SelectContent></Select>}</div></CardHeader>
       <CardContent className="grid gap-3">
-        {showPublicClip?<VideoPlayer><div ref={publicVideoRegionRef} className="relative scroll-mt-20"><NeutralVideoSkin className="w-full overflow-hidden rounded-lg bg-[#101624]" style={{aspectRatio:'16 / 9'}}><Video ref={publicVideoRef} onTimeUpdate={event=>{const second=Math.floor(event.currentTarget.currentTime);setPublicClipCurrentSecond(current=>current===second?current:second)}} className="size-full" src={api.surgicalClipVideoUrl(publicClip.clip_id)} playsInline preload="metadata" aria-label="Appendix300 laparoscopic appendectomy source video"/></NeutralVideoSkin>{sourceEventVisible&&publicClipAnnotation&&<div role="status" className="pointer-events-none absolute left-3 top-3 max-w-[min(90%,34rem)] rounded-md border border-primary-foreground/25 bg-background/95 p-2.5 text-foreground shadow-lg"><Badge variant="outline" className="mb-1">Publisher source annotation · {formatClipTime(publicClipAnnotation.timestamp_seconds)}</Badge><p className="m-0 text-sm font-semibold">{publicClipAnnotation.event_label}</p><p className="m-0 text-xs text-muted-foreground">Final laparoscopic grade: {publicClipAnnotation.final_laparoscopic_grade} · Gomes scale</p></div>}</div></VideoPlayer>:<Button variant="outline" className="w-fit" onClick={()=>setShowPublicClip(true)}>Load licensed video excerpt</Button>}
+        {showPublicClip?<VideoPlayer key={publicClip.clip_id}><div ref={publicVideoRegionRef} className="relative scroll-mt-20"><NeutralVideoSkin className="w-full overflow-hidden rounded-lg bg-[#101624]" style={{aspectRatio:'16 / 9'}}><Video ref={publicVideoRef} onTimeUpdate={event=>{const second=event.currentTarget.currentTime;setPublicClipCurrentSecond(current=>Math.abs(current-second)<0.02?current:second)}} className="size-full" src={api.surgicalClipVideoUrl(publicClip.clip_id)} playsInline preload="metadata" aria-label={`${publicClip.dataset_id} ${publicClip.procedure_label} source video`}/></NeutralVideoSkin>{sourcePhaseTrack.length>0&&sourcePhase?<div role="group" aria-live="off" aria-label="Publisher phase annotation for the current video frame" className="pointer-events-none absolute left-3 top-3 max-w-[min(90%,34rem)] rounded-md border border-primary-foreground/25 bg-background/95 p-2.5 text-foreground shadow-lg"><Badge variant="outline" className="mb-1">Publisher phase · frame {sourcePhaseFrame.toLocaleString()}</Badge><p className="m-0 text-sm font-semibold">{formatPhaseLabel(sourcePhase.phase)}</p><p className="m-0 text-xs text-muted-foreground">Cholec80 phase label for the current frame · 25 fps source track · not model output</p></div>:sourceEventVisible&&publicClipAnnotation?<div role="status" className="pointer-events-none absolute left-3 top-3 max-w-[min(90%,34rem)] rounded-md border border-primary-foreground/25 bg-background/95 p-2.5 text-foreground shadow-lg"><Badge variant="outline" className="mb-1">Publisher source annotation · {formatClipTime(publicClipAnnotation.timestamp_seconds)}</Badge><p className="m-0 text-sm font-semibold">{publicClipAnnotation.event_label}</p><p className="m-0 text-xs text-muted-foreground">Final laparoscopic grade: {publicClipAnnotation.final_laparoscopic_grade} · Gomes scale</p></div>:null}</div></VideoPlayer>:<Button variant="outline" className="w-fit" onClick={()=>setShowPublicClip(true)}>Load source video</Button>}
         {publicClipAnnotation&&<div className="flex flex-col gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3 sm:flex-row sm:items-center sm:justify-between" aria-label="Publisher source annotation for this video">
           <div className="min-w-0"><div className="mb-1 flex flex-wrap items-center gap-2"><Badge variant="outline">Source annotation</Badge><span className="text-xs tabular-nums text-muted-foreground">{formatClipTime(publicClipAnnotation.timestamp_seconds)}</span></div><p className="m-0 text-sm font-semibold">{publicClipAnnotation.event_label}</p><p className="m-0 text-xs leading-5 text-muted-foreground">Final laparoscopic grade {publicClipAnnotation.final_laparoscopic_grade} · Gomes scale. This is the dataset label, not an AI prediction.</p></div>
           <Button variant="outline" className="shrink-0" onClick={()=>{setShowPublicClip(true);setPendingClipSeek(true)}}>Jump to source event</Button>
         </div>}
+        {publicClip.dataset_id==='Cholec80'&&<div className="rounded-lg border border-border bg-muted/30 p-3 text-xs leading-5 text-muted-foreground">Tool-presence labels are available only at 1 fps and are intentionally not drawn across unsampled frames. The overlay shows the full-rate source phase annotation only.</div>}
         <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0"><p className="m-0 text-sm font-semibold">See cholecystectomy labels on their matching samples</p><p className="m-0 text-xs leading-5 text-muted-foreground">Those source labels belong to sparse still frames from separate surgical recordings.</p></div>
-          <Button variant="outline" className="shrink-0" onClick={()=>setMediaMode('sampled-replay')}>View CholecT50 labeled samples<ChevronRight data-icon="inline-end"/></Button>
+          <div className="min-w-0"><p className="m-0 text-sm font-semibold">Inspect CholecT50 sampled-frame annotations</p><p className="m-0 text-xs leading-5 text-muted-foreground">Official boxes and action labels appear only on their matching sampled frames.</p></div>
+          <Button variant="outline" className="shrink-0" onClick={()=>setMediaMode('sampled-replay')}>View labeled samples<ChevronRight data-icon="inline-end"/></Button>
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-2 text-xs text-muted-foreground"><span>{publicClip.license_label} · SHA-256 {publicClip.sha256.slice(0,12)}…</span><a className="text-primary hover:underline" href={publicClip.source_url} target="_blank" rel="noreferrer">OPARA dataset and citation ↗</a></div>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-2 text-xs text-muted-foreground"><span>{publicClip.license_label} · SHA-256 {publicClip.sha256.slice(0,12)}…</span><a className="text-primary hover:underline" href={publicClip.source_url} target="_blank" rel="noreferrer">{publicClip.dataset_id} source and license ↗</a></div>
         <p className="m-0 text-xs leading-relaxed text-muted-foreground">{publicClip.citation}</p>
       </CardContent>
       </Card>}

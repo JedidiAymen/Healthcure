@@ -122,6 +122,7 @@ const specialtyData = {
       "COCO anatomy and tool bounding boxes",
       "Image-level CVS label array",
       "Endoscapes 1 fps sampled-frame browsing",
+      "Cholec80 full-rate video with frame-matched phase labels",
       "Licensed Appendix300 video excerpt playback",
     ],
     blockers: [
@@ -129,7 +130,7 @@ const specialtyData = {
       "CVS-AdaptNet remains gated on independent checkpoint hash and terms",
     ],
     unavailableMethods: [
-      { task: "Continuous video aligned with Endoscapes frames and annotations", reason: "Endoscapes provides sampled stills; the separate Appendix300 clip is appendectomy footage with no aligned Endoscapes tracks." },
+      { task: "Continuous video aligned with Endoscapes frames and annotations", reason: "The available Cholec80 and Appendix300 videos are distinct sources; neither is frame-linked to Endoscapes stills." },
       { task: "Single-frame model inference", reason: "Checkpoint identity and checkpoint-specific terms remain unverified." },
     ],
   },
@@ -1053,11 +1054,11 @@ export function DomainWorkspace({ module }: { module: ModuleId }) {
   });
   const [directRecord,setDirectRecord]=useState<CaseRecord|null>(null)
   const [directRecordLoading,setDirectRecordLoading]=useState(false)
-  const [surgicalClipAvailable,setSurgicalClipAvailable]=useState(false)
+  const [surgicalClipIds,setSurgicalClipIds]=useState<string[]>([])
   useEffect(()=>{
-    if(module!=="surgivision"){setSurgicalClipAvailable(false);return}
+    if(module!=="surgivision"){setSurgicalClipIds([]);return}
     let live=true
-    api.surgicalClips().then(clips=>{if(live)setSurgicalClipAvailable(clips.length>0)}).catch(()=>{if(live)setSurgicalClipAvailable(false)})
+    api.surgicalClips().then(clips=>{if(live)setSurgicalClipIds(clips.map(clip=>clip.clip_id))}).catch(()=>{if(live)setSurgicalClipIds([])})
     return()=>{live=false}
   },[module])
   useEffect(()=>{
@@ -1118,7 +1119,7 @@ export function DomainWorkspace({ module }: { module: ModuleId }) {
           <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
             {record
               ? module === "surgivision"
-              ? `Choose a source-specific mode below: Appendix300 appendectomy video with one publisher-timed source event, CholecT50 sampled cholecystectomy frames with matching source labels, or Endoscapes annotated stills (${record.source_case_id}).`
+              ? `Choose a source-specific mode below: full-rate Cholec80 cholecystectomy video with frame-matched phase labels, the separate Appendix300 appendectomy event video, CholecT50 sampled frames with their matching labels, or Endoscapes annotated stills (${record.source_case_id}).`
                 : `Source case ${record.source_case_id} · ${record.dataset_id} · ${record.reference_kind}`
               : "No source case has been selected for this workspace."}
           </p>
@@ -1256,7 +1257,12 @@ export function DomainWorkspace({ module }: { module: ModuleId }) {
                 "Dose statistics and DVH",
               ].includes(task);
               const viewerOnlyAvailable = module === "dosetwin" && record?.status === "blocked" && doseViewerMethod;
-              const available = Boolean(record && (record.status === "ready" || viewerOnlyAvailable) && (task!=="Licensed Appendix300 video excerpt playback"||surgicalClipAvailable));
+              const requiredClipAvailable=task==="Cholec80 full-rate video with frame-matched phase labels"
+                ?surgicalClipIds.includes("cholect80-video01")
+                :task==="Licensed Appendix300 video excerpt playback"
+                  ?surgicalClipIds.some(id=>id.startsWith("appendix300-"))
+                  :true;
+              const available = Boolean(record && (record.status === "ready" || viewerOnlyAvailable) && requiredClipAvailable);
               return (
                 <TableRow key={task}>
                   <TableCell className="whitespace-normal"><span className="mr-2 inline-block font-mono text-xs text-muted-foreground">{String(i + 1).padStart(2, "0")}</span>{task}</TableCell>

@@ -47,6 +47,7 @@ from .endoscapes import SOURCE_URL as ENDOSCAPES_URL, case_record as _endoscapes
 from . import endoscapes as _endoscapes
 from . import fisav as _fisav
 from . import appendix300 as _appendix300
+from . import cholect80_video as _cholect80_video
 from . import cholect50_validation as _cholect50_validation
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -541,10 +542,16 @@ def create_app() -> FastAPI:
         ready=bool(openkbp_cases)
         surgical_cases=_endoscapes_cases()
         surgical_ready=bool(surgical_cases)
+        continuous_clips=[]
+        if _cholect80_video.clip_record():
+            continuous_clips.append('Cholec80 video with frame-matched source phase labels')
+        if _appendix300.clip_record():
+            continuous_clips.append('separate Appendix300 source-event clip')
+        surgical_media_detail=f'{len(surgical_cases)} annotated Endoscapes frames and 1 fps sampled sequences; {", ".join(continuous_clips) if continuous_clips else "no continuous source video installed"}'
         fistula_records=_fisav.installed_records()
         fistula_ready=bool(fistula_records)
         return [
-            ModuleStatus(id='surgivision',capability_state='ready' if surgical_ready else 'requires-setup',detail=f'{len(surgical_cases)} annotated Endoscapes frames and 1 fps sampled sequences; {"a separately licensed Appendix300 excerpt is installed" if _appendix300.clip_record() else "no continuous surgical clip is installed"}' if surgical_ready else 'Set MEDFORGE_ENDOSCAPES_ROOT to a verified local research sample'),
+            ModuleStatus(id='surgivision',capability_state='ready' if surgical_ready else 'requires-setup',detail=surgical_media_detail if surgical_ready else 'Set MEDFORGE_ENDOSCAPES_ROOT to a verified local research sample'),
             ModuleStatus(id='dosetwin',capability_state='ready' if ready else 'requires-setup',detail=('OpenKBP local case summary available' if ready else 'Set MEDFORGE_OPENKBP_CASE_DIR') + (f'; {sum(1 for _,_,enabled in openkbp_cases.values() if enabled)} case(s) fully enabled, {sum(1 for _,_,enabled in openkbp_cases.values() if not enabled)} viewer-only case(s)' if openkbp_cases else '')),
             ModuleStatus(id='fistulaguard',capability_state='ready' if fistula_ready else 'requires-setup',detail=f'Source-verified FiSaV CSV cohort available ({len(fistula_records)} recordings); no classifier is enabled' if fistula_ready else 'Set MEDFORGE_FISAV_ROOT to a verified local FiSaV research sample')]
 
@@ -675,8 +682,14 @@ def create_app() -> FastAPI:
 
     @app.get('/api/v1/surgivision/clips',response_model=list[SurgicalClipRecord])
     def surgivision_clips():
-        record=_appendix300.clip_record()
-        return [record] if record else []
+        records=[]
+        cholect80_record=_cholect80_video.clip_record()
+        appendix_record=_appendix300.clip_record()
+        if cholect80_record:
+            records.append(cholect80_record)
+        if appendix_record:
+            records.append(appendix_record)
+        return records
 
     @app.get('/api/v1/surgivision/cholect50',response_model=list[CholecT50VideoRecord])
     def surgivision_cholect50_videos():
@@ -713,9 +726,9 @@ def create_app() -> FastAPI:
 
     @app.get('/api/v1/surgivision/clips/{clip_id}/video')
     def surgivision_clip_video(clip_id:str,range_header:str|None=Header(default=None,alias='Range')):
-        if not re.fullmatch(r'appendix300-[a-z0-9-]+',clip_id):
+        if not re.fullmatch(r'(?:appendix300-[a-z0-9-]+|cholect80-video\d{2})',clip_id):
             raise HTTPException(status_code=404,detail={'code':'SURGICAL_CLIP_NOT_INSTALLED','message':'No verified licensed surgical clip matches this ID'})
-        path=_appendix300.video_path(clip_id)
+        path=_cholect80_video.video_path(clip_id) if clip_id.startswith('cholect80-') else _appendix300.video_path(clip_id)
         if path is None:
             raise HTTPException(status_code=404,detail={'code':'SURGICAL_CLIP_NOT_INSTALLED','message':'No verified licensed surgical clip matches this ID'})
         size=path.stat().st_size

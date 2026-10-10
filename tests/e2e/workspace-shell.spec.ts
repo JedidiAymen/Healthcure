@@ -483,8 +483,8 @@ test('SurgiVision frame picker stays readable beside the professional sidebar at
 
   await page.goto('/studio/surgivision/cases/endoscapes%3Atest%3A162_6575')
   await expect(page.getByRole('heading', { name: 'SurgiVision surgical media review' })).toBeVisible()
-  await expect(page.getByText(/separate from the cholecystectomy samples/i)).toBeVisible()
-  const nativePlayer = page.locator('video[aria-label="Appendix300 laparoscopic appendectomy source video"]')
+  await expect(page.getByText(/no tool masks, triplets, phase labels or model output/i)).toBeVisible()
+  const nativePlayer = page.locator('video[aria-label="Appendix300 Laparoscopic appendectomy source video"]')
   await expect(nativePlayer).toHaveAttribute('src', /appendix300%3Afixture-clip/)
   await expect.poll(() => nativePlayer.evaluate((video: HTMLVideoElement) => video.readyState)).toBeGreaterThanOrEqual(1)
   await page.getByRole('button', { name: 'Play' }).click()

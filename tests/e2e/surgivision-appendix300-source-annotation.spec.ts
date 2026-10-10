@@ -32,11 +32,13 @@ test('Appendix300 source event and grade appear at their video timestamp @source
   })
 
   await page.goto('/studio/surgivision/cases/current')
+  await page.getByRole('combobox', { name: 'Select continuous surgical video' }).click()
+  await page.getByRole('option', { name: 'Appendix300 · Laparoscopic appendectomy' }).click()
   await page.getByRole('button', { name: 'Jump to source event' }).click()
   const inVideoAnnotation = page.locator('[role="status"]').filter({ hasText: 'Publisher source annotation' })
   await expect(inVideoAnnotation).toContainText('Appendix fully visible before invasive preparation')
   await expect(inVideoAnnotation).toContainText('Final laparoscopic grade: 2 · Gomes scale')
-  const video = page.locator('video[aria-label="Appendix300 laparoscopic appendectomy source video"]')
+  const video = page.locator('video[aria-label="Appendix300 Laparoscopic appendectomy source video"]')
   await expect.poll(() => video.evaluate(element => (element as HTMLVideoElement).currentTime)).toBeGreaterThan(23)
   await expect.poll(async () => {
     const videoBox = await video.boundingBox()

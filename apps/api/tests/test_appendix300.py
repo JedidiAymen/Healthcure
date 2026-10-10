@@ -30,6 +30,7 @@ def test_licensed_clip_is_checksum_verified_and_supports_video_ranges(tmp_path, 
         "video_duration_seconds": 4.0,
     }))
     monkeypatch.setenv("MEDFORGE_APPENDIX300_ROOT", str(root))
+    monkeypatch.setenv("MEDFORGE_CHOLECT80_ROOT", str(tmp_path / "no-cholect80"))
     monkeypatch.setenv("MEDFORGE_DB_PATH", str(tmp_path / "appendix.sqlite3"))
     monkeypatch.setenv("MEDFORGE_SOURCE_KIND", "synthetic-test")
 
@@ -52,6 +53,7 @@ def test_clip_endpoint_hides_missing_or_unverified_source(tmp_path, monkeypatch)
     root = tmp_path / "appendix300"
     root.mkdir()
     monkeypatch.setenv("MEDFORGE_APPENDIX300_ROOT", str(root))
+    monkeypatch.setenv("MEDFORGE_CHOLECT80_ROOT", str(tmp_path / "no-cholect80"))
     monkeypatch.setenv("MEDFORGE_DB_PATH", str(tmp_path / "missing.sqlite3"))
     monkeypatch.setenv("MEDFORGE_SOURCE_KIND", "synthetic-test")
 
