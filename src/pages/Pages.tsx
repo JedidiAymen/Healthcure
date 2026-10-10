@@ -967,7 +967,7 @@ export function DomainWorkspace({ module }: { module: ModuleId }) {
           <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
             {record
               ? module === "surgivision"
-                ? `Choose a source-specific mode below: Appendix300 native appendectomy video without aligned labels, CholecT50 sampled cholecystectomy frames with matching source labels, or Endoscapes annotated stills (${record.source_case_id}).`
+              ? `Choose a source-specific mode below: Appendix300 appendectomy video with one publisher-timed source event, CholecT50 sampled cholecystectomy frames with matching source labels, or Endoscapes annotated stills (${record.source_case_id}).`
                 : `Source case ${record.source_case_id} · ${record.dataset_id} · ${record.reference_kind}`
               : "No source case has been selected for this workspace."}
           </p>

@@ -11,6 +11,8 @@ import hashlib
 import io
 import json
 import os
+import csv
+from datetime import datetime
 from pathlib import Path, PurePosixPath
 import shutil
 import subprocess
@@ -134,6 +136,54 @@ def probe_duration(path: Path) -> float:
     return duration
 
 
+def source_annotation(bitstreams: list[dict], member: PurePosixPath, duration: float | None) -> dict:
+    """Keep only this video's source-timed annotation; do not retain cohort metadata."""
+    stream = next((item for item in bitstreams if item.get("name") == "overall_merged.csv"), None)
+    if not stream or stream.get("uuid") != "93cb72d3-b1d5-40f0-bb46-08b6d486f3fd":
+        raise RuntimeError("The pinned OPARA Appendix300 annotation index is missing")
+    checksum = stream.get("checkSum", {})
+    expected_md5 = checksum.get("value", "").lower()
+    if checksum.get("checkSumAlgorithm") != "MD5" or len(expected_md5) != 32:
+        raise RuntimeError("The OPARA annotation index has no valid publisher checksum")
+    url = f"https://opara.zih.tu-dresden.de/server/api/core/bitstreams/{stream['uuid']}/content"
+    request = Request(url, headers={"User-Agent": "HealthCure local research dataset acquisition/1.0"})
+    with urlopen(request, timeout=60) as response:
+        data = response.read()
+        etag = response.headers.get("ETag", "").strip('"').lower()
+    digest = hashlib.md5(data).hexdigest()
+    if len(data) != stream.get("sizeBytes") or digest != expected_md5 or etag != expected_md5:
+        raise RuntimeError("The OPARA annotation index failed size/MD5/ETag verification")
+
+    center = member.parts[1].removeprefix("Center")
+    with io.StringIO(data.decode("utf-8-sig", errors="strict"), newline="") as source:
+        rows = csv.DictReader(source)
+        required = {"Center", "Timestamp", "Video", "Final Laparoscopic grading of appendicitis"}
+        if not required.issubset(rows.fieldnames or []):
+            raise RuntimeError("The OPARA annotation index is missing expected columns")
+        matching = [row for row in rows if row["Center"] == center and row["Video"] == member.name]
+    if len(matching) != 1:
+        raise RuntimeError(f"Expected one Appendix300 metadata row for {center}/{member.name}; found {len(matching)}")
+    row = matching[0]
+    try:
+        timestamp = datetime.strptime(row["Timestamp"], "%H:%M:%S.%f")
+    except ValueError as exc:
+        raise RuntimeError("The OPARA source event timestamp could not be parsed") from exc
+    timestamp_seconds = timestamp.hour * 3600 + timestamp.minute * 60 + timestamp.second + timestamp.microsecond / 1_000_000
+    grade = row["Final Laparoscopic grading of appendicitis"].strip()
+    if not grade or duration is None or timestamp_seconds >= duration:
+        raise RuntimeError("The source annotation does not fall within the selected clip")
+    return {
+        "event_label": "Appendix fully visible before invasive preparation",
+        "timestamp_seconds": timestamp_seconds,
+        "final_laparoscopic_grade": grade,
+        "grade_scale": "Gomes",
+        "metadata_file": "overall_merged.csv",
+        "metadata_bitstream_id": stream["uuid"],
+        "metadata_bytes": len(data),
+        "metadata_md5": digest,
+    }
+
+
 def main() -> None:
     argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter).parse_args()
     if shutil.which("ffprobe") is None:
@@ -197,6 +247,7 @@ def main() -> None:
 
         duration = probe_duration(destination)
         clip_id = "appendix300-center1-014"
+        annotation = source_annotation(bitstreams, member, duration)
         manifest = {
             "schema": "medforge.source-manifest.appendix300-single-clip.v1",
             "dataset": "Appendix300",
@@ -223,6 +274,7 @@ def main() -> None:
             "video_duration_seconds": duration,
             "video_duration_verified_by": "ffprobe",
             "video_scope": "De-identified laparoscopic appendectomy excerpt; not cholecystectomy footage and not annotated with instrument masks.",
+            "source_annotation": annotation,
             "selected_by": "smallest MP4 in the official Video_Snippets directory",
             "zip_directory_bytes_fetched": range_file.bytes_received,
         }
@@ -230,7 +282,7 @@ def main() -> None:
         temporary_manifest = manifest_path.with_suffix(".json.part")
         temporary_manifest.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf8")
         os.replace(temporary_manifest, manifest_path)
-        print(json.dumps({"video": str(destination), "bytes": selected.file_size, "sha256": clip_sha256, "member": selected.filename, "directory_bytes_fetched": range_file.bytes_received}, indent=2))
+        print(json.dumps({"video": str(destination), "bytes": selected.file_size, "sha256": clip_sha256, "member": selected.filename, "source_annotation": annotation, "directory_bytes_fetched": range_file.bytes_received}, indent=2))
 
 
 if __name__ == "__main__":

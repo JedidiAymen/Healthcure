@@ -50,6 +50,7 @@ const cvsCriteria=[
   "Clear dissection of Calot's triangle or hepatocystic triangle",
   'Cystic plate visualization with complete separation of the gallbladder body',
 ]
+const formatClipTime=(seconds:number)=>`${Math.floor(seconds/60).toString().padStart(2,'0')}:${Math.floor(seconds%60).toString().padStart(2,'0')}`
 
 export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedReference,viewerEvidence,onEvidenceChange,locked=false}:{frameId:string;availableFrameIds:string[];guided?:boolean;releasedReference?:StudentReferenceEvidence|null;viewerEvidence?:StudentViewerEvidence|null;onEvidenceChange?:(evidence:StudentSurgiViewerEvidence)=>void;locked?:boolean}) {
   const navigate=useNavigate()
@@ -68,10 +69,29 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
   const [publicClip,setPublicClip]=useState<SurgicalClipRecord|null>(null)
   const [publicClipLoading,setPublicClipLoading]=useState(true)
   const [showPublicClip,setShowPublicClip]=useState(false)
+  const publicVideoRef=useRef<HTMLVideoElement>(null)
+  const publicVideoRegionRef=useRef<HTMLDivElement>(null)
+  const [publicClipCurrentSecond,setPublicClipCurrentSecond]=useState(0)
+  const [pendingClipSeek,setPendingClipSeek]=useState(false)
   // Shared frame-comparison or filter links open on the annotated stills.
   const [mediaMode,setMediaMode]=useState(()=>guided||searchParams.has('compare')||[...searchParams.keys()].some(key=>key.startsWith('frames_'))?'annotated-frames':'native-video')
   const sampledMediaId=sourceMedia?.media_id
   const sampledMediaCount=sourceMedia?.sampled_frame_count
+  const publicClipAnnotation=publicClip?.source_annotation
+  const sourceEventVisible=Boolean(publicClipAnnotation&&Math.abs(publicClipCurrentSecond-publicClipAnnotation.timestamp_seconds)<1.5)
+  useEffect(()=>{
+    if(!pendingClipSeek||!showPublicClip||!publicClipAnnotation)return
+    const video=publicVideoRef.current
+    if(!video)return
+    const seekToEvent=()=>{
+      video.currentTime=publicClipAnnotation.timestamp_seconds
+      setPendingClipSeek(false)
+      window.requestAnimationFrame(()=>publicVideoRegionRef.current?.scrollIntoView({block:'start',behavior:'auto'}))
+    }
+    if(video.readyState>=1){seekToEvent();return}
+    video.addEventListener('loadedmetadata',seekToEvent,{once:true})
+    return()=>video.removeEventListener('loadedmetadata',seekToEvent)
+  },[pendingClipSeek,showPublicClip,publicClipAnnotation])
   const [imageUrl,setImageUrl]=useState('')
   const [imageError,setImageError]=useState('')
   const [imageSize,setImageSize]=useState<{width:number;height:number}|null>(null)
@@ -240,16 +260,20 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
     {openedReportError&&<div role="alert" className="rounded-md border border-destructive/40 p-3 text-sm text-destructive">{openedReportError}</div>}
     {reportId&&!openedReportError&&<div role="status" className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm">Reopened the saved Endoscapes frame and annotation view.</div>}
     <Tabs value={mediaMode} onValueChange={value=>{if(value)setMediaMode(value)}} className="min-w-0 flex-col gap-3">
-      <TabsList aria-label={guided?'Assigned surgical source':'Surgical media modes'} className={`!grid h-auto w-full grid-cols-1 gap-1 sm:grid-cols-3 ${guided?'sr-only':''}`}>
-        {guided?<TabsTrigger className="!h-10" value="annotated-frames">Assigned source frame</TabsTrigger>:<><TabsTrigger className="!h-10" value="native-video">Native video · no aligned labels</TabsTrigger><TabsTrigger className="!h-10" value="sampled-replay">Sampled replay · source labels</TabsTrigger><TabsTrigger className="!h-10" value="annotated-frames">Annotated stills</TabsTrigger></>}
+      <TabsList aria-label={guided?'Assigned surgical source':'Surgical media modes'} className={`!grid h-auto w-full grid-cols-1 gap-1 lg:grid-cols-3 ${guided?'sr-only':''}`}>
+        {guided?<TabsTrigger className="!h-10" value="annotated-frames">Assigned source frame</TabsTrigger>:<><TabsTrigger className="!h-10" value="native-video">Appendix300 · source event</TabsTrigger><TabsTrigger className="!h-10" value="sampled-replay">Sampled replay · source labels</TabsTrigger><TabsTrigger className="!h-10" value="annotated-frames">Annotated stills</TabsTrigger></>}
       </TabsList>
       {!guided&&<TabsContent value="native-video" className="mt-0 grid min-w-0 gap-3">
-      {publicClip&&<Card role="region" className="overflow-hidden border-border shadow-sm" aria-label="Unannotated native Appendix300 surgical video">
-      <CardHeader className="gap-1"><div className="flex flex-wrap items-center gap-2"><Badge variant="outline">Playback only · no aligned results</Badge><Badge variant="secondary">{publicClip.procedure_label} · {publicClip.duration_sec.toFixed(1)} sec</Badge></div><CardTitle className="mt-1">Separate source footage</CardTitle><CardDescription>Authentic, de-identified Appendix300 laparoscopic appendectomy footage. This clip has no synchronized annotations, masks or model predictions. It is a different procedure and recording from both annotated cholecystectomy frame sets shown in this workspace.</CardDescription></CardHeader>
+      {publicClip&&<Card role="region" className="overflow-hidden border-border shadow-sm" aria-label="Appendix300 video with a source-timed annotation">
+      <CardHeader className="gap-1"><div className="flex flex-wrap items-center gap-2"><Badge variant="outline">Source event aligned</Badge><Badge variant="secondary">{publicClip.procedure_label} · {publicClip.duration_sec.toFixed(1)} sec</Badge></div><CardTitle className="mt-1">Appendix300 source video</CardTitle><CardDescription>Authentic, de-identified laparoscopic appendectomy footage. The publisher links this file to a timestamped appendix-visibility event and a source-reported laparoscopic grade. It has no instrument masks, action triplets, phase labels or model output. This is separate from the cholecystectomy samples.</CardDescription></CardHeader>
       <CardContent className="grid gap-3">
-        {showPublicClip?<VideoPlayer><NeutralVideoSkin className="w-full overflow-hidden rounded-lg bg-[#101624]" style={{aspectRatio:'16 / 9'}}><Video className="size-full" src={api.surgicalClipVideoUrl(publicClip.clip_id)} playsInline preload="metadata" aria-label="Appendix300 laparoscopic appendectomy source video"/></NeutralVideoSkin></VideoPlayer>:<Button variant="outline" className="w-fit" onClick={()=>setShowPublicClip(true)}>Load licensed video excerpt</Button>}
-        <div className="flex flex-col gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0"><p className="m-0 text-sm font-semibold">No results are aligned to this footage</p><p className="m-0 text-xs leading-5 text-muted-foreground">Published labels are available on separate, sparse CholecT50 cholecystectomy samples—not on this appendectomy clip.</p></div>
+        {showPublicClip?<VideoPlayer><div ref={publicVideoRegionRef} className="relative scroll-mt-20"><NeutralVideoSkin className="w-full overflow-hidden rounded-lg bg-[#101624]" style={{aspectRatio:'16 / 9'}}><Video ref={publicVideoRef} onTimeUpdate={event=>{const second=Math.floor(event.currentTarget.currentTime);setPublicClipCurrentSecond(current=>current===second?current:second)}} className="size-full" src={api.surgicalClipVideoUrl(publicClip.clip_id)} playsInline preload="metadata" aria-label="Appendix300 laparoscopic appendectomy source video"/></NeutralVideoSkin>{sourceEventVisible&&publicClipAnnotation&&<div role="status" className="pointer-events-none absolute left-3 top-3 max-w-[min(90%,34rem)] rounded-md border border-primary-foreground/25 bg-background/95 p-2.5 text-foreground shadow-lg"><Badge variant="outline" className="mb-1">Publisher source annotation · {formatClipTime(publicClipAnnotation.timestamp_seconds)}</Badge><p className="m-0 text-sm font-semibold">{publicClipAnnotation.event_label}</p><p className="m-0 text-xs text-muted-foreground">Final laparoscopic grade: {publicClipAnnotation.final_laparoscopic_grade} · Gomes scale</p></div>}</div></VideoPlayer>:<Button variant="outline" className="w-fit" onClick={()=>setShowPublicClip(true)}>Load licensed video excerpt</Button>}
+        {publicClipAnnotation&&<div className="flex flex-col gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3 sm:flex-row sm:items-center sm:justify-between" aria-label="Publisher source annotation for this video">
+          <div className="min-w-0"><div className="mb-1 flex flex-wrap items-center gap-2"><Badge variant="outline">Source annotation</Badge><span className="text-xs tabular-nums text-muted-foreground">{formatClipTime(publicClipAnnotation.timestamp_seconds)}</span></div><p className="m-0 text-sm font-semibold">{publicClipAnnotation.event_label}</p><p className="m-0 text-xs leading-5 text-muted-foreground">Final laparoscopic grade {publicClipAnnotation.final_laparoscopic_grade} · Gomes scale. This is the dataset label, not an AI prediction.</p></div>
+          <Button variant="outline" className="shrink-0" onClick={()=>{setShowPublicClip(true);setPendingClipSeek(true)}}>Jump to source event</Button>
+        </div>}
+        <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0"><p className="m-0 text-sm font-semibold">See cholecystectomy labels on their matching samples</p><p className="m-0 text-xs leading-5 text-muted-foreground">Those source labels belong to sparse still frames from separate surgical recordings.</p></div>
           <Button variant="outline" className="shrink-0" onClick={()=>setMediaMode('sampled-replay')}>View CholecT50 labeled samples<ChevronRight data-icon="inline-end"/></Button>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-2 text-xs text-muted-foreground"><span>{publicClip.license_label} · SHA-256 {publicClip.sha256.slice(0,12)}…</span><a className="text-primary hover:underline" href={publicClip.source_url} target="_blank" rel="noreferrer">OPARA dataset and citation ↗</a></div>

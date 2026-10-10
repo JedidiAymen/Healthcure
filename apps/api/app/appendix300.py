@@ -11,6 +11,9 @@ from typing import Any
 SOURCE_URL = "https://doi.org/10.25532/OPARA-1173"
 PAPER_URL = "https://doi.org/10.1038/s41597-026-07593-6"
 LICENSE_URL = "https://creativecommons.org/licenses/by/4.0/"
+ANNOTATION_BITSTREAM_ID = "93cb72d3-b1d5-40f0-bb46-08b6d486f3fd"
+ANNOTATION_BYTES = 83_727
+ANNOTATION_MD5 = "6daddbbd2b5dbb28d1b025963bf93ed6"
 ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -58,20 +61,41 @@ def _load_record(signature: tuple[Any, ...]) -> tuple[dict[str, Any], Path] | No
         # Without a measured duration the clip is not verified, so it stays hidden.
         if isinstance(duration, bool) or not isinstance(duration, (int, float)) or duration <= 0:
             return None
+        duration = float(duration)
+        source_annotation = manifest.get("source_annotation")
+        if not isinstance(source_annotation, dict):
+            source_annotation = None
+        else:
+            try:
+                timestamp = float(source_annotation["timestamp_seconds"])
+                valid_annotation = (
+                    source_annotation.get("event_label") == "Appendix fully visible before invasive preparation"
+                    and source_annotation.get("final_laparoscopic_grade") in {"1", "2", "3", "4", "5"}
+                    and source_annotation.get("grade_scale") == "Gomes"
+                    and source_annotation.get("metadata_file") == "overall_merged.csv"
+                    and source_annotation.get("metadata_bitstream_id") == ANNOTATION_BITSTREAM_ID
+                    and source_annotation.get("metadata_bytes") == ANNOTATION_BYTES
+                    and source_annotation.get("metadata_md5") == ANNOTATION_MD5
+                    and 0 <= timestamp < duration
+                )
+                source_annotation = source_annotation if valid_annotation else None
+            except (KeyError, TypeError, ValueError):
+                source_annotation = None
         record = {
             "clip_id": manifest["clip_id"],
             "dataset_id": "Appendix300",
             "procedure_label": manifest["procedure_label"],
             "media_kind": "native_video",
-            "duration_sec": float(duration),
+            "duration_sec": duration,
             "asset_uri": f"/api/v1/surgivision/clips/{manifest['clip_id']}/video",
             "source_url": SOURCE_URL,
             "license_label": "CC BY 4.0",
             "citation": manifest["citation"],
             "sha256": manifest["video_sha256"],
+            "source_annotation": source_annotation,
             "limitations": [
                 "This is laparoscopic appendectomy footage, not cholecystectomy.",
-                "This excerpt has no instrument masks or phase labels.",
+                "Only the verified Appendix300 event timestamp and laparoscopic grade are aligned; instrument masks, phase labels, action triplets and model predictions are not installed.",
                 "Only the locally checksum-verified public clip is installed.",
             ],
         }

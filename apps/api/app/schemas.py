@@ -491,6 +491,18 @@ class SurgicalClipRecord(StrictModel):
     citation: str
     sha256: str
     limitations: list[str]
+    source_annotation: 'SurgicalClipSourceAnnotation | None' = None
+
+class SurgicalClipSourceAnnotation(StrictModel):
+    """A source-linked timestamp and grade, never a model-generated output."""
+    event_label: str
+    timestamp_seconds: float = Field(ge=0)
+    final_laparoscopic_grade: str
+    grade_scale: Literal['Gomes']
+    metadata_file: str
+    metadata_bitstream_id: str
+    metadata_bytes: int = Field(gt=0)
+    metadata_md5: str = Field(pattern=r'^[0-9a-f]{32}$')
 
 class CholecT50VideoRecord(StrictModel):
     """Installed source-sampled CholecT50 clip with matching source labels."""
