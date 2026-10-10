@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { mkdir } from 'node:fs/promises'
+import { mkdir, readFile } from 'node:fs/promises'
 
 test('home exposes the MEDFORGE app shell and role workspaces', async ({ page }) => {
   await page.goto('/')
@@ -74,7 +74,7 @@ test('educator lesson editor loads as a real route and switches its phone panes'
   await caseSearch.fill('video 162 frame 6575')
   const caseOption = page.getByRole('option', { name: /Endoscapes test.*frame 6575/ })
   await expect(caseOption).toBeVisible()
-  const casePopup = page.locator('[data-slot="combobox-content"]')
+  const casePopup = page.locator('[data-slot="combobox-content"]:visible').last()
   await mkdir('.local-review/FIX-01', { recursive: true })
   for (const viewport of [{ width: 1440, height: 900 }, { width: 768, height: 1024 }, { width: 390, height: 844 }]) {
     await page.setViewportSize(viewport)
@@ -113,12 +113,12 @@ test('educator lesson editor loads as a real route and switches its phone panes'
   const zoomedGeometry = await zoomedPopup.evaluate((element) => {
     const rect = element.getBoundingClientRect()
     const style = getComputedStyle(element)
-    return { left: rect.left, right: rect.right, bottom: rect.bottom, maxHeight: Number.parseFloat(style.maxHeight), background: style.backgroundColor, width: innerWidth }
+    return { left: rect.left, right: rect.right, bottom: rect.bottom, maxHeight: Number.parseFloat(style.maxHeight), background: style.backgroundColor, width: innerWidth, viewportHeight: visualViewport?.height ?? innerHeight }
   })
   expect(zoomedGeometry.background).toBe('rgb(255, 255, 255)')
   expect(zoomedGeometry.left).toBeGreaterThanOrEqual(0)
   expect(zoomedGeometry.right).toBeLessThanOrEqual(zoomedGeometry.width)
-  expect(zoomedGeometry.maxHeight).toBeLessThanOrEqual(180)
+  expect(zoomedGeometry.maxHeight).toBeLessThanOrEqual(Math.min(320, zoomedGeometry.viewportHeight * 0.4) + 1)
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(720)
   await page.screenshot({ path: '.local-review/FIX-01/educator-picker-200-percent-720x450.png' })
   await zoomCdp.detach()
@@ -202,6 +202,7 @@ test('educator teaching desk shows real work and opens the selected assignment r
 })
 
 test('SurgiVision frame picker stays readable beside the professional sidebar at tablet width', async ({ page }) => {
+  const playerFixture = await readFile('tests/e2e/fixtures/surgical-player-smoke.mp4')
   await page.setViewportSize({ width: 768, height: 1024 })
   const fixtureCase = (frame: number) => ({
     id: `endoscapes:test:162_${frame}`, module: 'surgivision', dataset_id: 'Endoscapes-BBox201',
@@ -231,11 +232,40 @@ test('SurgiVision frame picker stays readable beside the professional sidebar at
     })
   })
   await page.route('**/api/v1/surgivision/media/**', (route) => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ detail: 'No video media fixture is installed.' }) }))
+  await page.route('**/api/v1/surgivision/clips', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify([{
+      clip_id: 'appendix300:fixture-clip', dataset_id: 'Appendix300',
+      procedure_label: 'Laparoscopic appendectomy', media_kind: 'native_video',
+      duration_sec: 38.1384, asset_uri: 'verified-local-fixture.mp4',
+      source_url: 'https://example.org/source', license_label: 'fixture-only source license',
+      citation: 'E2E fixture metadata; no research media is replaced.', sha256: 'a'.repeat(64),
+      limitations: ['Separate procedure source; no Endoscapes overlays.'],
+    }]),
+  }))
+  await page.route('**/api/v1/surgivision/clips/**/video', (route) => {
+    const range = /^bytes=(\d+)-(\d*)$/.exec(route.request().headers().range ?? '')
+    const start = range ? Number(range[1]) : 0
+    const requestedEnd = range?.[2] ? Number(range[2]) : playerFixture.length - 1
+    const end = Math.min(requestedEnd, playerFixture.length - 1)
+    const headers = { 'Accept-Ranges': 'bytes', 'Content-Length': String(end - start + 1) }
+    if (range) headers['Content-Range'] = `bytes ${start}-${end}/${playerFixture.length}`
+    return route.fulfill({ status: range ? 206 : 200, headers, contentType: 'video/mp4', body: playerFixture.subarray(start, end + 1) })
+  })
   await page.route('**/api/v1/surgivision/cvs-coverage', (route) => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ detail: 'Coverage fixture is not installed.' }) }))
   await page.route('**/api/v1/models/cvs-adaptnet/validate', (route) => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ detail: 'Checkpoint remains gated.' }) }))
   await page.route('**/api/v1/runs', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }))
 
   await page.goto('/studio/surgivision/cases/endoscapes%3Atest%3A162_6575')
+  await expect(page.getByText('Surgical video review', { exact: true })).toBeVisible()
+  await expect(page.getByText(/separate procedure dataset.*no Endoscapes annotations or masks are aligned/i)).toBeVisible()
+  const nativePlayer = page.locator('video[aria-label="Appendix300 laparoscopic appendectomy source video"]')
+  await expect(nativePlayer).toHaveAttribute('src', /appendix300%3Afixture-clip/)
+  await expect.poll(() => nativePlayer.evaluate((video: HTMLVideoElement) => video.readyState)).toBeGreaterThanOrEqual(1)
+  await page.getByRole('button', { name: 'Play' }).click()
+  await expect.poll(() => nativePlayer.evaluate((video: HTMLVideoElement) => video.paused)).toBe(false)
+  await expect(page.getByText('Frame review', { exact: false })).toBeVisible()
   const input = page.getByRole('combobox', { name: 'Jump to surgical frame by split, video, or frame number' })
   await input.fill('test 162')
   const popup = page.locator('[data-slot="combobox-content"]')

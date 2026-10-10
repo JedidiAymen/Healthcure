@@ -17,6 +17,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { parseSurgicalViewPreferences, type SurgicalViewPreferences } from '@/lib/workspace-preferences'
 import { buildSurgicalFrameReport } from '@/lib/surgical-evidence'
 import { searchSurgicalFrames, type SurgicalFrameOption } from '@/lib/source-picker'
+import { NeutralVideoSkin, Video, VideoPlayer } from '@videojs/react/video'
+import '@videojs/react/video/neutral-skin.css'
 
 type FrameOption=SurgicalFrameOption
 
@@ -129,7 +131,7 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
   useEffect(()=>{
     if(guided){setPublicClip(null);setShowPublicClip(false);return}
     let live=true
-    api.surgicalClips().then(items=>{if(live)setPublicClip(items[0]??null)}).catch(()=>{if(live)setPublicClip(null)})
+    api.surgicalClips().then(items=>{if(live){const clip=items[0]??null;setPublicClip(clip);setShowPublicClip(Boolean(clip))}}).catch(()=>{if(live)setPublicClip(null)})
     return()=>{live=false}
   },[guided])
   const referenceIsReleased=Boolean(frame && releasedReference?.case_id===frame.id)
@@ -211,6 +213,14 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
   if(loading)return <div className="my-6 grid min-h-40 content-center gap-3"><Skeleton className="h-24 w-full"/><p className="text-sm text-muted-foreground">Loading verified image and annotation record…</p></div>
   if(error||!frame)return <Alert variant="destructive" className="my-6 min-h-36 items-center"><AlertCircle/><AlertDescription><strong className="block font-semibold">Endoscapes sample is unavailable</strong>{error||'No validated frame record was returned.'}</AlertDescription></Alert>
   return <section className="mt-4 grid min-w-0 gap-3" aria-label="SurgiVision frame review">
+    {!guided&&publicClip&&<Card className="overflow-hidden border-primary/25 shadow-sm" aria-label="Primary native surgical video">
+      <CardHeader className="gap-1"><div className="flex flex-wrap items-center gap-2"><Badge variant="outline" className="border-primary/25 bg-primary/5 text-primary">Native video · licensed source</Badge><Badge variant="secondary">{publicClip.procedure_label} · {publicClip.duration_sec.toFixed(1)} sec</Badge></div><CardTitle className="mt-1">Surgical video review</CardTitle><CardDescription>Authentic, de-identified Appendix300 laparoscopic appendectomy footage. This is a separate procedure dataset from the Endoscapes cholecystectomy stills below; no Endoscapes annotations or masks are aligned to this clip.</CardDescription></CardHeader>
+      <CardContent className="grid gap-3">
+        {showPublicClip?<VideoPlayer><NeutralVideoSkin className="w-full overflow-hidden rounded-lg bg-[#101624]" style={{aspectRatio:'16 / 9'}}><Video className="size-full" src={api.surgicalClipVideoUrl(publicClip.clip_id)} playsInline preload="metadata" aria-label="Appendix300 laparoscopic appendectomy source video"/></NeutralVideoSkin></VideoPlayer>:<Button variant="outline" className="w-fit" onClick={()=>setShowPublicClip(true)}>Load licensed video excerpt</Button>}
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-2 text-xs text-muted-foreground"><span>{publicClip.license_label} · SHA-256 {publicClip.sha256.slice(0,12)}…</span><a className="text-primary hover:underline" href={publicClip.source_url} target="_blank" rel="noreferrer">OPARA dataset and citation ↗</a></div>
+        <p className="m-0 text-xs leading-relaxed text-muted-foreground">{publicClip.citation}</p>
+      </CardContent>
+    </Card>}
     <div className="flex min-w-0 flex-col gap-3 rounded-xl border bg-card p-3 xl:flex-row xl:items-center xl:justify-between">
       <div className="min-w-0 flex-1">
         {guided ? (
@@ -263,14 +273,6 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
       {sampledFrames.length>0&&<Slider aria-label="Sampled frame position" min={0} max={sampledFrames.length-1} step={1} value={[Math.max(0,sampledFrames.findIndex(item=>item.id===activeFrameId))]} onValueChange={value=>{const position=Number(Array.isArray(value)?value[0]:value);const item=sampledFrames[position];if(item)navigate(`/studio/surgivision/cases/${encodeURIComponent(item.id)}`)}}/>}
       <div className="flex items-center justify-between gap-2 sm:justify-end"><Button variant="outline" size="icon-sm" aria-label="Previous sampled frame" disabled={sampledFrames.findIndex(item=>item.id===activeFrameId)<=0} onClick={()=>{const index=sampledFrames.findIndex(item=>item.id===activeFrameId);const item=sampledFrames[index-1];if(item)navigate(`/studio/surgivision/cases/${encodeURIComponent(item.id)}`)}}><ChevronLeft/></Button><span className="min-w-24 text-center text-xs tabular-nums text-muted-foreground" role="status">{sampledFrames.length?`${Math.max(0,sampledFrames.findIndex(item=>item.id===activeFrameId))+1} / ${sampledFrames.length}`:sampledFramesError||'Loading sequence'}</span><Button variant="outline" size="icon-sm" aria-label="Next sampled frame" disabled={sampledFrames.findIndex(item=>item.id===activeFrameId)<0||sampledFrames.findIndex(item=>item.id===activeFrameId)>=sampledFrames.length-1} onClick={()=>{const index=sampledFrames.findIndex(item=>item.id===activeFrameId);const item=sampledFrames[index+1];if(item)navigate(`/studio/surgivision/cases/${encodeURIComponent(item.id)}`)}}><ChevronRight/></Button></div>
     </section>}
-    {!guided&&publicClip&&<Card className="overflow-hidden border-primary/20">
-      <CardHeader className="gap-1"><div className="flex flex-wrap items-center gap-2"><Badge variant="outline" className="border-primary/25 bg-primary/5 text-primary">Licensed continuous footage</Badge><Badge variant="secondary">{publicClip.procedure_label} · {publicClip.duration_sec.toFixed(1)} sec</Badge></div><CardTitle className="mt-1">Appendix300 source excerpt</CardTitle><CardDescription>Authentic, de-identified laparoscopic appendectomy footage from a separate procedure dataset. It is not the cholecystectomy frame sequence above and includes no instrument masks.</CardDescription></CardHeader>
-      <CardContent className="grid gap-3">
-        {showPublicClip?<video className="aspect-video max-h-[36rem] w-full rounded-lg bg-black" controls playsInline preload="metadata" src={api.surgicalClipVideoUrl(publicClip.clip_id)} aria-label="Appendix300 laparoscopic appendectomy excerpt"/>:<Button variant="outline" className="w-fit" onClick={()=>setShowPublicClip(true)}><Image data-icon="inline-start"/>Load licensed video excerpt</Button>}
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-2 text-xs text-muted-foreground"><span>{publicClip.license_label} · SHA-256 {publicClip.sha256.slice(0,12)}…</span><a className="text-primary hover:underline" href={publicClip.source_url} target="_blank" rel="noreferrer">OPARA dataset and citation ↗</a></div>
-        <p className="m-0 text-xs leading-relaxed text-muted-foreground">{publicClip.citation}</p>
-      </CardContent>
-    </Card>}
     <div className="grid min-w-0 items-start gap-3 xl:grid-cols-[minmax(0,3fr)_minmax(17rem,1fr)]">
       <Card className="min-w-0 overflow-hidden">
         <CardHeader className="flex-row items-center justify-between gap-3 px-3 py-3">
