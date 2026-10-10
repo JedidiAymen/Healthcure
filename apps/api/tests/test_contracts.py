@@ -589,6 +589,21 @@ def test_slice_endpoint_returns_real_fixture_values_hash_and_index_limits(client
     assert client.get(f'/api/v1/cases/{cid}/viewer/slice?axis=3&index=0').status_code==422
     assert client.get(f'/api/v1/cases/{cid}/viewer/slice?axis=2&index=128').status_code==422
 
+def test_roi_volume_endpoint_preserves_source_c_order_spacing_and_provenance(client):
+    cid=client.get('/api/v1/cases').json()[0]['id']
+    response=client.get(f'/api/v1/cases/{cid}/viewer/roi-volume?roi=Brainstem')
+    assert response.status_code==200,response.text
+    payload=response.json()
+    assert payload['shape']==[128,128,128]
+    assert payload['spacing_mm']==[2.0,2.0,2.0]
+    assert payload['voxel_count']==2
+    assert payload['voxel_indices_c_order']==[0,1]
+    assert payload['index_convention']=='x-major-y-middle-z-fastest'
+    assert payload['coordinate_frame']=='openkbp-processed-voxel-grid'
+    assert payload['origin']=='computed-from-synthetic-test-fixture'
+    assert len(payload['source_sha256'])==64
+    assert client.get(f'/api/v1/cases/{cid}/viewer/roi-volume?roi=../../dose').status_code==422
+
 
 def test_dvh_endpoint_calculates_fixture_curve_and_provenance(client):
     cid=client.get('/api/v1/cases').json()[0]['id']

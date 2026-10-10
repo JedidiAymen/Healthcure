@@ -240,6 +240,45 @@ test('DoseTwin keeps one Gy scale, linked ROI overlays and voxel mapping under z
   expect(errors).toEqual([])
 })
 
+test('DoseTwin reconstructs the selected sparse source mask and falls back at phone width', async ({ page }) => {
+  const errors: string[]=[]
+  page.on('pageerror',error=>errors.push(error.message))
+  const caseId='openkbp:surface-fixture'
+  await page.route('**/api/v1/cases',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify([{id:caseId,module:'dosetwin',dataset_id:'OpenKBP',source_case_id:'surface-fixture',reference_kind:'benchmark',status:'ready',label:'OpenKBP geometry fixture'}])}))
+  await page.route('**/viewer/slice*',route=>{
+    const url=new URL(route.request().url()),layer=url.searchParams.get('layer'),roi=url.searchParams.get('roi')??'Brainstem'
+    const values=new Array(128*128).fill(layer==='ct'?.5:0)
+    return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({case_id:caseId,source_revision:'fixture-revision',source_file:`${roi}.csv`,source_sha256:'a'.repeat(64),axis:Number(url.searchParams.get('axis')??2),index:Number(url.searchParams.get('index')??64),shape:[128,128],values,unit:layer==='dose'?'Gy':layer==='roi'?'binary-mask':'benchmark-value',source_kind:'synthetic-test',origin:'synthetic-test-fixture',coordinate_frame:'openkbp-processed-voxel-grid'})})
+  })
+  await page.route('**/viewer/dvh*',route=>{
+    const roi=new URL(route.request().url()).searchParams.get('roi')??'Brainstem'
+    const curve=Array.from({length:51},(_,index)=>({dose_gy:index,volume_percent:index<25?100:0}))
+    return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({case_id:caseId,source_revision:'fixture-revision',roi,dose_sha256:'b'.repeat(64),roi_sha256:'c'.repeat(64),voxel_count:2,mean_dose_gy:1,dose_display_max_gy:50,spacing_mm:[5.422,5.422,3],ct_display_range:[0,1],ct_display_note:'Fixture window; not HU.',official_metrics:{volume_cc:1,dmean_gy:1,dmax_voxel_gy:2,d95_gy_interpolated:1,d0_1cc_gy_openkbp:2,d99_gy_openkbp:1,d1_gy_openkbp:2,v20gy_percent:0,note:'Fixture.'},curve,method:'Fixture curve.',source_kind:'synthetic-test',origin:'computed-from-synthetic-test-fixture'})})
+  })
+  await page.route('**/viewer/roi-volume*',route=>{
+    const url=new URL(route.request().url()),roi=url.searchParams.get('roi')??'Brainstem'
+    const points=roi==='Brainstem'?[[5,9,11],[6,9,11]]:[[20,30,40],[21,30,40]]
+    const voxel_indices_c_order=points.map(([x,y,z])=>x*128*128+y*128+z)
+    return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({case_id:caseId,source_revision:'fixture-revision',source_file:`${roi}.csv`,source_sha256:'d'.repeat(64),shape:[128,128,128],spacing_mm:[5.422,5.422,3],voxel_count:2,voxel_indices_c_order,source_kind:'synthetic-test',origin:'computed-from-synthetic-test-fixture',coordinate_frame:'openkbp-processed-voxel-grid',index_convention:'x-major-y-middle-z-fastest'})})
+  })
+  await page.setViewportSize({width:1440,height:1000})
+  await page.goto('/studio/dosetwin/cases/current')
+  await page.getByText('Open 3D view',{exact:true}).click()
+  const bounds=page.getByTestId('dosetwin-3d-bounds')
+  await expect(bounds).toContainText('24.40, 35.24')
+  await expect(page.getByText('2 source mask voxels')).toBeVisible()
+  await page.getByLabel('Structure to reconstruct').selectOption('PTV70')
+  await expect(page.getByText('Reconstruct PTV70 from its verified mask, linked to the active 2D structure selection.')).toBeVisible()
+  await expect(page.getByTestId('dosetwin-3d-viewport')).toHaveAttribute('aria-label','PTV70 reconstructed 3D surface viewport')
+  await expect(bounds).toContainText('105.73, 116.57')
+  await page.getByRole('button',{name:'Visible'}).click()
+  await expect(page.getByRole('button',{name:'Hidden'})).toHaveAttribute('aria-pressed','false')
+  await page.setViewportSize({width:390,height:844})
+  await expect(page.getByText(/3D rendering is paused on this narrow screen/)).toBeVisible()
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
+  expect(errors).toEqual([])
+})
+
 test('global search keeps keyboard focus and returns it to the trigger on escape', async ({ page }) => {
   await page.goto('/studio/models')
   const trigger = page.getByRole('button', { name: 'Find a research case or workspace' })

@@ -1564,6 +1564,117 @@
         "title": "ReportRecord",
         "type": "object"
       },
+      "RoiMaskVolume": {
+        "additionalProperties": false,
+        "description": "Sparse occupancy for a source-backed OpenKBP ROI surface reconstruction.",
+        "properties": {
+          "case_id": {
+            "title": "Case Id",
+            "type": "string"
+          },
+          "coordinate_frame": {
+            "const": "openkbp-processed-voxel-grid",
+            "title": "Coordinate Frame",
+            "type": "string"
+          },
+          "index_convention": {
+            "const": "x-major-y-middle-z-fastest",
+            "title": "Index Convention",
+            "type": "string"
+          },
+          "origin": {
+            "enum": [
+              "computed-from-benchmark-array",
+              "computed-from-synthetic-test-fixture"
+            ],
+            "title": "Origin",
+            "type": "string"
+          },
+          "shape": {
+            "maxItems": 3,
+            "minItems": 3,
+            "prefixItems": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "title": "Shape",
+            "type": "array"
+          },
+          "source_file": {
+            "title": "Source File",
+            "type": "string"
+          },
+          "source_kind": {
+            "enum": [
+              "benchmark",
+              "research",
+              "synthetic-test"
+            ],
+            "title": "Source Kind",
+            "type": "string"
+          },
+          "source_revision": {
+            "title": "Source Revision",
+            "type": "string"
+          },
+          "source_sha256": {
+            "title": "Source Sha256",
+            "type": "string"
+          },
+          "spacing_mm": {
+            "maxItems": 3,
+            "minItems": 3,
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Spacing Mm",
+            "type": "array"
+          },
+          "voxel_count": {
+            "minimum": 1.0,
+            "title": "Voxel Count",
+            "type": "integer"
+          },
+          "voxel_indices_c_order": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Voxel Indices C Order",
+            "type": "array"
+          }
+        },
+        "required": [
+          "case_id",
+          "source_revision",
+          "source_file",
+          "source_sha256",
+          "shape",
+          "spacing_mm",
+          "voxel_count",
+          "voxel_indices_c_order",
+          "source_kind",
+          "origin",
+          "coordinate_frame",
+          "index_convention"
+        ],
+        "title": "RoiMaskVolume",
+        "type": "object"
+      },
       "RubricCriterion": {
         "additionalProperties": false,
         "properties": {
@@ -5111,6 +5222,57 @@
           }
         },
         "summary": "Viewer Dvh"
+      }
+    },
+    "/api/v1/cases/{case_id}/viewer/roi-volume": {
+      "get": {
+        "description": "Return a sparse, source-indexed ROI mask for the optional vtk.js surface viewer.",
+        "operationId": "viewer_roi_volume_api_v1_cases__case_id__viewer_roi_volume_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "title": "Case Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "roi",
+            "required": false,
+            "schema": {
+              "default": "Brainstem",
+              "pattern": "^(Brainstem|SpinalCord|RightParotid|LeftParotid|Esophagus|Larynx|Mandible|PTV56|PTV63|PTV70)$",
+              "title": "Roi",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoiMaskVolume"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Viewer Roi Volume"
       }
     },
     "/api/v1/cases/{case_id}/viewer/slice": {

@@ -310,6 +310,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/cases/{case_id}/viewer/roi-volume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Viewer Roi Volume
+         * @description Return a sparse, source-indexed ROI mask for the optional vtk.js surface viewer.
+         */
+        get: operations["viewer_roi_volume_api_v1_cases__case_id__viewer_roi_volume_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/cases/{case_id}/viewer/slice": {
         parameters: {
             query?: never;
@@ -1456,6 +1476,56 @@ export interface components {
              * @enum {string}
              */
             status: "draft" | "generated" | "failed";
+        };
+        /**
+         * RoiMaskVolume
+         * @description Sparse occupancy for a source-backed OpenKBP ROI surface reconstruction.
+         */
+        RoiMaskVolume: {
+            /** Case Id */
+            case_id: string;
+            /**
+             * Coordinate Frame
+             * @constant
+             */
+            coordinate_frame: "openkbp-processed-voxel-grid";
+            /**
+             * Index Convention
+             * @constant
+             */
+            index_convention: "x-major-y-middle-z-fastest";
+            /**
+             * Origin
+             * @enum {string}
+             */
+            origin: "computed-from-benchmark-array" | "computed-from-synthetic-test-fixture";
+            /** Shape */
+            shape: [
+                number,
+                number,
+                number
+            ];
+            /** Source File */
+            source_file: string;
+            /**
+             * Source Kind
+             * @enum {string}
+             */
+            source_kind: "benchmark" | "research" | "synthetic-test";
+            /** Source Revision */
+            source_revision: string;
+            /** Source Sha256 */
+            source_sha256: string;
+            /** Spacing Mm */
+            spacing_mm: [
+                number,
+                number,
+                number
+            ];
+            /** Voxel Count */
+            voxel_count: number;
+            /** Voxel Indices C Order */
+            voxel_indices_c_order: number[];
         };
         /** RubricCriterion */
         RubricCriterion: {
@@ -3011,6 +3081,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DvhSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    viewer_roi_volume_api_v1_cases__case_id__viewer_roi_volume_get: {
+        parameters: {
+            query?: {
+                roi?: string;
+            };
+            header?: never;
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoiMaskVolume"];
                 };
             };
             /** @description Validation Error */
