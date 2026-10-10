@@ -19,6 +19,23 @@ test('small phone viewport keeps the app shell within the screen', async ({ page
   expect(pageWidth).toBeLessThanOrEqual(390)
 })
 
+test('case registry explains an empty local source set without inventing cases', async ({ page }) => {
+  await page.route('**/api/v1/cases**', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify([]),
+  }))
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/studio/cases')
+
+  await expect(page.getByRole('heading', { name: 'No cases registered' })).toBeVisible()
+  await expect(page.getByText(/Nothing has been seeded as a sample patient/)).toBeVisible()
+  await expect(page.getByRole('link', { name: /SurgiVision/ })).toHaveAttribute('href', '/studio/surgivision/cases/current')
+  await expect(page.getByRole('link', { name: /DoseTwin/ })).toHaveAttribute('href', '/studio/dosetwin/cases/current')
+  await expect(page.getByRole('link', { name: /FistulaGuard/ })).toHaveAttribute('href', '/studio/fistulaguard/cases/current')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
+})
+
 test('educator lesson editor loads as a real route and switches its phone panes', async ({ page }) => {
   const errors: string[] = []
   page.on('pageerror', (error) => errors.push(error.message))

@@ -621,15 +621,15 @@ export function Studio() {
           ))}
         </div>
       ) : (
-        <div className="empty-slate">
-          <Clock3 size={18} />
-          <span>
+        <div className="flex min-h-12 flex-wrap items-center gap-2.5 rounded-md border border-border bg-card px-3 py-2.5 text-xs text-muted-foreground">
+          <Clock3 className="size-4 shrink-0" />
+          <span className="min-w-0 flex-1">
             {runs.loading
               ? "Checking saved runs…"
               : "There is no saved analysis activity. Start with an authorized case from the registry."}
           </span>
           {!runs.loading && (
-            <Link to="/studio/cases">
+            <Link className="flex items-center gap-1.5 text-primary hover:underline" to="/studio/cases">
               Browse cases <ArrowRight size={14} />
             </Link>
           )}
@@ -711,7 +711,7 @@ export function Cases() {
       />
       <div className="mb-4 flex min-w-0 flex-col gap-3 border-b border-border pb-3 lg:flex-row lg:items-center lg:justify-between">
         <ToggleGroup
-          className="filter-tabs max-w-full overflow-x-auto"
+          className="flex max-w-full items-center gap-1 overflow-x-auto"
           aria-label="Filter cases by research domain"
           multiple={false}
           variant="outline"
@@ -747,7 +747,7 @@ export function Cases() {
             />
             {searchText && <InputGroupAddon align="inline-end"><InputGroupButton aria-label="Clear case search" onClick={() => updateSearch("")}><X aria-hidden="true" /></InputGroupButton></InputGroupAddon>}
           </InputGroup>
-          <div aria-live="polite" className="registry-count whitespace-nowrap">
+          <div aria-live="polite" className="whitespace-nowrap text-xs text-muted-foreground">
           {loading
             ? "Checking local API"
             : rows.length
@@ -790,7 +790,7 @@ export function Cases() {
             </Link>
           ))}
           </div>
-          {pageCount > 1 && <Pagination className="registry-pagination">
+          {pageCount > 1 && <Pagination className="mt-4">
             <PaginationContent>
               <PaginationItem>
                 <PaginationPrevious
@@ -835,28 +835,26 @@ export function Cases() {
           <Button variant="outline" onClick={clearFilters}>Clear search and filters</Button>
         </Empty>
       ) : (
-        <div className="registry-empty">
-          <div className="registry-empty-symbol">
-            <Database size={22} />
-          </div>
-          <h2>No cases registered</h2>
-          <p>
-            The local API only lists data after a source case is installed and
-            configured. Nothing has been seeded as a sample patient.
-          </p>
-          <div className="registry-empty-links">
+        <Empty className="mt-4 min-h-64 border border-border bg-card/40">
+          <EmptyHeader>
+            <EmptyMedia variant="icon"><Database aria-hidden="true" /></EmptyMedia>
+            <EmptyTitle>No cases registered</EmptyTitle>
+            <EmptyDescription>
+              The local API only lists data after a source case is installed and
+              configured. Nothing has been seeded as a sample patient.
+            </EmptyDescription>
+          </EmptyHeader>
+          <div className="grid w-full max-w-2xl gap-2 text-left sm:grid-cols-3">
             {(Object.keys(specialtyData) as ModuleId[]).map((key) => {
               const m = specialtyData[key];
-              return (
-                <Link key={key} to={`/studio/${key}/cases/current`}>
-                  <span>{m.name}</span>
-                  <small>{m.source} · requirements</small>
-                  <ArrowRight size={14} />
-                </Link>
-              );
+              return <Link className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-1 rounded-md border border-border bg-card p-3 hover:bg-accent" key={key} to={`/studio/${key}/cases/current`}>
+                <span className="truncate text-sm font-medium">{m.name}</span>
+                <small className="col-span-2 truncate text-xs text-muted-foreground">{m.source} · requirements</small>
+                <ArrowRight className="col-start-2 row-start-1 size-4 self-center text-primary" />
+              </Link>
             })}
           </div>
-        </div>
+        </Empty>
       )}
     </>
   );
@@ -1159,17 +1157,16 @@ function EmptyWork({
   linkText: string;
 }) {
   return (
-    <div className="empty-slate roomy">
-      <span className="empty-large-icon">
-        <Icon size={22} />
-      </span>
-      <h2>{title}</h2>
-      <p>{body}</p>
-      <Link to={link}>
-        {linkText}
-        <ArrowRight size={14} />
-      </Link>
-    </div>
+    <Empty className="mt-5 min-h-64 border border-dashed border-border bg-card/40">
+      <EmptyHeader>
+        <EmptyMedia variant="icon"><Icon aria-hidden="true" /></EmptyMedia>
+        <EmptyTitle>{title}</EmptyTitle>
+        <EmptyDescription>{body}</EmptyDescription>
+      </EmptyHeader>
+      <Button render={<Link to={link} />} nativeButton={false} variant="outline">
+        {linkText}<ArrowRight data-icon="inline-end" />
+      </Button>
+    </Empty>
   );
 }
 export function Experiments() {
@@ -1274,9 +1271,10 @@ export function Experiments() {
         </AlertDescription>
       </Alert>
       {loading ? (
-        <div className="empty-slate roomy">
-          <LoaderCircle size={18} />
+        <div role="status" className="mt-4 grid min-h-64 place-items-center rounded-lg border border-border bg-card px-6 py-5 text-center text-sm text-muted-foreground">
+          <div className="flex items-center gap-2"><LoaderCircle className="size-4 animate-spin" />
           <span>Loading local cases and saved runs…</span>
+          </div>
         </div>
       ) : cases.length === 0 ? (
         <EmptyWork
@@ -1379,10 +1377,10 @@ export function Experiments() {
               </CardContent>
             </Card>
           )}
-          <div className="section-heading section-spaced">
+          <div className="mt-6 flex items-end justify-between gap-4">
             <div>
-              <div className="eyebrow">Saved operations</div>
-              <h2>
+              <div className="text-xs font-medium text-muted-foreground">Saved operations</div>
+              <h2 className="mt-1 text-lg font-semibold tracking-tight">
                 {runs.length
                   ? `${runs.length} saved run${runs.length === 1 ? "" : "s"}`
                   : "No analysis runs yet"}
@@ -1418,12 +1416,16 @@ export function Experiments() {
               ))}
             </div>
           ) : (
-            <div className="empty-slate">
-              <span>
+            <Empty className="mt-4 min-h-56 border border-dashed border-border bg-card/40">
+              <EmptyHeader>
+                <EmptyMedia variant="icon"><FlaskConical aria-hidden="true" /></EmptyMedia>
+                <EmptyTitle>No saved analysis runs yet</EmptyTitle>
+                <EmptyDescription>
                 Run the enabled OpenKBP summary to save an idempotent result
                 with source provenance.
-              </span>
-            </div>
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           )}
         </>
       )}
@@ -1479,9 +1481,10 @@ export function Reports() {
       {error ? (
         <Alert variant="destructive"><CircleAlert/><AlertTitle>Saved reports could not be loaded</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>
       ) : reloading ? (
-        <div className="empty-slate roomy">
-          <LoaderCircle size={18} />
+        <div role="status" className="mt-4 grid min-h-64 place-items-center rounded-lg border border-border bg-card px-6 py-5 text-center text-sm text-muted-foreground">
+          <div className="flex items-center gap-2"><LoaderCircle className="size-4 animate-spin" />
           <span>Loading saved reports…</span>
+          </div>
         </div>
       ) : data.length ? (
         <div className="grid gap-3">
