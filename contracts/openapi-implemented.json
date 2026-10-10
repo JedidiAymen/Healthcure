@@ -8298,7 +8298,7 @@
                 }
               }
             },
-            "description": "Content Too Large"
+            "description": "Request Entity Too Large"
           },
           "422": {
             "content": {
@@ -8308,7 +8308,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Unprocessable Entity"
           }
         },
         "summary": "Import Dose Artifact"
@@ -8382,7 +8382,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Unprocessable Entity"
           }
         },
         "summary": "Dose Artifact Comparison"
@@ -8480,7 +8480,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Unprocessable Entity"
           }
         },
         "summary": "Dose Artifact Slice"
@@ -8940,7 +8940,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Unprocessable Entity"
           }
         },
         "summary": "Create Signal Comparison"
@@ -10877,7 +10877,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Unprocessable Entity"
           }
         },
         "summary": "Create Report"
@@ -10943,7 +10943,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Unprocessable Entity"
           }
         },
         "summary": "Create Dose Comparison Report"
@@ -11009,7 +11009,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Unprocessable Entity"
           }
         },
         "summary": "Create Surgical Frame Report"
@@ -11443,7 +11443,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Unprocessable Entity"
           }
         },
         "summary": "Create Run"
