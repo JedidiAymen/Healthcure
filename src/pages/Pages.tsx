@@ -39,6 +39,7 @@ import {
   type SignalWindowComparison,
   type StudentChallenge,
   type StudentLearningPath,
+  type StudentLearningPathLesson,
   type StudentAttempt,
   type StudentDebrief,
   type StudentViewerEvidence,
@@ -180,9 +181,9 @@ const specialtyData = {
 } as const;
 type ModuleId = keyof typeof specialtyData;
 const challengeStatePresentation = {
-  not_started: { label: "Not started", variant: "outline" as const },
+  not_started: { label: "Available", variant: "outline" as const },
   in_progress: { label: "In progress", variant: "secondary" as const },
-  submitted: { label: "Awaiting review", variant: "secondary" as const },
+  submitted: { label: "Submitted", variant: "secondary" as const },
   reviewed: { label: "Reviewed", variant: "outline" as const },
 };
 
@@ -485,6 +486,87 @@ function AcademyPathPreview({ path }: { path: StudentLearningPath }) {
     {preview}
     <figcaption className="sr-only">Preview from the assigned {path.module} source case {lesson.case_label}</figcaption>
   </figure>;
+}
+
+const academyPathDetails = {
+  surgivision: { label: "Surgical teams", source: "Endoscapes frame evidence", icon: Stethoscope },
+  dosetwin: { label: "Radiation oncology", source: "OpenKBP dose benchmark", icon: Activity },
+  fistulaguard: { label: "Nephrology and access care", source: "FiSaV measured signals", icon: Radio },
+} as const;
+
+const academyLessonState = {
+  not_started: { label: "Available", marker: "is-available" },
+  in_progress: { label: "In progress", marker: "is-active" },
+  submitted: { label: "Submitted", marker: "is-submitted" },
+  reviewed: { label: "Reviewed", marker: "is-reviewed" },
+} as const;
+
+function AcademyJourneyLesson({ lesson, index }: { lesson: StudentLearningPathLesson; index: number }) {
+  const state = academyLessonState[lesson.state];
+  const action = lesson.state === "in_progress"
+    ? "Continue"
+    : lesson.state === "submitted" || lesson.state === "reviewed"
+      ? "View feedback"
+      : "Investigate";
+  return (
+    <li className="academy-journey-stop">
+      <span className={`academy-journey-marker ${state.marker}`} aria-hidden="true">{index + 1}</span>
+      <Card className="academy-journey-lesson">
+        <CardHeader>
+          <div className="flex min-w-0 items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="academy-journey-state">Investigation {String(index + 1).padStart(2, "0")}</p>
+              <CardTitle className="mt-1 break-words text-base leading-snug">{lesson.title}</CardTitle>
+              <CardDescription className="mt-1 break-words">{lesson.case_label} · version {lesson.version}{lesson.due_at ? ` · due ${new Date(lesson.due_at).toLocaleDateString()}` : ""}</CardDescription>
+            </div>
+            <Badge variant={lesson.state === "in_progress" ? "secondary" : "outline"} className="shrink-0">{state.label}</Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <Button render={<Link to={`/academy/missions/${encodeURIComponent(lesson.assignment_id)}`}/>} nativeButton={false} variant={lesson.state === "in_progress" ? "default" : "outline"} size="sm" className="w-full justify-between">
+            {action}<ArrowRight data-icon="inline-end"/>
+          </Button>
+        </CardContent>
+      </Card>
+    </li>
+  );
+}
+
+function AcademyJourneyBranch({ path, module, index }: { path: StudentLearningPath | undefined; module: ModuleId; index: number }) {
+  const detail = academyPathDetails[module];
+  const Icon = detail.icon;
+  return (
+    <Card className={`academy-journey-branch academy-journey-branch-${module}`}>
+      <CardHeader className="academy-journey-branch-header">
+        <div className="flex items-start justify-between gap-3">
+          <span className="academy-journey-discipline"><Icon aria-hidden="true"/><span>{detail.label}</span></span>
+          <span className="academy-journey-branch-number" aria-hidden="true">0{index + 1}</span>
+        </div>
+        <CardTitle className="text-lg leading-snug">{path?.title ?? `${detail.label} pathway`}</CardTitle>
+        <CardDescription>{detail.source}</CardDescription>
+        {path?.lessons.length ? <div className="academy-journey-progress" aria-label={`${path.assigned_count} assigned, ${path.in_progress_count} in progress, ${path.submitted_count} submitted, ${path.reviewed_count} reviewed`}>
+          <span>{path.assigned_count} assigned</span><span>{path.reviewed_count} reviewed</span>
+        </div> : null}
+      </CardHeader>
+      <CardContent className="academy-journey-branch-content">
+        {path ? <>
+          <p className="academy-journey-description">{path.description}</p>
+          {path.lessons.length ? <ol className="academy-journey-route" aria-label={`${detail.label} assigned investigations`}>
+            {path.lessons.map((lesson, lessonIndex) => <AcademyJourneyLesson key={lesson.assignment_id} lesson={lesson} index={lessonIndex}/>) }
+          </ol> : <div className="academy-journey-unassigned">
+            <Badge variant="outline">Not assigned</Badge>
+            <p>Explore the source and objectives. Lessons appear here only after your educator assigns them.</p>
+          </div>}
+          <Button render={<Link to={`/academy/paths/${encodeURIComponent(path.path_id)}`}/>} nativeButton={false} variant="ghost" size="sm" className="academy-journey-overview">
+            Path overview<ArrowRight data-icon="inline-end"/>
+          </Button>
+        </> : <div className="academy-journey-unassigned">
+          <Badge variant="outline">Not available</Badge>
+          <p>No published learning path is currently available for this research source.</p>
+        </div>}
+      </CardContent>
+    </Card>
+  );
 }
 
 function StudioDepartmentAtlas({ cases }: { cases: CaseRecord[] }) {
@@ -2030,30 +2112,16 @@ export function Academy() {
         {paths.error ? (
           <Alert variant="destructive"><CircleAlert/><AlertTitle>Learning pathways could not load</AlertTitle><AlertDescription>{paths.error}</AlertDescription></Alert>
         ) : (
-          <div className="academy-path-list">
-              {paths.loading ? (
-                <div className="grid gap-2 py-4"><Skeleton className="h-24"/><Skeleton className="h-24"/><Skeleton className="h-24"/></div>
-              ) : paths.data.length === 0 ? (
-                <Empty className="min-h-40 rounded-none border-0"><EmptyHeader><EmptyMedia variant="icon"><BookOpenCheck/></EmptyMedia><EmptyTitle>No learning pathways available</EmptyTitle><EmptyDescription>Published pathways will appear here when they are available to your account.</EmptyDescription></EmptyHeader></Empty>
-              ) : paths.data.map((path, index) => {
-                const detail = pathDetails[path.module];
-                const activeLesson = path.lessons.find((lesson) => lesson.state === "in_progress") ?? path.lessons.find((lesson) => lesson.state === "not_started");
-                const pathState = activeLesson ? activeLesson.state === "in_progress" ? "In progress" : "Assigned" : path.assigned_count ? path.submitted_count ? "Awaiting review" : "Reviewed" : "Available";
-                const PathIcon = path.module === "surgivision" ? Stethoscope : path.module === "dosetwin" ? Activity : Radio;
-                return (
-                  <Link
-                    key={path.path_id}
-                    to={`/academy/paths/${encodeURIComponent(path.path_id)}`}
-                    className="academy-path-row"
-                  >
-                    <span className="academy-path-sequence" aria-hidden="true">{index + 1}</span>
-                    <span className="academy-path-evidence"><AcademyPathPreview path={path}/><span className="academy-path-source"><span><PathIcon aria-hidden="true"/>{detail.label}</span><small>{detail.source}</small></span></span>
-                    <span className="academy-path-content"><strong>{path.title}</strong><span>{path.description}</span><small>{path.objectives[0]}</small></span>
-                    <span className="academy-path-state"><span className={`academy-state-dot ${activeLesson ? "is-active" : path.assigned_count ? "is-reviewed" : ""}`} aria-hidden="true"/>{pathState}<small>{path.assigned_count ? `${path.assigned_count} assigned · ${path.reviewed_count} reviewed` : "Explore the source overview; lessons appear when assigned"}</small></span>
-                    <span className="academy-path-open">View path <ArrowRight aria-hidden="true"/></span>
-                  </Link>
-                );
-              })}
+          <div className="academy-journey-branches">
+            {paths.loading ? (
+              <div className="grid gap-4 md:grid-cols-3">{[0, 1, 2].map((index) => <Skeleton key={index} className="h-72"/>)}</div>
+            ) : (
+              <div className="academy-journey-branch-grid">
+                {(["surgivision", "dosetwin", "fistulaguard"] as const).map((module, index) => (
+                  <AcademyJourneyBranch key={module} module={module} index={index} path={paths.data.find((path) => path.module === module)}/>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </section>

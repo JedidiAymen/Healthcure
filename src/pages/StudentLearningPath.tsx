@@ -19,9 +19,9 @@ const discipline = {
 } as const;
 
 const statePresentation = {
-  not_started: { label: "Not started", variant: "outline" as const, Icon: CircleDot },
+  not_started: { label: "Available", variant: "outline" as const, Icon: CircleDot },
   in_progress: { label: "In progress", variant: "secondary" as const, Icon: Clock3 },
-  submitted: { label: "Awaiting review", variant: "secondary" as const, Icon: CalendarClock },
+  submitted: { label: "Submitted", variant: "secondary" as const, Icon: CalendarClock },
   reviewed: { label: "Reviewed", variant: "outline" as const, Icon: Check },
 };
 
@@ -77,7 +77,7 @@ function PathContent({ path }: { path: LearningPath }) {
         <dl className="academy-path-counts" aria-label="Assignment progress">
           <dt>Assigned lessons</dt><dd>{path.assigned_count}</dd>
           <dt>In progress</dt><dd>{path.in_progress_count}</dd>
-          <dt>Awaiting review</dt><dd>{path.submitted_count}</dd>
+          <dt>Submitted</dt><dd>{path.submitted_count}</dd>
           <dt>Reviewed</dt><dd>{path.reviewed_count}</dd>
         </dl>
       </header>
