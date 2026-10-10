@@ -1,21 +1,20 @@
-# PR-UX-15 — DoseTwin case selection and isolated read-only case
+# PR-UX-15 — DoseTwin case selection and isolated prediction comparison
 
 ## What changed
 
-The default local launcher continues to use `pt_201` as its fully enabled source. When `data/openkbp-opt/pt_241` is installed, the same launcher registers it as a second selectable case in a **viewer-only** mode. The case picker uses the stable case ID in the URL, and DoseTwin loads the selected case's own CT, reference dose, spacing, ROI masks, source revision, and DVH. Per-case viewer preferences remain separate.
+The default local launcher continues to use `pt_201` as its fully enabled source. When the complete local `data/openkbp-opt/pt_241` reference and `prediction-set_1.csv` are installed, the same launcher registers `pt_241` as a second fully enabled source. The case picker uses the stable case ID in the URL, and DoseTwin loads the selected case's own CT, reference dose, spacing, ROI masks, source revision, DVH, prediction artifacts, comparisons, runs, and reports. Per-case viewer preferences and imported artifact ownership remain separate. If only the reference files exist, an operator can still register that case as viewer-only instead.
 
-The server accepts additional case IDs only through the operator-controlled `MEDFORGE_OPENKBP_CASES_JSON` allowlist. An ID from a request is only looked up in this map; it is never treated as a filesystem path. Each profile resolves hashes, revisions, arrays, and cache entries from its own local root. The legacy `MEDFORGE_OPENKBP_CASE_DIR` case retains its existing full capabilities. Additional allowlisted cases stay blocked from run creation, dose import, prediction comparison, and report creation until those write and evidence flows have been migrated and validated for multiple cases.
+The server accepts additional case IDs only through operator-controlled local allowlists: `MEDFORGE_OPENKBP_CASES_JSON` for viewer-only profiles and `MEDFORGE_OPENKBP_FULL_CASES_JSON` for profiles enabled for case-bound runs and prediction comparison. An ID from a request is only looked up in a map; it is never treated as a filesystem path. Each profile resolves hashes, revisions, arrays, spacing, and cache entries from its own local root. Prediction artifacts, reports, and run rows remain attached to their existing case IDs. Cross-case artifact lookup returns 404, and an artifact's declared source case must exactly match the selected case.
 
-The independent `pt_241` launcher still opens the complete authentic reference/prediction pair on its own grid, using a separate local database. Do not compare `pt_241` against `pt_201`. The checkpoint hash is unpublished. Dataset terms remain under review, so research arrays are ignored local data and are not committed to the repository.
+The complete authentic `pt_241` reference/prediction pair uses its own grid. Do not compare `pt_241` against `pt_201`. The archive does not publish a checkpoint hash; the import form leaves that value blank and stores the archive/model revision separately. Its source and rights basis remain operator-declared; the import discloses that MEDFORGE validates bytes and grid, not model provenance or legal rights. Dataset files are kept in ignored local storage and are not committed to the repository. The separate `pt_241` launcher remains useful for reviewing the source profile in isolation.
 
 ## Files changed
 
-- `apps/api/app/main.py` — validated local case allowlist, case-root resolution, source revision per case, and per-root slice/volume cache access. Only established read-only endpoints accept viewer-only profiles.
-- `apps/api/tests/test_contracts.py` — synthetic dual-root isolation coverage for manifest, slice, ROI-volume, DVH, provenance, unknown IDs, and rejected run access.
-- `src/pages/Pages.tsx` — shadcn case selector, ID-addressable navigation, artifact-query gating, and viewer-only research method state.
-- `src/pages/DoseViewer.tsx` — read-only explanation and suppressed prediction comparison for viewer-only profiles.
-- `tests/e2e/workspace-shell.spec.ts` — case switch, viewer-only boundaries, no blocked artifact request, and per-case preference restoration.
-- `scripts/start_local.sh` — registers installed local `pt_241` automatically unless the operator has set an explicit allowlist.
+- `apps/api/app/main.py` — separate full/viewer-only local allowlists, case-root resolution, source revision per case, startup DB registration, per-root cache reads, case-bound run provenance, and prediction import/slice/comparison/report isolation.
+- `apps/api/tests/test_contracts.py` — synthetic dual-root isolation for reads, runs, imported predictions, source/grid rejection, artifact ownership, and report persistence/reopen.
+- `src/pages/Pages.tsx` — shadcn case selector, ID-addressable navigation, comparison-availability labels, and artifact queries scoped to the selected case.
+- `tests/e2e/workspace-shell.spec.ts` — case switching into the comparison workspace, case-specific artifact request, and per-case preference restoration.
+- `scripts/start_local.sh` — enables installed `pt_241` for comparison only when both its reference and authentic set_1 prediction are present; otherwise it can expose the reference as viewer-only.
 - `docs/LOCAL_ACCESS_AND_PROFILES.md` — updated default launcher behavior; existing startup, profile, and account provisioning instructions retained.
 
 ## Components and licenses
@@ -25,13 +24,14 @@ The case picker composes the project's existing generated shadcn Base Nova `Sele
 ## Verification
 
 - `python3 -m pytest -q apps/api/tests/test_contracts.py` — 23 passed.
-- Focused Playwright case-picker regression — 1 passed. It confirms that the second case is viewer-only, never requests its prediction artifact, and the first case retains its selected ROI after switching away and back.
+- Focused Playwright case-picker regression — passed; confirms the enabled comparison label and case-scoped artifact requests.
 - `npm run lint` — passed.
 - `npm run typecheck` — passed.
+- `npm test` — 42 passed across 12 files.
 - `npm run build` — passed. Existing vtk.js chunk-size and React Compiler directive warnings remain.
 - `npm run contracts:check` — passed against the backend route/schema export.
 - `bash -n scripts/start_local.sh` and `git diff --check` — passed.
-- Against the installed authentic local sources, the actual `pt_241` case rendered at 1440×900, 768×1024, and 390×844. Each viewport showed the viewer-only state and case picker, returned no browser errors, and had no horizontal overflow. Captures are in ignored `.local-review/DOSETWIN-TWO-CASE/` and are intentionally not committed with the source datasets.
+- Against the installed authentic local sources, the actual `pt_241` case rendered at 1440×900, 768×1024, and 390×844. The source and comparison workspace rendered at all three viewports; the actual imported `prediction-set_1.csv`, seven ROI comparisons, and provenance details were visible with no browser errors or horizontal overflow. Captures are in ignored `.local-review/DOSETWIN-TWO-CASE/` and are intentionally not committed with the source datasets.
 
 ## Open in the local review checkout
 
@@ -39,6 +39,6 @@ The case picker composes the project's existing generated shadcn Base Nova `Sele
 ./scripts/start_local.sh
 ```
 
-Open <http://127.0.0.1:5173/studio/dosetwin/cases/current> and select `pt_241` in **DoseTwin source case**. The direct route is <http://127.0.0.1:5173/studio/dosetwin/cases/openkbp%3Apt_241>. This default launcher exposes `pt_241` only if its local source files exist. For the authentic matched prediction import and comparison, follow the separate launcher instructions in [`LOCAL_ACCESS_AND_PROFILES.md`](../LOCAL_ACCESS_AND_PROFILES.md).
+Open <http://127.0.0.1:5173/studio/dosetwin/cases/current> and select `pt_241` in **DoseTwin source case**. The direct route is <http://127.0.0.1:5173/studio/dosetwin/cases/openkbp%3Apt_241>. Expand **Compare a real prediction**, choose the local `prediction-set_1.csv`, leave the unpublished checkpoint hash blank, enter the pinned OpenKBP-Opt source/model revision and the operator's local research-use basis, then confirm and import. The grid is checked before comparison. Setup, provenance details, and the isolated launcher are in [`LOCAL_ACCESS_AND_PROFILES.md`](../LOCAL_ACCESS_AND_PROFILES.md).
 
 The local Academy/Educator username and password setup is documented in [`LOCAL_ACCESS_AND_PROFILES.md`](../LOCAL_ACCESS_AND_PROFILES.md); each reviewer provisions their own student and educator accounts. No default credentials are seeded or included in Git.

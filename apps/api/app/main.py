@@ -1,6 +1,6 @@
 """Local-only reference API. NOT a healthcare system or production auth implementation.
 
-Endpoints backed by real OpenKBP CSV data only when MEDFORGE_OPENKBP_CASE_DIR is configured.
+Endpoints backed by real OpenKBP CSV data only when a trusted local case directory is configured.
 With MEDFORGE_SOURCE_KIND=synthetic-test, only synthetic test data are used.
 Provisioned local educator/student sessions protect selected learning endpoints. General
 research API authorization and production identity are not implemented. Research model execution
@@ -100,15 +100,9 @@ def _case_root() -> Path | None:
     raw=os.environ.get('MEDFORGE_OPENKBP_CASE_DIR','').strip()
     return Path(raw).expanduser().resolve() if raw else None
 
-def _configured_case_roots() -> dict[str,Path]:
-    """Trusted, local operator allowlist for additional read-only OpenKBP cases.
-
-    MEDFORGE_OPENKBP_CASES_JSON is a JSON object mapping a stable case ID to a
-    local directory. Request values are only looked up as keys; they are never
-    interpreted as paths. The legacy MEDFORGE_OPENKBP_CASE_DIR remains the
-    default fully enabled case.
-    """
-    raw=os.environ.get('MEDFORGE_OPENKBP_CASES_JSON','').strip()
+def _configured_openkbp_roots(env_name:str) -> dict[str,Path]:
+    """Parse a trusted local case map; request identifiers are never filesystem paths."""
+    raw=os.environ.get(env_name,'').strip()
     if not raw:
         return {}
     try:
@@ -119,33 +113,56 @@ def _configured_case_roots() -> dict[str,Path]:
         return {}
     roots={}
     default_root=_case_root()
+    default_id=_case_id()
     for case_id,directory in configured.items():
         if (not isinstance(case_id,str) or
             not re.fullmatch(r'openkbp:[A-Za-z0-9][A-Za-z0-9_.-]{0,79}',case_id) or
+            case_id==default_id or
             not isinstance(directory,str) or not directory.strip()):
             continue
         try:
             root=Path(directory).expanduser().resolve()
         except (OSError,RuntimeError):
             continue
-        # Avoid ambiguous identity if an allowlist aliases the legacy profile.
         if default_root is not None and root==default_root:
             continue
         if root.is_dir() and all((root/name).is_file() for name in ('ct.csv','dose.csv','possible_dose_mask.csv','voxel_dimensions.csv')):
             roots[case_id]=root
     return roots
 
+def _configured_case_roots() -> dict[str,Path]:
+    """Trusted local profiles limited to read-only scientific viewing."""
+    return _configured_openkbp_roots('MEDFORGE_OPENKBP_CASES_JSON')
+
+def _configured_full_case_roots() -> dict[str,Path]:
+    """Trusted local profiles enabled for case-bound runs and dose comparisons."""
+    return _configured_openkbp_roots('MEDFORGE_OPENKBP_FULL_CASES_JSON')
+
 def _case_entry(case_id:str) -> tuple[Path,str,bool] | None:
-    """Return (root, stable ID, fully_enabled) for a configured local case."""
-    legacy=_case_response()
-    if legacy is not None and legacy.id==case_id:
-        root=_case_root()
-        if root is not None:
-            return root,legacy.id,True
-    root=_configured_case_roots().get(case_id)
-    if root is not None:
-        return root,case_id,False
+    """Return (root, stable ID, full case capability) for a configured source."""
+    legacy_id=_case_id()
+    legacy_root=_case_root()
+    if legacy_id==case_id and legacy_root is not None:
+        return legacy_root,legacy_id,True
+    full_root=_configured_full_case_roots().get(case_id)
+    if full_root is not None:
+        return full_root,case_id,True
+    viewer_root=_configured_case_roots().get(case_id)
+    if viewer_root is not None:
+        return viewer_root,case_id,False
     return None
+
+def _all_openkbp_case_entries() -> dict[str,tuple[Path,str,bool]]:
+    entries={}
+    default_id=_case_id()
+    default_root=_case_root()
+    if default_id is not None and default_root is not None:
+        entries[default_id]=(default_root,default_id,True)
+    for mapping,fully_enabled in ((_configured_full_case_roots(),True),(_configured_case_roots(),False)):
+        for case_id,root in mapping.items():
+            if case_id not in entries:
+                entries[case_id]=(root,case_id,fully_enabled)
+    return entries
 
 def _case_record(case_id:str,root:Path,*,fully_enabled:bool) -> Case:
     status='ready' if fully_enabled else 'blocked'
@@ -159,6 +176,13 @@ def _expect_viewer_case(case_id:str) -> tuple[Case,Path]:
         raise HTTPException(status_code=404,detail={'code':'CASE_NOT_INSTALLED','message':'No installed case matching this ID','action':'Configure MEDFORGE_OPENKBP_CASE_DIR or the trusted MEDFORGE_OPENKBP_CASES_JSON allowlist'})
     root,stable_id,fully_enabled=entry
     return _case_record(stable_id,root,fully_enabled=fully_enabled),root
+
+def _expect_enabled_case(case_id:str) -> tuple[Case,Path]:
+    entry=_case_entry(case_id)
+    if entry is None or not entry[2]:
+        raise HTTPException(status_code=404,detail={'code':'CASE_NOT_ENABLED','message':'This case is not enabled for runs, prediction import, comparison, and evidence reports','action':'Configure the case in MEDFORGE_OPENKBP_FULL_CASES_JSON after verifying its data and use basis'})
+    root,stable_id,_=entry
+    return _case_record(stable_id,root,fully_enabled=True),root
 
 def _source_kind() -> str:
     value=os.environ.get('MEDFORGE_SOURCE_KIND','benchmark')
@@ -256,13 +280,17 @@ def init_db():
                         ('cvs-adaptnet-checkpoint-v1',CVS_MODEL_ID,'models/cvs-adaptnet/CVSAdaptNet.pth',artifact['sha256'],'checkpoint',1))
             except (OSError,ValueError,TypeError):
                 pass
-        if _case_id():
+        openkbp_cases=_all_openkbp_case_entries()
+        if openkbp_cases:
             c.execute('INSERT OR IGNORE INTO datasets(id,name,modality,source_url,license_label) VALUES (?,?,?,?,?)',
                 ('openkbp','OpenKBP','radiotherapy-volume',SOURCE_URL,'Dataset rights require independent review'))
             c.execute('INSERT OR IGNORE INTO dataset_versions(id,dataset_id,version) VALUES (?,?,?)',
                 ('openkbp-public','openkbp','public-source'))
-            c.execute('INSERT OR IGNORE INTO cases(id,module,dataset_version_id,external_case_id,partition_name,reference_kind,status) VALUES (?,?,?,?,?,?,?)',
-                (_case_id(),'dosetwin','openkbp-public',_case_root().name,None,_source_kind(),'ready'))
+            for case_id,(case_root,_,fully_enabled) in openkbp_cases.items():
+                c.execute('''INSERT INTO cases(id,module,dataset_version_id,external_case_id,partition_name,reference_kind,status) VALUES (?,?,?,?,?,?,?)
+                    ON CONFLICT(id) DO UPDATE SET module=excluded.module,dataset_version_id=excluded.dataset_version_id,
+                        external_case_id=excluded.external_case_id,reference_kind=excluded.reference_kind,status=excluded.status''',
+                    (case_id,'dosetwin','openkbp-public',case_root.name,None,_source_kind(),'ready' if fully_enabled else 'blocked'))
 
 def _case_response() -> Case | None:
     cid=_case_id()
@@ -271,10 +299,7 @@ def _case_response() -> Case | None:
                 reference_kind=_source_kind(),status='ready',label='OpenKBP '+_case_root().name)
 
 def _expect_case(cid:str) -> Case:
-    case=_case_response()
-    if case is None or case.id!=cid:
-        raise HTTPException(status_code=404,detail={'code':'CASE_NOT_INSTALLED','message':'No installed case matching this ID','action':'Configure MEDFORGE_OPENKBP_CASE_DIR with authorized input files'})
-    return case
+    return _expect_enabled_case(cid)[0]
 
 def _ensure_learning_case(conn:sqlite3.Connection, case:Case) -> None:
     dataset_id=''.join(ch.lower() if ch.isalnum() else '-' for ch in case.dataset_id).strip('-')
@@ -511,21 +536,20 @@ def create_app() -> FastAPI:
 
     @app.get('/api/v1/modules',response_model=list[ModuleStatus])
     def modules():
-        ready=_case_id() is not None
+        openkbp_cases=_all_openkbp_case_entries()
+        ready=bool(openkbp_cases)
         surgical_cases=_endoscapes_cases()
         surgical_ready=bool(surgical_cases)
         fistula_records=_fisav.installed_records()
         fistula_ready=bool(fistula_records)
         return [
             ModuleStatus(id='surgivision',capability_state='ready' if surgical_ready else 'requires-setup',detail=f'{len(surgical_cases)} annotated Endoscapes frames and 1 fps sampled sequences; {"a separately licensed Appendix300 excerpt is installed" if _appendix300.clip_record() else "no continuous surgical clip is installed"}' if surgical_ready else 'Set MEDFORGE_ENDOSCAPES_ROOT to a verified local research sample'),
-            ModuleStatus(id='dosetwin',capability_state='ready' if ready else 'requires-setup',detail=('OpenKBP local case summary available' if ready else 'Set MEDFORGE_OPENKBP_CASE_DIR') + (f'; {len(_configured_case_roots())} additional viewer-only case profile(s), analysis and imports disabled' if _configured_case_roots() else '')),
+            ModuleStatus(id='dosetwin',capability_state='ready' if ready else 'requires-setup',detail=('OpenKBP local case summary available' if ready else 'Set MEDFORGE_OPENKBP_CASE_DIR') + (f'; {sum(1 for _,_,enabled in openkbp_cases.values() if enabled)} case(s) fully enabled, {sum(1 for _,_,enabled in openkbp_cases.values() if not enabled)} viewer-only case(s)' if openkbp_cases else '')),
             ModuleStatus(id='fistulaguard',capability_state='ready' if fistula_ready else 'requires-setup',detail=f'Source-verified FiSaV CSV cohort available ({len(fistula_records)} recordings); no classifier is enabled' if fistula_ready else 'Set MEDFORGE_FISAV_ROOT to a verified local FiSaV research sample')]
 
     @app.get('/api/v1/cases',response_model=list[Case])
     def list_cases():
-        case=_case_response()
-        rows=[case] if case else []
-        rows.extend(_case_record(case_id,root,fully_enabled=False) for case_id,root in sorted(_configured_case_roots().items()))
+        rows=[_case_record(case_id,root,fully_enabled=enabled) for case_id,(root,_,enabled) in sorted(_all_openkbp_case_entries().items())]
         rows.extend(_endoscapes_cases())
         rows.extend(_fisav.installed_records())
         return rows
@@ -921,7 +945,7 @@ def create_app() -> FastAPI:
     async def import_dose_artifact(case_id:str,request:Request,file_name:str=Query(...,min_length=1,max_length=200)):
         """Install a user-supplied, same-grid prediction CSV for local research comparison."""
         _reject_student_dose_prediction_access(request.headers.get('authorization'))
-        case=_expect_case(case_id)
+        case,case_root=_expect_enabled_case(case_id)
         if _source_kind()=='synthetic-test':
             raise HTTPException(422,detail={'code':'SYNTHETIC_REFERENCE_BLOCKED','message':'A synthetic test fixture cannot receive a research dose prediction'})
         if request.headers.get('content-type','').split(';',1)[0].strip().lower() not in ('text/csv','application/csv','application/octet-stream'):
@@ -955,7 +979,7 @@ def create_app() -> FastAPI:
             if request.headers.get('x-dose-array-shape','').strip()!='128,128,128':
                 raise ValueError('Dose array shape must match the installed OpenKBP grid: 128,128,128')
             spacing=parse_spacing(request.headers.get('x-dose-spacing-mm',''))
-            reference_spacing=np.loadtxt(_case_root()/'voxel_dimensions.csv',dtype=np.float64).reshape(-1)
+            reference_spacing=np.loadtxt(case_root/'voxel_dimensions.csv',dtype=np.float64).reshape(-1)
             if reference_spacing.shape!=(3,) or not np.allclose(spacing,reference_spacing,rtol=0,atol=1e-6):
                 raise ValueError('Dose spacing does not match the installed case spacing')
             content_length=request.headers.get('content-length')
@@ -1013,14 +1037,14 @@ def create_app() -> FastAPI:
              responses={404:{'model':ApiError},422:{'model':ApiError}})
     def dose_artifact_slice(case_id:str,artifact_id:str,axis:int=Query(2,ge=0,le=2),index:int=Query(64,ge=0,lt=128),authorization:str|None=Header(default=None)):
         _reject_student_dose_prediction_access(authorization)
-        case=_expect_case(case_id);row=_stored_dose_artifact(artifact_id)
+        case,case_root=_expect_enabled_case(case_id);row=_stored_dose_artifact(artifact_id)
         if row is None or row[1]!=case.id:
             raise HTTPException(404,detail={'code':'DOSE_ARTIFACT_UNKNOWN','message':'No imported dose artifact belongs to this case'})
-        reference_path=_case_root()/'dose.csv';artifact_path=(_dose_artifact_root()/row[17]).resolve()
+        reference_path=case_root/'dose.csv';artifact_path=(_dose_artifact_root()/row[17]).resolve()
         if artifact_path.parent!=_dose_artifact_root() or not artifact_path.is_file():
             raise HTTPException(404,detail={'code':'DOSE_ARTIFACT_MISSING','message':'The local dose artifact is no longer installed'})
         try:
-            reference=_read_cached_volume(str(_case_root()),'dose.csv',reference_path.stat().st_size,reference_path.stat().st_mtime_ns)
+            reference=_read_cached_volume(str(case_root),'dose.csv',reference_path.stat().st_size,reference_path.stat().st_mtime_ns)
             prediction=validate_prediction(artifact_path)
             reference_plane=np.take(reference,index,axis=axis)
             prediction_plane=np.take(prediction,index,axis=axis)
@@ -1040,22 +1064,22 @@ def create_app() -> FastAPI:
              responses={404:{'model':ApiError},422:{'model':ApiError}})
     def dose_artifact_comparison(case_id:str,artifact_id:str,authorization:str|None=Header(default=None)):
         _reject_student_dose_prediction_access(authorization)
-        case=_expect_case(case_id);row=_stored_dose_artifact(artifact_id)
+        case,case_root=_expect_enabled_case(case_id);row=_stored_dose_artifact(artifact_id)
         if row is None or row[1]!=case.id:
             raise HTTPException(404,detail={'code':'DOSE_ARTIFACT_UNKNOWN','message':'No imported dose artifact belongs to this case'})
-        reference_path=_case_root()/'dose.csv';artifact_path=(_dose_artifact_root()/row[17]).resolve()
+        reference_path=case_root/'dose.csv';artifact_path=(_dose_artifact_root()/row[17]).resolve()
         if artifact_path.parent!=_dose_artifact_root() or not artifact_path.is_file():
             raise HTTPException(404,detail={'code':'DOSE_ARTIFACT_MISSING','message':'The local dose artifact is no longer installed'})
         try:
-            reference=_read_cached_volume(str(_case_root()),'dose.csv',reference_path.stat().st_size,reference_path.stat().st_mtime_ns)
+            reference=_read_cached_volume(str(case_root),'dose.csv',reference_path.stat().st_size,reference_path.stat().st_mtime_ns)
             prediction=validate_prediction(artifact_path)
-            spacing=np.loadtxt(_case_root()/'voxel_dimensions.csv',dtype=np.float64).reshape(-1)
+            spacing=np.loadtxt(case_root/'voxel_dimensions.csv',dtype=np.float64).reshape(-1)
             rows=[]
             for roi in ('Brainstem','SpinalCord','RightParotid','LeftParotid','Esophagus','Larynx','Mandible','PTV56','PTV63','PTV70'):
-                mask_path=_case_root()/f'{roi}.csv'
+                mask_path=case_root/f'{roi}.csv'
                 if not mask_path.is_file():
                     continue
-                mask=_read_cached_volume(str(_case_root()),mask_path.name,mask_path.stat().st_size,mask_path.stat().st_mtime_ns).astype(bool,copy=False)
+                mask=_read_cached_volume(str(case_root),mask_path.name,mask_path.stat().st_size,mask_path.stat().st_mtime_ns).astype(bool,copy=False)
                 if not np.any(mask):
                     continue
                 rows.append({'roi':roi,**comparison_for_roi(reference,prediction,mask,spacing)})
@@ -1073,7 +1097,7 @@ def create_app() -> FastAPI:
        ModelRecord(id='cvs-adaptnet',module='surgivision',name='CVS-AdaptNet',operation_ids=['cvs.inference'],upstream_url='https://github.com/CAMMA-public/CVS-AdaptNet',source_revision=CVS_MODEL_REVISION,source_license='CVS-AdaptNet code: CC BY-NC-SA 4.0; checkpoint-specific terms require review',readiness='ready' if not cvs_blockers else 'blocked',details='Pinned CUDA worker completed authentic Endoscapes val inference on 409 records (AP C1/C2/C3: 0.4964/0.5024/0.5005). A source-bound frame inference and persisted-run adapter is integrated. It remains blocked until an independently verified checkpoint SHA-256 and checkpoint-specific research-use terms are supplied. The val split includes 38 file names with identical all-black content; this is not clinical validation.'),
        ModelRecord(id='surgical-latentgraph',module='surgivision',name='SurgLatentGraph architectures',operation_ids=['surgical.detection','surgical.segmentation','surgical.phase','surgical.triplet'],upstream_url='https://github.com/CAMMA-public/SurgLatentGraph',source_revision='8e521f07ffe431926ae00f273dce649ebf0cdbfa',source_license='Not verified; review repository and checkpoint terms',readiness='unverified',details='Detection, segmentation, CVS, phase and triplet source families are inventoried; complete checkpoints and runtime are not verified.'),
        ModelRecord(id='openkbp-baseline',module='dosetwin',name='OpenKBP prediction baseline',operation_ids=['dose.prediction'],upstream_url=SOURCE_URL,source_revision='ce625e62f3b04203f22bd9d1634f3e8fb0245e46',source_license='MIT for repository code; dataset terms require separate review',readiness='unverified',details='Training/evaluation source is available; prediction weights and runtime are not verified.'),
-       ModelRecord(id='openkbp-opt-archives',module='dosetwin',name='OpenKBP-Opt archived predictions',operation_ids=['dose.comparison'],upstream_url='https://github.com/ababier/open-kbp-opt',source_revision='16fbe0dbc64c94ed4b7e8378a090b47c6596bbd7',source_license='MIT for repository code; archive data terms not established',readiness='blocked',details='The 9.49 GiB author-hosted core-data.zip displayed a Malware detected warning on OneDrive (2026-10-09). No archive was downloaded; require maintainer-confirmed integrity and data-use terms before enabling same-case comparisons.'),
+       ModelRecord(id='openkbp-opt-archives',module='dosetwin',name='OpenKBP-Opt archived predictions',operation_ids=['dose.comparison'],upstream_url='https://github.com/ababier/open-kbp-opt',source_revision='16fbe0dbc64c94ed4b7e8378a090b47c6596bbd7',source_license='MIT for repository code; archive data terms not established',readiness='blocked',details='A selected pt_241 reference/prediction pair was ETag-range-extracted and verified by source ZIP CRC/size, Git blob metadata and SHA-256; the 10.19 GB archive was not retained. Its set_1 array is installed locally for the authentic pt_241 same-grid comparison workflow, with a user-declared rights basis. No prediction checkpoint/hash or separate clinical-array license was published; this archived output is not an executable model.'),
        ModelRecord(id='openkbp-opt-optimizer',module='dosetwin',name='OpenKBP-Opt planning optimizer',operation_ids=['dose.optimization'],upstream_url='https://github.com/ababier/open-kbp-opt',source_revision='16fbe0dbc64c94ed4b7e8378a090b47c6596bbd7',source_license='MIT for repository code; data and solver terms require review',readiness='missing-dataset',details='Reference inputs are not installed; upstream scripts require a compatible OR-Tools solver and were tested with licensed Gurobi. No optimization run is available.'),
        ModelRecord(id='portpy-planning',module='dosetwin',name='PortPy planning research',operation_ids=['dose.imrt','dose.vmat','dose.evaluation'],upstream_url='https://github.com/PortPy-Project/PortPy',source_revision='bd4d881917164e5929326598c6b4795ce6510132',source_license='Apache-2.0 with Commons Clause; review before use',readiness='blocked',details='PortPy data adapters, influence matrices and solver worker are not installed. Its license restricts commercial use; compatibility and permitted deployment need review.'),
        ModelRecord(id='fistula-baseline',module='fistulaguard',name='Research signal-analysis utilities',operation_ids=['acoustic.features','acoustic.classification'],upstream_url='https://www.nature.com/articles/s41597-026-08242-8',source_revision='Not a model checkpoint; MEDFORGE signal methods are local',source_license='FiSaV source data: CC BY 4.0; no classifier weights',readiness='unverified',details='The complete 59-recording CSV cohort supports measured waveform and PSD review; no stenosis classifier or patient-disjoint validation is implemented.')]
@@ -1194,8 +1218,7 @@ def create_app() -> FastAPI:
             return RunRecord(id=run_id,case_id=case.id,operation_id=request.operation_id,status=status,
                 source_kind=case.reference_kind,results=result,provenance=provenance,failure_code=failure_code)
 
-        case=_expect_case(request.case_id)
-        root=_case_root()
+        case,root=_expect_enabled_case(request.case_id)
         try:
             summary=validate_case(root)
         except Exception as e:
@@ -1211,7 +1234,7 @@ def create_app() -> FastAPI:
                     provenance=json.loads(existing[3]) if existing[3] else {},failure_code=existing[4])
             run_id='run_'+uuid.uuid4().hex
             provenance={'dataset':'OpenKBP','source_url':SOURCE_URL,'input_sha256':file_hashes,
-                'source_revision':_source_revision(),
+                'source_revision':_source_revision_for_root(root),
                 'algorithm':'MEDFORGE reference sparse case summary v0.8',
                 'reference_kind':case.reference_kind,
                 'clinical_use':'not validated; research/education only',
@@ -1289,7 +1312,7 @@ def create_app() -> FastAPI:
     @app.post('/api/v1/reports/dosetwin-comparison',response_model=ReportRecord,
               responses={404:{'model':ApiError},422:{'model':ApiError}})
     def create_dose_comparison_report(request:DoseTwinComparisonReportCreateRequest):
-        case=_expect_case(request.case_id)
+        case,case_root=_expect_enabled_case(request.case_id)
         row=_stored_dose_artifact(request.artifact_id)
         if row is None or row[1]!=case.id:
             raise HTTPException(status_code=404,detail={'code':'DOSE_ARTIFACT_UNKNOWN','message':'No imported dose artifact belongs to this case'})
@@ -1300,7 +1323,7 @@ def create_app() -> FastAPI:
             'generated_at_utc':None,
             'case':{'id':case.id,'dataset_id':case.dataset_id,'source_case_id':case.source_case_id,'reference_kind':case.reference_kind},
             'analysis':{'operation_id':'dose.comparison','status':'completed','method':'Voxelwise same-grid comparison with per-ROI dose-volume summaries'},
-            'source':{'repository':SOURCE_URL,'revision':_source_revision(),'files_sha256':{'reference:dose.csv':comparison.reference_dose_sha256,
+            'source':{'repository':SOURCE_URL,'revision':_source_revision_for_root(case_root),'files_sha256':{'reference:dose.csv':comparison.reference_dose_sha256,
                 f'prediction:{comparison.artifact.source_file_name}':comparison.artifact.source_file_sha256},
                 'prediction_source_revision':comparison.artifact.source_revision,
                 'model_revision':comparison.artifact.model_revision,'checkpoint_sha256':comparison.artifact.checkpoint_sha256,

@@ -61,8 +61,9 @@ def test_model_registry_exposes_source_versions_licenses_and_asset_gate(client):
     assert 'not clinical validation' in cvs['details']
     archived=models['openkbp-opt-archives']
     assert archived['readiness']=='blocked'
-    assert 'Malware detected' in archived['details']
-    assert 'data-use terms' in archived['details']
+    assert 'pt_241 reference/prediction pair' in archived['details']
+    assert 'archive was not retained' in archived['details']
+    assert 'not an executable model' in archived['details']
     assert models['portpy-planning']['source_license'].startswith('Apache-2.0 with Commons Clause')
 
 
@@ -732,8 +733,8 @@ def test_dvh_endpoint_calculates_fixture_curve_and_provenance(client):
     assert result['source_kind']=='synthetic-test'
 
 
-def test_trusted_allowlisted_dosetwin_case_is_viewer_only_and_root_isolation(monkeypatch,tmp_path):
-    """Alternating case requests never reuse another case's data or identity."""
+def test_trusted_dosetwin_case_profiles_isolate_runs_predictions_and_reports(monkeypatch,tmp_path):
+    """Full and read-only profiles retain separate source roots and artifact ownership."""
     case_a=tmp_path/'test-synthetic-case'
     case_a.mkdir()
     (case_a/'voxel_dimensions.csv').write_text('2.0\n2.0\n2.0\n',encoding='utf8')
@@ -748,9 +749,17 @@ def test_trusted_allowlisted_dosetwin_case_is_viewer_only_and_root_isolation(mon
     _sparse(case_b/'dose.csv',[(0,70),(2,90),(4,120)])
     _sparse(case_b/'possible_dose_mask.csv',[(0,0),(2,0),(4,0)],binary=True)
     _sparse(case_b/'Brainstem.csv',[(0,0),(2,0)],binary=True)
+    case_c=tmp_path/'case-c'
+    case_c.mkdir()
+    (case_c/'voxel_dimensions.csv').write_text('4.0\n4.0\n3.0\n',encoding='utf8')
+    _sparse(case_c/'ct.csv',[(0,900)])
+    _sparse(case_c/'dose.csv',[(0,140)])
+    _sparse(case_c/'possible_dose_mask.csv',[(0,0)],binary=True)
+    _sparse(case_c/'Brainstem.csv',[(0,0)],binary=True)
     (case_a/'medforge-source-manifest.json').write_text(json.dumps({'upstream_commit':'1'*40}),encoding='utf8')
     (case_b/'medforge-source-manifest.json').write_text(json.dumps({'upstream_commit':'2'*40}),encoding='utf8')
-    monkeypatch.setenv('MEDFORGE_OPENKBP_CASES_JSON',json.dumps({'openkbp:case-b':str(case_b)}))
+    monkeypatch.setenv('MEDFORGE_OPENKBP_FULL_CASES_JSON',json.dumps({'openkbp:case-b':str(case_b)}))
+    monkeypatch.setenv('MEDFORGE_OPENKBP_CASES_JSON',json.dumps({'openkbp:case-c':str(case_c)}))
     monkeypatch.setenv('MEDFORGE_OPENKBP_CASE_DIR',str(case_a))
     monkeypatch.setenv('MEDFORGE_DB_PATH',str(tmp_path/'case-registry.sqlite3'))
     monkeypatch.setenv('MEDFORGE_SOURCE_KIND','synthetic-test')
@@ -759,10 +768,12 @@ def test_trusted_allowlisted_dosetwin_case_is_viewer_only_and_root_isolation(mon
     cases={item['id']:item for item in api.get('/api/v1/cases').json() if item['module']=='dosetwin'}
     id_a='openkbp:'+case_a.name
     id_b='openkbp:case-b'
+    id_c='openkbp:case-c'
     assert cases[id_a]['status']=='ready'
-    assert cases[id_b]['status']=='blocked'
-    assert 'viewer only' in cases[id_b]['label']
-    assert '1 additional viewer-only case profile' in next(item for item in api.get('/api/v1/modules').json() if item['id']=='dosetwin')['detail']
+    assert cases[id_b]['status']=='ready'
+    assert cases[id_c]['status']=='blocked'
+    assert 'viewer only' in cases[id_c]['label']
+    assert '2 case(s) fully enabled, 1 viewer-only case(s)' in next(item for item in api.get('/api/v1/modules').json() if item['id']=='dosetwin')['detail']
 
     # Interleave all supported reads to exercise both decoded-volume and slice caches.
     for cid,spacing,first_dose,source_revision in (
@@ -798,12 +809,84 @@ def test_trusted_allowlisted_dosetwin_case_is_viewer_only_and_root_isolation(mon
         assert dvh['source_kind']=='synthetic-test'
         assert dvh['origin']=='computed-from-synthetic-test-fixture'
 
+    run_b=api.post('/api/v1/runs',json={'case_id':id_b,'operation_id':'openkbp.case_summary'})
+    assert run_b.status_code==200,run_b.text
+    assert run_b.json()['case_id']==id_b
+    assert run_b.json()['results']['case']=='case-b'
+    assert run_b.json()['provenance']['source_revision']=='2'*40
+    assert hashlib.sha256((case_b/'dose.csv').read_bytes()).hexdigest()==run_b.json()['provenance']['input_sha256']['dose.csv']
+    run_a=api.post('/api/v1/runs',json={'case_id':id_a,'operation_id':'openkbp.case_summary'})
+    assert run_a.status_code==200 and run_a.json()['case_id']==id_a
+    assert run_a.json()['provenance']['source_revision']=='1'*40
+    assert api.get('/api/v1/runs/'+run_b.json()['id']).json()['case_id']==id_b
+
     unknown=api.get('/api/v1/cases/openkbp:unlisted/viewer-manifest')
     assert unknown.status_code==404 and unknown.json()['detail']['code']=='CASE_NOT_INSTALLED'
     unknown_case=api.get('/api/v1/cases/openkbp:unlisted')
     assert unknown_case.status_code==404
-    blocked_run=api.post('/api/v1/runs',json={'case_id':id_b,'operation_id':'openkbp.case_summary'})
-    assert blocked_run.status_code==404
+    blocked_run=api.post('/api/v1/runs',json={'case_id':id_c,'operation_id':'openkbp.case_summary'})
+    assert blocked_run.status_code==404 and blocked_run.json()['detail']['code']=='CASE_NOT_ENABLED'
+    assert api.get(f'/api/v1/cases/{id_c}/dose-artifacts').status_code==404
+
+    # The upload action remains a user-confirmed, same-case import. Switch the
+    # synthetic guard off only for this contract exercise; the generated arrays
+    # above remain test fixtures and do not represent real benchmark results.
+    monkeypatch.setenv('MEDFORGE_SOURCE_KIND','benchmark')
+    monkeypatch.setenv('MEDFORGE_DOSE_ARTIFACT_DIR',str(tmp_path/'dose-artifacts'))
+    prediction=b',data\n0,75\n2,95\n4,125\n'
+    prediction_hash=hashlib.sha256(prediction).hexdigest()
+    headers={
+        'Content-Type':'text/csv','X-Dose-Origin':'archived_model_prediction',
+        'X-Dose-Model-Revision':'test archived release','X-Dose-Source-Revision':'test prediction release',
+        'X-Dose-Rights-Basis':'Synthetic contract test only; no source rights claim',
+        'X-Dose-Source-Case':id_b,'X-Dose-Rights-Confirmed':'true','X-Dose-Unit':'Gy',
+        'X-Dose-Index-Convention':'x-major-y-middle-z-fastest','X-Dose-Array-Shape':'128,128,128',
+        'X-Dose-Spacing-MM':'3,3,2.5','X-Dose-File-SHA256':prediction_hash,
+    }
+    wrong_case={**headers,'X-Dose-Source-Case':id_a}
+    rejected_identity=api.put(f'/api/v1/cases/{id_b}/dose-artifacts?file_name=prediction.csv',content=prediction,headers=wrong_case)
+    assert rejected_identity.status_code==422
+    wrong_spacing={**headers,'X-Dose-Spacing-MM':'2,2,2'}
+    rejected_grid=api.put(f'/api/v1/cases/{id_b}/dose-artifacts?file_name=prediction.csv',content=prediction,headers=wrong_spacing)
+    assert rejected_grid.status_code==422
+    assert 'SYNTHETIC_REFERENCE_BLOCKED' != rejected_grid.json()['detail']['code']
+    imported=api.put(f'/api/v1/cases/{id_b}/dose-artifacts?file_name=prediction.csv',content=prediction,headers=headers)
+    assert imported.status_code==200,imported.text
+    artifact=imported.json()
+    artifact_id=artifact['id']
+    assert artifact['case_id']==id_b and artifact['source_case_id']==id_b
+    assert artifact['spacing_mm']==[3.0,3.0,2.5]
+    assert artifact['source_file_sha256']==prediction_hash
+    assert api.get(f'/api/v1/cases/{id_b}/dose-artifacts').json()[0]['id']==artifact_id
+    assert api.get(f'/api/v1/cases/{id_a}/dose-artifacts').json()==[]
+    assert api.get(f'/api/v1/cases/{id_a}/dose-artifacts/{artifact_id}/comparison').status_code==404
+    assert api.get(f'/api/v1/cases/{id_a}/dose-artifacts/{artifact_id}/slice').status_code==404
+
+    slice_b=api.get(f'/api/v1/cases/{id_b}/dose-artifacts/{artifact_id}/slice?axis=2&index=0')
+    assert slice_b.status_code==200,slice_b.text
+    assert slice_b.json()['reference_gy'][0]==70
+    assert slice_b.json()['prediction_gy'][0]==75
+    assert slice_b.json()['delta_gy'][0]==5
+    comparison=api.get(f'/api/v1/cases/{id_b}/dose-artifacts/{artifact_id}/comparison')
+    assert comparison.status_code==200,comparison.text
+    assert comparison.json()['case_id']==id_b
+    assert comparison.json()['roi_comparisons'][0]['reference_mean_gy']==80
+    assert comparison.json()['roi_comparisons'][0]['prediction_mean_gy']==85
+    assert comparison.json()['roi_comparisons'][0]['mean_delta_gy']==5
+
+    report=api.post('/api/v1/reports/dosetwin-comparison',json={
+        'case_id':id_b,'artifact_id':artifact_id,'roi':'Brainstem','axis':2,'index':0,
+    })
+    assert report.status_code==200,report.text
+    saved=report.json()
+    assert saved['case_id']==id_b
+    assert saved['document']['source']['revision']=='2'*40
+    assert saved['document']['source']['files_sha256']['reference:dose.csv']==hashlib.sha256((case_b/'dose.csv').read_bytes()).hexdigest()
+    assert saved['document']['source']['files_sha256']['prediction:prediction.csv']==prediction_hash
+    assert api.get('/api/v1/reports/'+saved['id']).json()['document']==saved['document']
+    assert api.post('/api/v1/reports/dosetwin-comparison',json={
+        'case_id':id_a,'artifact_id':artifact_id,'roi':'Brainstem','axis':2,'index':0,
+    }).status_code==404
 
 
 def test_endoscapes_frame_requires_matching_local_hashes_and_keeps_identity(monkeypatch,tmp_path):

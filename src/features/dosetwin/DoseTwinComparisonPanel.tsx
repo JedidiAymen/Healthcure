@@ -56,6 +56,7 @@ export function DoseTwinComparisonPanel({caseId,roi,axis,index,spacingMm}:{caseI
  const [saving,setSaving]=useState(false)
  const [savedReport,setSavedReport]=useState<string|null>(null)
  const artifacts=useQuery({queryKey:['doseArtifacts',caseId],queryFn:()=>api.doseArtifacts(caseId),staleTime:15_000})
+ const artifactOptions=useMemo(()=>artifacts.data?.map(item=>({value:item.id,label:`${item.source_file_name} · ${item.model_revision}`}))??[],[artifacts.data])
  const chosenId=artifactId||artifacts.data?.[0]?.id||''
  const comparison=useQuery({queryKey:['doseArtifactComparison',caseId,chosenId],queryFn:()=>api.doseArtifactComparison(caseId,chosenId),enabled:Boolean(chosenId),staleTime:30_000})
  const slice=useQuery({queryKey:['doseArtifactSlice',caseId,chosenId,axis,index],queryFn:()=>api.doseArtifactSlice(caseId,chosenId,axis,index),enabled:Boolean(chosenId),staleTime:10_000})
@@ -109,7 +110,7 @@ export function DoseTwinComparisonPanel({caseId,roi,axis,index,spacingMm}:{caseI
      <Button type="submit" disabled={saving||!file||!rightsConfirmed} className="w-full">{saving?<LoaderCircle className="animate-spin" data-icon="inline-start"/>:<FileUp data-icon="inline-start"/>}{saving?'Validating source grid…':'Validate and add prediction'}</Button>
     </form>
     <div className="grid content-start gap-3">
-     <Field><FieldLabel htmlFor="dose-artifact-choice">Installed predictions for this case</FieldLabel><Select value={chosenId} onValueChange={value=>setArtifactId(value??'')}><SelectTrigger id="dose-artifact-choice" aria-label="Select imported dose prediction"><SelectValue placeholder="No prediction imported"/></SelectTrigger><SelectContent><SelectGroup>{artifacts.data?.map(item=><SelectItem key={item.id} value={item.id}>{item.source_file_name} · {item.model_revision}</SelectItem>)}</SelectGroup></SelectContent></Select></Field>
+     <Field><FieldLabel htmlFor="dose-artifact-choice">Installed predictions for this case</FieldLabel><Select items={artifactOptions} value={chosenId} onValueChange={value=>setArtifactId(value??'')}><SelectTrigger id="dose-artifact-choice" aria-label="Select imported dose prediction"><SelectValue placeholder="No prediction imported"/></SelectTrigger><SelectContent><SelectGroup>{artifacts.data?.map(item=><SelectItem key={item.id} value={item.id}>{item.source_file_name} · {item.model_revision}</SelectItem>)}</SelectGroup></SelectContent></Select></Field>
      {artifacts.isLoading&&<p role="status" className="text-sm text-muted-foreground">Loading local prediction records…</p>}
      {artifacts.error&&<Alert variant="destructive"><AlertCircle/><AlertTitle>Local prediction records could not be loaded</AlertTitle><AlertDescription>{artifacts.error.message}</AlertDescription></Alert>}
      {!artifacts.isLoading&&!artifacts.error&&!artifacts.data?.length&&<div className="grid min-h-36 content-center rounded-lg border border-dashed border-border px-4 py-5 text-center"><p className="m-0 text-sm font-medium">No compatible second array is installed.</p><p className="mb-0 mt-1 text-xs leading-5 text-muted-foreground">Add a permitted prediction file with matching case identity, shape, spacing, index convention and Gy units. The feature never creates a placeholder result.</p></div>}

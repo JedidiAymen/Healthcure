@@ -545,16 +545,16 @@ test('DoseTwin reconstructs the selected sparse source mask and falls back at ph
   expect(errors).toEqual([])
 })
 
-test('DoseTwin case picker opens allowlisted cases in viewer-only mode without artifact requests', async ({ page }) => {
+test('DoseTwin case picker opens a separately enabled case and its case-bound comparison workspace', async ({ page }) => {
   const readyCaseId = 'openkbp:pt_201'
-  const viewerOnlyCaseId = 'openkbp:pt_241'
+  const secondCaseId = 'openkbp:pt_241'
   const records = [
     { id: readyCaseId, module: 'dosetwin', dataset_id: 'OpenKBP', source_case_id: 'pt_201', reference_kind: 'benchmark', status: 'ready', label: 'OpenKBP · pt_201' },
-    { id: viewerOnlyCaseId, module: 'dosetwin', dataset_id: 'OpenKBP', source_case_id: 'pt_241', reference_kind: 'benchmark', status: 'blocked', label: 'OpenKBP · pt_241 — viewer only; analysis/import/report disabled' },
+    { id: secondCaseId, module: 'dosetwin', dataset_id: 'OpenKBP', source_case_id: 'pt_241', reference_kind: 'benchmark', status: 'ready', label: 'OpenKBP · pt_241' },
   ]
-  let blockedArtifactRequests = 0
+  const artifactRequests: string[] = []
   page.on('request', (request) => {
-    if (request.url().includes('/dose-artifacts') && request.url().includes('pt_241')) blockedArtifactRequests += 1
+    if (request.url().includes('/dose-artifacts')) artifactRequests.push(request.url())
   })
   await page.route('**/api/v1/cases', (route) => route.fulfill({
     status: 200,
@@ -563,7 +563,7 @@ test('DoseTwin case picker opens allowlisted cases in viewer-only mode without a
   }))
   await page.route('**/viewer/slice*', (route) => {
     const url = new URL(route.request().url())
-    const caseId = url.pathname.includes('pt_241') ? viewerOnlyCaseId : readyCaseId
+    const caseId = url.pathname.includes('pt_241') ? secondCaseId : readyCaseId
     const layer = url.searchParams.get('layer')
     const roi = url.searchParams.get('roi') ?? 'Brainstem'
     const values = new Array(128 * 128).fill(layer === 'ct' ? 0.5 : 0)
@@ -576,7 +576,7 @@ test('DoseTwin case picker opens allowlisted cases in viewer-only mode without a
   })
   await page.route('**/viewer/dvh*', (route) => {
     const url = new URL(route.request().url())
-    const caseId = url.pathname.includes('pt_241') ? viewerOnlyCaseId : readyCaseId
+    const caseId = url.pathname.includes('pt_241') ? secondCaseId : readyCaseId
     const roi = url.searchParams.get('roi') ?? 'Brainstem'
     const curve = Array.from({ length: 51 }, (_, index) => ({ dose_gy: index * 1.6, volume_percent: index < 25 ? 100 : 0 }))
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
@@ -595,23 +595,24 @@ test('DoseTwin case picker opens allowlisted cases in viewer-only mode without a
   await primaryRoi.click()
   await page.getByRole('option', { name: 'PTV70', exact: true }).click()
   await page.getByLabel('DoseTwin source case').click()
-  await page.getByRole('option', { name: /pt_241.*viewer only/i }).click()
+  await page.getByRole('option', { name: /pt_241.*comparison available/i }).click()
 
   await expect(page).toHaveURL(/\/studio\/dosetwin\/cases\/openkbp%3Apt_241$/)
   await expect(page.getByRole('heading', { name: 'Linked dose review' })).toBeVisible()
-  await expect(page.getByText('Read-only source viewer', { exact: true })).toBeVisible()
-  await expect(page.getByText(/analysis runs, dose imports, comparisons, and reports are disabled/i)).toBeVisible()
-  await expect(page.getByText('Viewer only · analysis and imports disabled')).toBeVisible()
+  await expect(page.getByText('Read-only source viewer', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('Source configured', { exact: true })).toBeVisible()
   await expect(page.getByRole('img', { name: /OpenKBP processed-array z-index plane/ })).toBeVisible()
-  await expect(page.getByText('Compare a real dose prediction', { exact: true })).toHaveCount(0)
+  await page.getByText('Compare a real dose prediction', { exact: true }).click()
+  await expect(page.getByText('No compatible second array is installed.', { exact: true })).toBeVisible()
+  await expect(page.getByLabel('Choose an authentic dose prediction CSV')).toBeVisible()
+  expect(artifactRequests.some((url) => url.includes('/openkbp%3Apt_241/dose-artifacts'))).toBe(true)
   await expect(primaryRoi).toContainText('Brainstem')
-  expect(blockedArtifactRequests).toBe(0)
 
   await page.getByLabel('DoseTwin source case').click()
   await page.getByRole('option', { name: /pt_201/ }).click()
   await expect(page).toHaveURL(/\/studio\/dosetwin\/cases\/openkbp%3Apt_201$/)
   await expect(page.getByRole('combobox', { name: 'Primary structure' })).toContainText('PTV70')
-  expect(blockedArtifactRequests).toBe(0)
+  expect(artifactRequests.some((url) => url.includes('/openkbp%3Apt_201/dose-artifacts'))).toBe(true)
 })
 
 test('global search keeps keyboard focus and returns it to the trigger on escape', async ({ page }) => {

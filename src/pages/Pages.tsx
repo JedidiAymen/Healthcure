@@ -876,6 +876,10 @@ export function DomainWorkspace({ module }: { module: ModuleId }) {
   const selectedDoseCase = caseId === "current"
     ? doseCases[0]
     : doseCases.find((item) => item.id === caseId);
+  const doseCaseOptions = doseCases.map((item) => ({
+    value: item.id,
+    label: `${item.label} · ${item.status === "blocked" ? "viewer only" : "comparison available"}`,
+  }));
   const artifactCaseId = module === "dosetwin" && selectedDoseCase?.status === "ready"
     ? selectedDoseCase.id
     : undefined;
@@ -957,6 +961,7 @@ export function DomainWorkspace({ module }: { module: ModuleId }) {
             <Field className="mt-2 grid w-full max-w-xl gap-1.5">
               <FieldLabel htmlFor="dosetwin-case-picker">DoseTwin source case</FieldLabel>
               <Select
+                items={doseCaseOptions}
                 value={selectedDoseCase?.id ?? null}
                 onValueChange={(next) => {
                   if (next) navigate(`/studio/dosetwin/cases/${encodeURIComponent(next)}`);
@@ -969,7 +974,7 @@ export function DomainWorkspace({ module }: { module: ModuleId }) {
                   <SelectGroup>
                     {doseCases.map((item) => (
                       <SelectItem key={item.id} value={item.id}>
-                        {item.label} · {item.status === "blocked" ? "viewer only" : "analysis enabled"}
+                        {item.label} · {item.status === "blocked" ? "viewer only" : "comparison available"}
                       </SelectItem>
                     ))}
                   </SelectGroup>
