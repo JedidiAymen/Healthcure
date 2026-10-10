@@ -66,6 +66,34 @@ The selected walkthrough is **DoseTwin `pt_241`**, as described in [`docs/FLAGSH
 
 The viewer paths read installed local files and call the local API. They do not require a third-party token, hosted model, remote inference service or external API. Source and publication links inside the interface require internet access if opened. Keep both services on `127.0.0.1`; do not expose the API to a LAN or the public internet. Press Ctrl+C in the launcher terminal to stop both services.
 
+## Local-only Docker HackCure profile
+
+Use this profile when the rehearsal must run in Docker and the host preflight must inspect the exact database used by the app. It keeps the source tree mounted read-only, adds only the authenticated `pt_241` comparison mapping, and publishes the existing proxy ports on `127.0.0.1`. The API and broker have no published host ports. Do not use this profile for LAN access or public hosting.
+
+Prepare the Docker images and the local `pt_241` source files on this machine before rehearsal. The launcher below does not build or pull images; it verifies the resolved Compose ports and starts only already available images. It creates the ignored `data/hackcure-docker/` directory when needed. The app applies its normal database schema migrations at startup but does **not** seed student, educator, reviewer, or admin accounts. Do not provision reviewer/student accounts as part of this setup unless the people responsible for the rehearsal explicitly arrange that separately.
+
+```sh
+./scripts/start_hackcure_docker.sh
+```
+
+Open the local app at <https://127.0.0.1:8443/studio/dosetwin/cases/openkbp%3Apt_241>. Caddy uses a local certificate authority; trust that certificate on the demo machine before the presentation. Stop the stack with:
+
+```sh
+docker compose -f docker-compose.yml -f docker-compose.hackcure.yml down
+```
+
+This profile deliberately uses a host-bind-mounted, unencrypted SQLite demo database at `data/hackcure-docker/medforge.sqlite3`, so the host-side read-only preflight can inspect the same file as the container. Protect the folder with the machine's account permissions and full-disk encryption; do not copy it into Git, screenshots, or shared storage. This database is separate from the encrypted default Docker state volume and from the development launcher database. The OpenKBP files remain outside the database and are bind-mounted read-only from `data/` into `/datasets/`.
+
+The Compose profile maps `openkbp:pt_241` to `/datasets/openkbp-opt/pt_241` for the API. The companion `scripts/hackcure_docker_preflight.sh` resolves that same source directory on the host and checks `data/hackcure-docker/medforge.sqlite3` with SQLite read-only/query-only settings:
+
+```sh
+./scripts/hackcure_docker_preflight.sh
+```
+
+The first run is expected to report missing imported comparison state and reviewer credentials. It does not create them. A passing data/profile preflight still does not replace an interactive Docker rehearsal; its loopback item describes the development launcher, while `start_hackcure_docker.sh` independently checks the rendered Compose config and refuses to start if any host-published port is not bound to `127.0.0.1`.
+
+Once the Docker profile database contains the prepared walkthrough state, use [`docs/HACKCURE_BACKUP_RESTORE.md`](docs/HACKCURE_BACKUP_RESTORE.md) to create a local-only archive and verify it in a disposable directory. That check never overwrites the active database and does not replace the offline second-machine rehearsal.
+
 ## Local preflight
 
 Before rehearsal, use the targeted HackCure preflight from the project root:
@@ -76,7 +104,7 @@ npm run doctor -- --hackcure-preflight
 
 It checks the manifest-hashed `pt_241` source and archived `set_1` file; a matching imported artifact and saved comparison report in the selected local database; a local reviewer/admin role with sign-in credentials; and the local launcher's loopback-only configuration. It also reports whether an optional Academy lesson is already published and assigned to a credentialed student. The Academy check is informational and does not affect the command's exit status. A failed required check exits nonzero and gives a local path plus a short reason.
 
-This mode does not start services, apply migrations, create or change accounts, passwords, learner records, review decisions or the demo database, download assets, or validate clinical credentials or data-display rights. It opens the selected database with SQLite read-only/query-only settings. The default database is `data/local.sqlite3`; set `MEDFORGE_DB_PATH` before running the preflight if the app will use a different database, and keep that same path when launching. The `pt_241` source path follows `MEDFORGE_OPENKBP_FULL_CASES_JSON` when configured, otherwise it checks `data/openkbp-opt/pt_241`. A viewer-only `MEDFORGE_OPENKBP_CASES_JSON` map is not sufficient for the prediction-comparison walkthrough and is reported as a blocker. Run the check again after preparing local state. It is not a live-service, visual, keyboard, or screen-size review.
+This mode does not start services, apply migrations, create or change accounts, passwords, learner records, review decisions or the demo database, download assets, or validate clinical credentials or data-display rights. It opens the selected database with SQLite read-only/query-only settings. The default database is `data/local.sqlite3`; set `MEDFORGE_DB_PATH` before running the preflight if the app will use a different database, and keep that same path when launching. For the Docker profile, use `scripts/hackcure_docker_preflight.sh` so both the host database and source mapping match the Compose bind mounts. The `pt_241` source path otherwise follows `MEDFORGE_OPENKBP_FULL_CASES_JSON` when configured, or checks `data/openkbp-opt/pt_241`. A viewer-only `MEDFORGE_OPENKBP_CASES_JSON` map is not sufficient for the prediction-comparison walkthrough and is reported as a blocker. Run the check again after preparing local state. It is not a live-service, visual, keyboard, or screen-size review.
 
 With the launcher running, open another terminal in the project root and check general machine readiness plus source-backed routes:
 
