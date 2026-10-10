@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import concurrent.futures
 import hashlib
 import json
@@ -57,6 +58,7 @@ def sha256(path: Path) -> str:
 
 
 def main() -> None:
+    argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter).parse_args()
     DESTINATION.parent.mkdir(parents=True, exist_ok=True)
     if DESTINATION.exists():
         if DESTINATION.stat().st_size != EXPECTED_SIZE:

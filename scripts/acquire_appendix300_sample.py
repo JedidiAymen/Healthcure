@@ -6,6 +6,7 @@ the extracted file SHA-256 are recorded locally; raw data stays out of Git.
 """
 from __future__ import annotations
 
+import argparse
 import hashlib
 import io
 import json
@@ -120,9 +121,9 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def probe_duration(path: Path) -> float | None:
+def probe_duration(path: Path) -> float:
     if shutil.which("ffprobe") is None:
-        return None
+        raise SystemExit("ffprobe (part of FFmpeg) is required to verify the clip duration. Install FFmpeg or put ffprobe on PATH, then rerun.")
     result = subprocess.run(
         ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "json", str(path)],
         check=True, capture_output=True, text=True,
@@ -134,6 +135,9 @@ def probe_duration(path: Path) -> float | None:
 
 
 def main() -> None:
+    argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter).parse_args()
+    if shutil.which("ffprobe") is None:
+        raise SystemExit("ffprobe (part of FFmpeg) is required to verify the clip duration. Install FFmpeg or put ffprobe on PATH, then rerun.")
     item = fetch_json(ITEM_API)
     license_uris = [entry.get("value") for entry in item.get("metadata", {}).get("dc.rights.uri", [])]
     if "http://creativecommons.org/licenses/by/4.0/" not in license_uris:
@@ -217,7 +221,7 @@ def main() -> None:
             "video_crc32": f"{selected.CRC:08x}",
             "video_sha256": clip_sha256,
             "video_duration_seconds": duration,
-            "video_duration_verified_by": "ffprobe" if duration is not None else None,
+            "video_duration_verified_by": "ffprobe",
             "video_scope": "De-identified laparoscopic appendectomy excerpt; not cholecystectomy footage and not annotated with instrument masks.",
             "selected_by": "smallest MP4 in the official Video_Snippets directory",
             "zip_directory_bytes_fetched": range_file.bytes_received,

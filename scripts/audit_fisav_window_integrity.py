@@ -1,6 +1,7 @@
 """Audit timestamp and finite-value integrity for the installed FiSaV cohort."""
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import sys
@@ -15,6 +16,7 @@ from app import fisav  # noqa: E402
 
 
 def main() -> None:
+    argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter).parse_args()
     records = fisav.installed_records()
     if len(records) != 59:
         raise SystemExit(f"Expected the installed 59-record FiSaV cohort, found {len(records)}")
