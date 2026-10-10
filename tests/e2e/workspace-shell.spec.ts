@@ -162,12 +162,15 @@ test('DoseTwin keeps one Gy scale, linked ROI overlays and voxel mapping under z
       curve, method: 'Test-fixture curve.', source_kind: 'synthetic-test', origin: 'computed-from-synthetic-test-fixture',
     }) })
   })
+  await page.route('**/dose-artifacts', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }))
 
   await page.goto('/studio/dosetwin/cases/current')
   await expect(page.getByRole('heading', { name: 'Linked dose review' })).toBeVisible()
   await expect(page.getByText('Dose prediction inference')).toBeVisible()
   await expect(page.getByRole('row', { name: /Dose prediction inference.*Blocked/ })).toBeVisible()
   await expect(page.getByText('0–80.0 Gy')).toBeVisible()
+  await page.getByText('Compare a real dose prediction', { exact: true }).click()
+  await expect(page.getByText('No compatible second array is installed.')).toBeVisible()
   const sourceViewport = page.getByRole('group', { name: /Z-index plane imaging viewport/ })
   const primaryPane = page.locator('section[aria-labelledby="dose-view-title"]')
   const paneWidth = await primaryPane.evaluate(element => element.getBoundingClientRect().width)

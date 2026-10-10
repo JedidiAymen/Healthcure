@@ -12,6 +12,9 @@ export type CaseRecord = ApiSchemas['Case'];
 export type ModelRecord = ApiSchemas['ModelRecord'];
 export type VoxelSlice = ApiSchemas['VoxelSlice'];
 export type RoiMaskVolume = ApiSchemas['RoiMaskVolume'];
+export type DoseArtifact = ApiSchemas['DoseArtifact'];
+export type DoseArtifactSlice = ApiSchemas['DoseArtifactSlice'];
+export type DoseArtifactComparison = ApiSchemas['DoseArtifactComparison'];
 export type DvhSummary = ApiSchemas['DvhSummary'];
 export type CaseSummary = {
   case: string;
@@ -111,12 +114,18 @@ export type EvidenceReport = {
       license?: string;
       revision?: string;
       files_sha256?: Record<string, string>;
+      model_revision?: string;
+      prediction_source_revision?: string;
+      checkpoint_sha256?: string;
+      rights_basis?: string;
       image_sha256?: string;
       annotation_sha256?: string;
     };
     evidence?: { reference_annotations?: Array<{ id: number; category_name: string; bbox: number[] }>; cvs_source_values?: Array<number | null> };
     display_state?: { show_annotations: boolean; selected_annotation_id: number | null };
     results?: CaseSummary;
+    comparison?: DoseArtifactComparison;
+    selection?: { roi: string; axis: number; index: number; coordinate_frame: string };
     viewer_state?: ViewerEvidenceState;
     limitations?: string[];
   };
@@ -484,6 +493,8 @@ export const api = {
       run_id: runId,
       ...(viewerState ? { viewer_state: viewerState } : {}),
     }),
+  createDoseComparisonReport: (caseId: string, artifactId: string, roi: string, axis: number, index: number) =>
+    post<EvidenceReport>('/api/v1/reports/dosetwin-comparison', { case_id: caseId, artifact_id: artifactId, roi, axis, index }),
   slice: (
     caseId: string,
     axis: number,
@@ -502,4 +513,36 @@ export const api = {
     request<RoiMaskVolume>(
       `/api/v1/cases/${encodeURIComponent(caseId)}/viewer/roi-volume?roi=${encodeURIComponent(roi)}`,
     ),
+  doseArtifacts: (caseId: string) =>
+    request<DoseArtifact[]>(`/api/v1/cases/${encodeURIComponent(caseId)}/dose-artifacts`),
+  doseArtifactComparison: (caseId: string, artifactId: string) =>
+    request<DoseArtifactComparison>(`/api/v1/cases/${encodeURIComponent(caseId)}/dose-artifacts/${encodeURIComponent(artifactId)}/comparison`),
+  doseArtifactSlice: (caseId: string, artifactId: string, axis: number, index: number) =>
+    request<DoseArtifactSlice>(`/api/v1/cases/${encodeURIComponent(caseId)}/dose-artifacts/${encodeURIComponent(artifactId)}/slice?axis=${axis}&index=${index}`),
+  importDoseArtifact: async (caseId: string, file: File, metadata: {
+    sourceRevision: string; modelRevision: string; checkpointSha256: string;
+    rightsBasis: string; spacingMm: [number, number, number];
+  }) => {
+    const bytes = await file.arrayBuffer();
+    const digest = await crypto.subtle.digest('SHA-256', bytes);
+    const fileHash = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+    const headers: Record<string, string> = {
+      'Content-Type': 'text/csv', 'X-Dose-Origin': 'archived_model_prediction',
+      'X-Dose-Model-Revision': metadata.modelRevision, 'X-Dose-Checkpoint-SHA256': metadata.checkpointSha256,
+      'X-Dose-Source-Case': caseId,
+      'X-Dose-Source-Revision': metadata.sourceRevision, 'X-Dose-Rights-Basis': metadata.rightsBasis,
+      'X-Dose-Rights-Confirmed': 'true', 'X-Dose-Unit': 'Gy',
+      'X-Dose-Index-Convention': 'x-major-y-middle-z-fastest', 'X-Dose-Array-Shape': '128,128,128',
+      'X-Dose-Spacing-MM': metadata.spacingMm.join(','), 'X-Dose-File-SHA256': fileHash,
+    };
+    if (sessionToken) headers.Authorization = `Bearer ${sessionToken}`;
+    const response = await fetch(`${API}/api/v1/cases/${encodeURIComponent(caseId)}/dose-artifacts?file_name=${encodeURIComponent(file.name)}`, {
+      method: 'PUT', headers, body: bytes, signal: AbortSignal.timeout(90000),
+    });
+    if (!response.ok) {
+      const detail = await response.json().catch(() => null);
+      throw new Error(detail?.detail?.message ?? `API returned ${response.status}`);
+    }
+    return response.json() as Promise<DoseArtifact>;
+  },
 };

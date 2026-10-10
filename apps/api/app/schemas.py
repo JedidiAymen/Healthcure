@@ -613,6 +613,66 @@ class RoiMaskVolume(StrictModel):
     coordinate_frame: Literal['openkbp-processed-voxel-grid']
     index_convention: Literal['x-major-y-middle-z-fastest']
 
+class DoseArtifact(StrictModel):
+    id: str
+    case_id: str
+    source_case_id: str
+    source_file_name: str
+    source_file_sha256: str = Field(pattern=r'^[0-9a-f]{64}$')
+    source_revision: str
+    shape: tuple[int, int, int]
+    spacing_mm: tuple[float, float, float]
+    index_convention: Literal['x-major-y-middle-z-fastest']
+    dose_unit: Literal['Gy']
+    origin: Literal['archived_model_prediction']
+    model_revision: str
+    checkpoint_sha256: str = Field(pattern=r'^[0-9a-f]{64}$')
+    rights_basis: str
+    validation_status: Literal['grid-validated-local-only']
+    size_bytes: int = Field(gt=0, le=67108864)
+    created_at: str
+
+class DoseArtifactSlice(StrictModel):
+    artifact: DoseArtifact
+    case_id: str
+    axis: int = Field(ge=0, le=2)
+    index: int = Field(ge=0, lt=128)
+    shape: tuple[int, int]
+    reference_gy: list[float]
+    prediction_gy: list[float]
+    delta_gy: list[float]
+    shared_display_max_gy: float = Field(gt=0)
+    delta_display_max_gy: float = Field(ge=0)
+    unit: Literal['Gy']
+    coordinate_frame: Literal['openkbp-processed-voxel-grid']
+
+class DoseArtifactRoiComparison(StrictModel):
+    roi: str
+    voxel_count: int = Field(ge=1)
+    reference_mean_gy: float
+    prediction_mean_gy: float
+    mean_delta_gy: float
+    mean_absolute_delta_gy: float
+    maximum_absolute_delta_gy: float
+    reference_dvh: list[DvhPoint]
+    prediction_dvh: list[DvhPoint]
+    reference_metrics: dict
+    prediction_metrics: dict
+
+class DoseArtifactComparison(StrictModel):
+    artifact: DoseArtifact
+    case_id: str
+    reference_dose_sha256: str
+    roi_comparisons: list[DoseArtifactRoiComparison]
+    limitations: list[str]
+
+class DoseTwinComparisonReportCreateRequest(StrictModel):
+    case_id: str
+    artifact_id: str = Field(pattern=r'^dose_[0-9a-f]{32}$')
+    roi: str = Field(pattern=r'^(Brainstem|SpinalCord|RightParotid|LeftParotid|Esophagus|Larynx|Mandible|PTV56|PTV63|PTV70)$')
+    axis: int = Field(ge=0, le=2)
+    index: int = Field(ge=0, lt=128)
+
 class DvhPoint(StrictModel):
     dose_gy: float
     volume_percent: float

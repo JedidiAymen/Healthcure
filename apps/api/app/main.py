@@ -20,7 +20,7 @@ import uuid
 from functools import lru_cache
 from contextlib import contextmanager
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi import Header, Depends
 from fastapi.responses import JSONResponse
 from fastapi.responses import FileResponse
@@ -29,10 +29,10 @@ from pydantic import ValidationError
 import numpy as np
 from .schemas import (
     ApiError, Case, Health, ModuleStatus, ModelRecord, ModelValidationRequest,
-    DvhPoint, DvhMetrics, DvhSummary, ModelValidationResponse, RunCreateRequest, RunRecord, ViewerManifest, VoxelSlice, RoiMaskVolume, VoxelVolumeArtifact,
+    DvhPoint, DvhMetrics, DvhSummary, DoseArtifact, DoseArtifactSlice, DoseArtifactComparison, ModelValidationResponse, RunCreateRequest, RunRecord, ViewerManifest, VoxelSlice, RoiMaskVolume, VoxelVolumeArtifact,
     SurgicalFrameArtifact, SurgicalFrameRecord, SurgicalMediaRecord, CvsCoverage, SignalArtifact, SignalRecord, SignalWindow, SignalSpectrum, SignalSpectrogram, SignalFeatures
 )
-from .schemas import ReportCreateRequest, ReportRecord, SurgicalFrameReportCreateRequest
+from .schemas import ReportCreateRequest, ReportRecord, SurgicalFrameReportCreateRequest, DoseTwinComparisonReportCreateRequest
 from .schemas import (LocalLoginRequest, LocalSession, LocalUser, EducatorEvidenceItem,
     StudentChallengeSummary, EducatorDraftCreate, EducatorDraftUpdate, EducatorDraft,
     EducatorDraftSummary, SignalWindowComparisonCreate, SignalWindowComparison,
@@ -40,6 +40,9 @@ from .schemas import (LocalLoginRequest, LocalSession, LocalUser, EducatorEviden
 from .auth import password_digest, issue_session, verify_password, current_user as _current_user, require_role
 from .learning import register_learning_routes
 from .openkbp import dose_statistics, sha256, validate_case
+from .dose_artifacts import (INDEX_CONVENTION, MAX_UPLOAD_BYTES, SHAPE as DOSE_SHAPE,
+    comparison_for_roi, file_name as validate_dose_file_name, parse_spacing,
+    validate_prediction, validate_sparse_csv_bytes)
 from .endoscapes import SOURCE_URL as ENDOSCAPES_URL, case_record as _endoscapes_case_record, installed_cases as _endoscapes_cases, installed_frame as _endoscapes_frame
 from . import endoscapes as _endoscapes
 from . import fisav as _fisav
@@ -223,11 +226,35 @@ def validate_sparse_volume(path: Path) -> np.ndarray:
     from .openkbp import read_sparse_csv
     return read_sparse_csv(path,(128,128,128),binary=path.name.endswith('.csv') and path.name not in ('ct.csv','dose.csv'))
 
+def _dose_artifact_root() -> Path:
+    raw=os.environ.get('MEDFORGE_DOSE_ARTIFACT_DIR','').strip()
+    return Path(raw).expanduser().resolve() if raw else (ROOT/'data'/'dose-artifacts').resolve()
+
+def _dose_artifact_record(row) -> DoseArtifact:
+    return DoseArtifact(id=row[0],case_id=row[1],source_case_id=row[2],source_file_name=row[3],source_file_sha256=row[4],
+        source_revision=row[5],shape=tuple(json.loads(row[6])),spacing_mm=tuple(json.loads(row[7])),
+        index_convention=row[8],dose_unit=row[9],origin=row[10],model_revision=row[11],
+        checkpoint_sha256=row[12],rights_basis=row[13],validation_status=row[14],size_bytes=row[15],created_at=row[16])
+
+def _stored_dose_artifact(artifact_id:str):
+    if not re.fullmatch(r'dose_[0-9a-f]{32}',artifact_id):
+        return None
+    with _db() as conn:
+        return conn.execute('''SELECT id,case_id,source_case_id,source_file_name,source_file_sha256,source_revision,shape_json,
+            spacing_json,index_convention,dose_unit,origin,model_revision,checkpoint_sha256,rights_basis,
+            validation_status,size_bytes,created_at,storage_key FROM dose_artifacts WHERE id=?''',(artifact_id,)).fetchone()
+
+def _reject_student_dose_prediction_access(authorization:str|None) -> None:
+    with _db() as conn:
+        user=_current_user(conn,authorization)
+    if user and user['role']=='student':
+        raise HTTPException(status_code=403,detail={'code':'DOSE_PREDICTION_RESEARCH_ONLY','message':'Imported dose predictions and comparisons are not available in student viewer sessions'})
+
 def create_app() -> FastAPI:
     app=FastAPI(title='MEDFORGE local research API',version='0.1.0',
         description='Loopback-only research and education API. Local educator/student access tokens are not production identity or public RBAC.')
     app.add_middleware(CORSMiddleware,allow_origin_regex=r'^https?://(127\.0\.0\.1|localhost)(:\d+)?$',
-        allow_credentials=False,allow_methods=['GET','POST','PATCH','PUT'],allow_headers=['Content-Type','Authorization','Idempotency-Key'])
+        allow_credentials=False,allow_methods=['GET','POST','PATCH','PUT'],allow_headers=['Content-Type','Authorization','Idempotency-Key','X-Dose-Array-Shape','X-Dose-Checkpoint-SHA256','X-Dose-File-SHA256','X-Dose-Index-Convention','X-Dose-Model-Revision','X-Dose-Origin','X-Dose-Rights-Basis','X-Dose-Rights-Confirmed','X-Dose-Source-Case','X-Dose-Source-Revision','X-Dose-Spacing-MM','X-Dose-Unit'])
     init_db()
 
     def _student_has_assigned_case(user_id:str,case_id:str)->bool:
@@ -716,6 +743,156 @@ def create_app() -> FastAPI:
             method='Exploratory cumulative voxel DVH: percentage of ROI voxels at or above each dose threshold; not official benchmark metric validation.',
             source_kind=_source_kind(),origin='computed-from-synthetic-test-fixture' if _source_kind()=='synthetic-test' else 'computed-from-benchmark-arrays')
 
+    @app.put('/api/v1/cases/{case_id}/dose-artifacts',response_model=DoseArtifact,
+              responses={404:{'model':ApiError},413:{'model':ApiError},422:{'model':ApiError}})
+    async def import_dose_artifact(case_id:str,request:Request,file_name:str=Query(...,min_length=1,max_length=200)):
+        """Install a user-supplied, same-grid prediction CSV for local research comparison."""
+        _reject_student_dose_prediction_access(request.headers.get('authorization'))
+        case=_expect_case(case_id)
+        if _source_kind()=='synthetic-test':
+            raise HTTPException(422,detail={'code':'SYNTHETIC_REFERENCE_BLOCKED','message':'A synthetic test fixture cannot receive a research dose prediction'})
+        if request.headers.get('content-type','').split(';',1)[0].strip().lower() not in ('text/csv','application/csv','application/octet-stream'):
+            raise HTTPException(415,detail={'code':'DOSE_CSV_REQUIRED','message':'Upload the authentic sparse dose CSV as text/csv'})
+        try:
+            safe_name=validate_dose_file_name(file_name)
+            origin=request.headers.get('x-dose-origin','').strip()
+            model_revision=request.headers.get('x-dose-model-revision','').strip()
+            checkpoint_hash=request.headers.get('x-dose-checkpoint-sha256','').strip().lower()
+            source_revision=request.headers.get('x-dose-source-revision','').strip()
+            rights_basis=request.headers.get('x-dose-rights-basis','').strip()
+            source_case_id=request.headers.get('x-dose-source-case','').strip()
+            if origin!='archived_model_prediction':
+                raise ValueError('Only a genuine archived model prediction is accepted by this comparison import')
+            if source_case_id!=case.id:
+                raise ValueError('Prediction source case identity must exactly match the installed case ID')
+            if not model_revision or len(model_revision)>200:
+                raise ValueError('Enter the prediction model revision or checkpoint identifier')
+            if not re.fullmatch(r'[0-9a-f]{64}',checkpoint_hash):
+                raise ValueError('A verified checkpoint SHA-256 is required')
+            if not source_revision or len(source_revision)>200:
+                raise ValueError('Enter the source revision associated with the prediction')
+            if len(rights_basis)<10 or len(rights_basis)>1000:
+                raise ValueError('Describe the local research-use rights basis in 10–1000 characters')
+            if request.headers.get('x-dose-rights-confirmed','').lower()!='true':
+                raise ValueError('Confirm you have a rights basis for this local research import')
+            if request.headers.get('x-dose-unit','').strip()!='Gy':
+                raise ValueError('Dose units must be explicitly Gy')
+            if request.headers.get('x-dose-index-convention','').strip()!=INDEX_CONVENTION:
+                raise ValueError(f'Index convention must be {INDEX_CONVENTION}')
+            if request.headers.get('x-dose-array-shape','').strip()!='128,128,128':
+                raise ValueError('Dose array shape must match the installed OpenKBP grid: 128,128,128')
+            spacing=parse_spacing(request.headers.get('x-dose-spacing-mm',''))
+            reference_spacing=np.loadtxt(_case_root()/'voxel_dimensions.csv',dtype=np.float64).reshape(-1)
+            if reference_spacing.shape!=(3,) or not np.allclose(spacing,reference_spacing,rtol=0,atol=1e-6):
+                raise ValueError('Dose spacing does not match the installed case spacing')
+            content_length=request.headers.get('content-length')
+            if content_length and int(content_length)>MAX_UPLOAD_BYTES:
+                raise HTTPException(413,detail={'code':'DOSE_ARTIFACT_TOO_LARGE','message':'Dose CSV is larger than the 64 MiB local-import limit'})
+            payload_buffer=bytearray()
+            async for chunk in request.stream():
+                if len(payload_buffer)+len(chunk)>MAX_UPLOAD_BYTES:
+                    raise HTTPException(413,detail={'code':'DOSE_ARTIFACT_TOO_LARGE','message':'Dose CSV is larger than the 64 MiB local-import limit'})
+                payload_buffer.extend(chunk)
+            payload=bytes(payload_buffer)
+            validate_sparse_csv_bytes(payload)
+            content_hash=hashlib.sha256(payload).hexdigest()
+            declared_hash=request.headers.get('x-dose-file-sha256','').strip().lower()
+            if declared_hash and declared_hash!=content_hash:
+                raise ValueError('Uploaded bytes do not match the declared file SHA-256')
+            artifact_id='dose_'+uuid.uuid4().hex
+            root=_dose_artifact_root();root.mkdir(parents=True,exist_ok=True)
+            target=(root/f'{artifact_id}.csv').resolve()
+            if target.parent!=root:
+                raise ValueError('Invalid local artifact storage key')
+            target.write_bytes(payload)
+            try:
+                prediction=validate_prediction(target)
+                if prediction.shape!=DOSE_SHAPE:
+                    raise ValueError('Prediction shape does not match the required grid')
+                with _db() as conn:
+                    conn.execute('''INSERT INTO dose_artifacts(id,case_id,source_case_id,storage_key,source_file_name,source_file_sha256,
+                        source_revision,shape_json,spacing_json,index_convention,dose_unit,origin,model_revision,
+                        checkpoint_sha256,rights_basis,validation_status,size_bytes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                        (artifact_id,case.id,source_case_id,target.name,safe_name,content_hash,source_revision,json.dumps(DOSE_SHAPE),
+                         json.dumps(spacing),INDEX_CONVENTION,'Gy',origin,model_revision,checkpoint_hash,rights_basis,
+                         'grid-validated-local-only',len(payload)))
+            except Exception:
+                target.unlink(missing_ok=True)
+                raise
+            stored=_stored_dose_artifact(artifact_id)
+            return _dose_artifact_record(stored)
+        except HTTPException:
+            raise
+        except (ValueError,OSError,TypeError) as exc:
+            raise HTTPException(422,detail={'code':'DOSE_ARTIFACT_INVALID','message':str(exc)}) from exc
+
+    @app.get('/api/v1/cases/{case_id}/dose-artifacts',response_model=list[DoseArtifact])
+    def list_dose_artifacts(case_id:str,authorization:str|None=Header(default=None)):
+        _reject_student_dose_prediction_access(authorization)
+        case=_expect_case(case_id)
+        with _db() as conn:
+            rows=conn.execute('''SELECT id,case_id,source_case_id,source_file_name,source_file_sha256,source_revision,shape_json,
+                spacing_json,index_convention,dose_unit,origin,model_revision,checkpoint_sha256,rights_basis,
+                validation_status,size_bytes,created_at,storage_key FROM dose_artifacts WHERE case_id=? ORDER BY created_at DESC,id DESC LIMIT 50''',(case.id,)).fetchall()
+        return [_dose_artifact_record(row) for row in rows]
+
+    @app.get('/api/v1/cases/{case_id}/dose-artifacts/{artifact_id}/slice',response_model=DoseArtifactSlice,
+             responses={404:{'model':ApiError},422:{'model':ApiError}})
+    def dose_artifact_slice(case_id:str,artifact_id:str,axis:int=Query(2,ge=0,le=2),index:int=Query(64,ge=0,lt=128),authorization:str|None=Header(default=None)):
+        _reject_student_dose_prediction_access(authorization)
+        case=_expect_case(case_id);row=_stored_dose_artifact(artifact_id)
+        if row is None or row[1]!=case.id:
+            raise HTTPException(404,detail={'code':'DOSE_ARTIFACT_UNKNOWN','message':'No imported dose artifact belongs to this case'})
+        reference_path=_case_root()/'dose.csv';artifact_path=(_dose_artifact_root()/row[17]).resolve()
+        if artifact_path.parent!=_dose_artifact_root() or not artifact_path.is_file():
+            raise HTTPException(404,detail={'code':'DOSE_ARTIFACT_MISSING','message':'The local dose artifact is no longer installed'})
+        try:
+            reference=_read_cached_volume(str(_case_root()),'dose.csv',reference_path.stat().st_size,reference_path.stat().st_mtime_ns)
+            prediction=validate_prediction(artifact_path)
+            reference_plane=np.take(reference,index,axis=axis)
+            prediction_plane=np.take(prediction,index,axis=axis)
+            delta_volume=prediction.astype(np.float64)-reference.astype(np.float64)
+            delta=prediction_plane.astype(np.float64)-reference_plane.astype(np.float64)
+            shared_display_max=max(float(np.max(reference)),float(np.max(prediction)))
+            delta_display_max=float(np.max(np.abs(delta_volume)))
+            return DoseArtifactSlice(artifact=_dose_artifact_record(row),case_id=case.id,axis=axis,index=index,
+                shape=tuple(int(value) for value in reference_plane.shape),reference_gy=reference_plane.astype(np.float32).ravel().tolist(),
+                prediction_gy=prediction_plane.astype(np.float32).ravel().tolist(),delta_gy=delta.astype(np.float32).ravel().tolist(),
+                shared_display_max_gy=shared_display_max,delta_display_max_gy=delta_display_max,
+                unit='Gy',coordinate_frame='openkbp-processed-voxel-grid')
+        except (ValueError,OSError) as exc:
+            raise HTTPException(422,detail={'code':'DOSE_ARTIFACT_INVALID','message':str(exc)}) from exc
+
+    @app.get('/api/v1/cases/{case_id}/dose-artifacts/{artifact_id}/comparison',response_model=DoseArtifactComparison,
+             responses={404:{'model':ApiError},422:{'model':ApiError}})
+    def dose_artifact_comparison(case_id:str,artifact_id:str,authorization:str|None=Header(default=None)):
+        _reject_student_dose_prediction_access(authorization)
+        case=_expect_case(case_id);row=_stored_dose_artifact(artifact_id)
+        if row is None or row[1]!=case.id:
+            raise HTTPException(404,detail={'code':'DOSE_ARTIFACT_UNKNOWN','message':'No imported dose artifact belongs to this case'})
+        reference_path=_case_root()/'dose.csv';artifact_path=(_dose_artifact_root()/row[17]).resolve()
+        if artifact_path.parent!=_dose_artifact_root() or not artifact_path.is_file():
+            raise HTTPException(404,detail={'code':'DOSE_ARTIFACT_MISSING','message':'The local dose artifact is no longer installed'})
+        try:
+            reference=_read_cached_volume(str(_case_root()),'dose.csv',reference_path.stat().st_size,reference_path.stat().st_mtime_ns)
+            prediction=validate_prediction(artifact_path)
+            spacing=np.loadtxt(_case_root()/'voxel_dimensions.csv',dtype=np.float64).reshape(-1)
+            rows=[]
+            for roi in ('Brainstem','SpinalCord','RightParotid','LeftParotid','Esophagus','Larynx','Mandible','PTV56','PTV63','PTV70'):
+                mask_path=_case_root()/f'{roi}.csv'
+                if not mask_path.is_file():
+                    continue
+                mask=_read_cached_volume(str(_case_root()),mask_path.name,mask_path.stat().st_size,mask_path.stat().st_mtime_ns).astype(bool,copy=False)
+                if not np.any(mask):
+                    continue
+                rows.append({'roi':roi,**comparison_for_roi(reference,prediction,mask,spacing)})
+            if not rows:
+                raise ValueError('No installed ROI masks are available for comparison')
+            return DoseArtifactComparison(artifact=_dose_artifact_record(row),case_id=case.id,reference_dose_sha256=sha256(reference_path),
+                roi_comparisons=rows,limitations=['Research comparison only; no clinical-plan interpretation.','The uploaded prediction is user-supplied and its model provenance and rights basis are user-declared, not independently verified.','Grid matching confirms processed array shape, spacing and index convention only; patient orientation and DICOM alignment are not asserted.'])
+        except (ValueError,OSError) as exc:
+            raise HTTPException(422,detail={'code':'DOSE_ARTIFACT_INVALID','message':str(exc)}) from exc
+
     @app.get('/api/v1/models',response_model=list[ModelRecord])
     def models():
        cvs_blockers,_=_cvs_worker_gate()
@@ -935,6 +1112,43 @@ def create_app() -> FastAPI:
             document['generated_at_utc']=created
             c.execute('UPDATE reports SET provenance_json=? WHERE id=?',(json.dumps(document,sort_keys=True),report_id))
             return ReportRecord(id=report_id,run_id=run.id,case_id=case.id,status='generated',created_at=created,document=document)
+
+    @app.post('/api/v1/reports/dosetwin-comparison',response_model=ReportRecord,
+              responses={404:{'model':ApiError},422:{'model':ApiError}})
+    def create_dose_comparison_report(request:DoseTwinComparisonReportCreateRequest):
+        case=_expect_case(request.case_id)
+        row=_stored_dose_artifact(request.artifact_id)
+        if row is None or row[1]!=case.id:
+            raise HTTPException(status_code=404,detail={'code':'DOSE_ARTIFACT_UNKNOWN','message':'No imported dose artifact belongs to this case'})
+        comparison=dose_artifact_comparison(case.id,request.artifact_id,authorization=None)
+        document={
+            'schema':'medforge.dosetwin-dose-comparison/v1',
+            'title':f"Dose prediction comparison — {case.source_case_id}",
+            'generated_at_utc':None,
+            'case':{'id':case.id,'dataset_id':case.dataset_id,'source_case_id':case.source_case_id,'reference_kind':case.reference_kind},
+            'analysis':{'operation_id':'dose.comparison','status':'completed','method':'Voxelwise same-grid comparison with per-ROI dose-volume summaries'},
+            'source':{'repository':SOURCE_URL,'revision':_source_revision(),'files_sha256':{'reference:dose.csv':comparison.reference_dose_sha256,
+                f'prediction:{comparison.artifact.source_file_name}':comparison.artifact.source_file_sha256},
+                'prediction_source_revision':comparison.artifact.source_revision,
+                'model_revision':comparison.artifact.model_revision,'checkpoint_sha256':comparison.artifact.checkpoint_sha256,
+                'rights_basis':comparison.artifact.rights_basis},
+            'comparison':comparison.model_dump(mode='json'),
+            'selection':{'roi':request.roi,'axis':request.axis,'index':request.index,'coordinate_frame':'openkbp-processed-voxel-grid'},
+            'limitations':comparison.limitations,
+        }
+        with _db() as conn:
+            existing=conn.execute('SELECT id,run_id,case_id,status,created_at,provenance_json FROM reports WHERE case_id=? AND run_id IS NULL AND status=? ORDER BY created_at DESC,id DESC',(case.id,'generated')).fetchall()
+            for record in existing:
+                prior=json.loads(record[5])
+                if prior.get('schema')==document['schema'] and prior.get('source')==document['source'] and prior.get('selection')==document['selection']:
+                    return _report(record)
+            report_id='report_'+uuid.uuid4().hex
+            conn.execute('INSERT INTO reports(id,case_id,run_id,status,provenance_json) VALUES (?,?,NULL,?,?)',
+                (report_id,case.id,'generated',json.dumps(document,sort_keys=True)))
+            created=conn.execute('SELECT created_at FROM reports WHERE id=?',(report_id,)).fetchone()[0]
+            document['generated_at_utc']=created
+            conn.execute('UPDATE reports SET provenance_json=? WHERE id=?',(json.dumps(document,sort_keys=True),report_id))
+            return ReportRecord(id=report_id,run_id=None,case_id=case.id,status='generated',created_at=created,document=document)
 
     @app.post('/api/v1/reports/surgivision-frame',response_model=ReportRecord,responses={404:{'model':ApiError},422:{'model':ApiError}})
     def create_surgical_frame_report(request:SurgicalFrameReportCreateRequest):

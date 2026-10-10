@@ -133,6 +133,7 @@ const specialtyData = {
       "CT, reference dose and ROI masks",
       "Index-space linked slice views",
       "Dose statistics and DVH",
+      "Validate a local same-case prediction before comparison",
     ],
     blockers: [
       "No prediction checkpoint is installed",
@@ -140,7 +141,7 @@ const specialtyData = {
     ],
     unavailableMethods: [
       { task: "Dose prediction inference", reason: "No verified checkpoint, runtime or prediction output is installed." },
-      { task: "Reference-versus-prediction comparison", reason: "No authentic compatible second array is installed; local import and validation have not been implemented." },
+      { task: "Reference-versus-prediction comparison", reason: "No authentic compatible second array is installed. Local import and grid validation are supported; no prediction is generated or supplied." },
     ],
   },
   fistulaguard: {
@@ -1629,6 +1630,22 @@ export function Reports() {
                         ))}
                       </TableBody>
                     </Table>
+                  </div>
+                )}
+                {report.document.comparison && (
+                  <div className="mt-3 grid gap-3 border-b pb-3">
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      <Badge variant="outline" className="text-primary">DoseTwin · imported prediction</Badge>
+                      <span>{report.document.selection?.roi ?? "ROI"} · {report.document.selection?.coordinate_frame ?? "processed grid"}</span>
+                      <span>Model {report.document.source?.model_revision ?? "revision not recorded"}</span>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <Table className="min-w-[720px]">
+                        <TableHeader><TableRow><TableHead scope="col">Structure</TableHead><TableHead scope="col" className="text-right">Reference mean</TableHead><TableHead scope="col" className="text-right">Prediction mean</TableHead><TableHead scope="col" className="text-right">Mean Δ</TableHead><TableHead scope="col" className="text-right">Mean |Δ|</TableHead><TableHead scope="col" className="text-right">Max |Δ|</TableHead></TableRow></TableHeader>
+                        <TableBody>{report.document.comparison.roi_comparisons.map(item=><TableRow key={item.roi}><TableHead scope="row">{item.roi}</TableHead><TableCell className="text-right tabular-nums">{item.reference_mean_gy.toFixed(2)} Gy</TableCell><TableCell className="text-right tabular-nums">{item.prediction_mean_gy.toFixed(2)} Gy</TableCell><TableCell className="text-right tabular-nums">{item.mean_delta_gy.toFixed(2)} Gy</TableCell><TableCell className="text-right tabular-nums">{item.mean_absolute_delta_gy.toFixed(2)} Gy</TableCell><TableCell className="text-right tabular-nums">{item.maximum_absolute_delta_gy.toFixed(2)} Gy</TableCell></TableRow>)}</TableBody>
+                      </Table>
+                    </div>
+                    <p className="m-0 text-xs text-muted-foreground">Reference dose SHA-256 · <code className="break-all">{report.document.comparison.reference_dose_sha256}</code></p>
                   </div>
                 )}
                 <ul className="my-3 grid gap-1 pl-4 text-xs leading-relaxed text-muted-foreground">

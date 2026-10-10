@@ -78,6 +78,98 @@ def test_manifest_marked_synthetic_and_geometry_not_invented(client):
     assert 'SYNTHETIC' in manifest.provenance_label
 
 
+def test_dose_artifact_import_requires_real_reference_and_preserves_source_provenance(client,monkeypatch,tmp_path):
+    cid=client.get('/api/v1/cases').json()[0]['id']
+    payload=b',data\n0,18\n1,25\n3,41\n'
+    digest=hashlib.sha256(payload).hexdigest()
+    headers={
+        'Content-Type':'text/csv','X-Dose-Origin':'archived_model_prediction',
+        'X-Dose-Model-Revision':'model@abc123','X-Dose-Checkpoint-SHA256':'b'*64,
+        'X-Dose-Source-Revision':'prediction-dataset@def456','X-Dose-Rights-Basis':'Local research permission recorded by the operator',
+        'X-Dose-Source-Case':cid,
+        'X-Dose-Rights-Confirmed':'true','X-Dose-Unit':'Gy',
+        'X-Dose-Index-Convention':'x-major-y-middle-z-fastest','X-Dose-Array-Shape':'128,128,128',
+        'X-Dose-Spacing-MM':'2,2,2','X-Dose-File-SHA256':digest,
+    }
+    monkeypatch.setenv('MEDFORGE_DOSE_ARTIFACT_DIR',str(tmp_path/'dose-artifacts'))
+    rejected=client.put(f'/api/v1/cases/{cid}/dose-artifacts?file_name=prediction.csv',content=payload,headers=headers)
+    assert rejected.status_code==422
+    assert rejected.json()['detail']['code']=='SYNTHETIC_REFERENCE_BLOCKED'
+
+    monkeypatch.setenv('MEDFORGE_SOURCE_KIND','benchmark')
+    imported=client.put(f'/api/v1/cases/{cid}/dose-artifacts?file_name=prediction.csv',content=payload,headers=headers)
+    assert imported.status_code==200,imported.text
+    artifact=imported.json()
+    assert artifact['source_file_sha256']==digest
+    assert artifact['case_id']==cid
+    assert artifact['validation_status']=='grid-validated-local-only'
+    assert artifact['checkpoint_sha256']=='b'*64
+    assert client.get(f'/api/v1/cases/{cid}/dose-artifacts').json()[0]['id']==artifact['id']
+
+    comparison=client.get(f"/api/v1/cases/{cid}/dose-artifacts/{artifact['id']}/comparison")
+    assert comparison.status_code==200,comparison.text
+    brainstem=comparison.json()['roi_comparisons'][0]
+    assert brainstem['roi']=='Brainstem'
+    assert brainstem['reference_mean_gy']==17
+    assert brainstem['prediction_mean_gy']==21.5
+    assert brainstem['mean_delta_gy']==4.5
+    assert len(brainstem['reference_dvh'])==51
+
+    slice_result=client.get(f"/api/v1/cases/{cid}/dose-artifacts/{artifact['id']}/slice?axis=2&index=1")
+    assert slice_result.status_code==200,slice_result.text
+    values=slice_result.json()
+    assert values['reference_gy'][0]==22
+    assert values['prediction_gy'][0]==25
+    assert values['delta_gy'][0]==3
+
+    report_payload={'case_id':cid,'artifact_id':artifact['id'],'roi':'Brainstem','axis':2,'index':1}
+    report=client.post('/api/v1/reports/dosetwin-comparison',json=report_payload)
+    assert report.status_code==200,report.text
+    saved=report.json()
+    assert saved['run_id'] is None
+    assert saved['document']['schema']=='medforge.dosetwin-dose-comparison/v1'
+    assert saved['document']['source']['files_sha256']['prediction:prediction.csv']==digest
+    assert saved['document']['comparison']['roi_comparisons'][0]['mean_delta_gy']==4.5
+    again=client.post('/api/v1/reports/dosetwin-comparison',json=report_payload)
+    assert again.json()['id']==saved['id']
+
+
+def test_dose_artifact_import_rejects_wrong_grid_unit_and_negative_values(client,monkeypatch,tmp_path):
+    cid=client.get('/api/v1/cases').json()[0]['id']
+    monkeypatch.setenv('MEDFORGE_SOURCE_KIND','benchmark')
+    monkeypatch.setenv('MEDFORGE_DOSE_ARTIFACT_DIR',str(tmp_path/'dose-artifacts'))
+    headers={
+        'Content-Type':'text/csv','X-Dose-Origin':'archived_model_prediction',
+        'X-Dose-Model-Revision':'model@abc123','X-Dose-Checkpoint-SHA256':'b'*64,
+        'X-Dose-Source-Revision':'prediction-dataset@def456','X-Dose-Rights-Basis':'Operator has local research permission',
+        'X-Dose-Source-Case':cid,
+        'X-Dose-Rights-Confirmed':'true','X-Dose-Unit':'Gy',
+        'X-Dose-Index-Convention':'x-major-y-middle-z-fastest','X-Dose-Array-Shape':'128,128,128',
+        'X-Dose-Spacing-MM':'2,2,2',
+    }
+    negative=client.put(f'/api/v1/cases/{cid}/dose-artifacts?file_name=prediction.csv',content=b',data\n0,-1\n1,2\n',headers=headers)
+    assert negative.status_code==422
+    assert 'negative' in negative.json()['detail']['message']
+    wrong_unit=client.put(f'/api/v1/cases/{cid}/dose-artifacts?file_name=prediction.csv',content=b',data\n0,1\n',headers={**headers,'X-Dose-Unit':'cGy'})
+    assert wrong_unit.status_code==422
+    assert 'Gy' in wrong_unit.json()['detail']['message']
+    wrong_grid=client.put(f'/api/v1/cases/{cid}/dose-artifacts?file_name=prediction.csv',content=b',data\n0,1\n',headers={**headers,'X-Dose-Array-Shape':'64,64,64'})
+    assert wrong_grid.status_code==422
+    assert '128,128,128' in wrong_grid.json()['detail']['message']
+    wrong_case=client.put(f'/api/v1/cases/{cid}/dose-artifacts?file_name=prediction.csv',content=b',data\n0,1\n',headers={**headers,'X-Dose-Source-Case':'openkbp:another-case'})
+    assert wrong_case.status_code==422
+    assert 'case identity' in wrong_case.json()['detail']['message']
+    wrong_spacing=client.put(f'/api/v1/cases/{cid}/dose-artifacts?file_name=prediction.csv',content=b',data\n0,1\n',headers={**headers,'X-Dose-Spacing-MM':'1,2,2'})
+    assert wrong_spacing.status_code==422
+    assert 'spacing' in wrong_spacing.json()['detail']['message']
+    duplicate=client.put(f'/api/v1/cases/{cid}/dose-artifacts?file_name=prediction.csv',content=b',data\n0,1\n0,2\n',headers=headers)
+    assert duplicate.status_code==422
+    assert 'Duplicate' in duplicate.json()['detail']['message']
+    nonfinite=client.put(f'/api/v1/cases/{cid}/dose-artifacts?file_name=prediction.csv',content=b',data\n0,nan\n',headers=headers)
+    assert nonfinite.status_code==422
+    assert 'Nonfinite' in nonfinite.json()['detail']['message']
+
+
 def test_run_is_real_calculation_of_synthetic_fixture_and_idempotent(client):
     cid=client.get('/api/v1/cases').json()[0]['id']
     payload={'case_id':cid,'operation_id':'openkbp.case_summary'}
