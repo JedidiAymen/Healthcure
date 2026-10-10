@@ -1,6 +1,6 @@
 # UX-11 — Show the selected scientific source in Educator Studio
 
-**Status: Implemented in `48a2854`; focused code checks and authenticated desktop/tablet/phone visual review passed. Laptop-width review remains open.**
+**Status: Implemented in `48a2854`; authenticated responsive review passed at desktop, laptop, tablet, and phone widths.**
 
 ## Change
 
@@ -27,7 +27,7 @@ No package was installed. UI dependencies are the project's existing generated s
 - `npm run typecheck` — passed.
 - `npm run build` — passed. Existing vtk.js large-chunk and React compiler-directive warnings remain.
 - `git diff --check` — passed.
-- Actual authenticated visual screenshots used a real FiSaV `pat001` assignment and an isolated disposable educator database. At 1440×900, 768×1024 and 390×844 the waveform/provenance stayed visible, document width matched viewport width, and there were no page errors or failed requests. This was a browser screenshot and API review, not a full cross-route handoff visual audit; the required 1280×800 capture remains outstanding. Captures and measurements: [desktop](../../.local-review/UX11-educator-source-preview/educator-source-desktop.png), [tablet](../../.local-review/UX11-educator-source-preview/educator-source-tablet.png), [phone](../../.local-review/UX11-educator-source-preview/educator-source-phone.png), [review measurements](../../.local-review/UX11-educator-source-preview/visual-review.json).
+- Actual authenticated visual screenshots used real FiSaV `pat001` source evidence and a newly isolated disposable educator database. At 1440×900, 1280×800, 768×1024 and 390×844 the source, provenance and permission state rendered with document width equal to viewport width and no page errors or failed requests. The laptop-width shot closes the previously open capture gap. Updated captures and measurements: [desktop](../../.local-review/UX11-educator-source-preview/educator-source-desktop.png), [laptop](../../.local-review/UX11-educator-source-preview/educator-source-laptop.png), [tablet](../../.local-review/UX11-educator-source-preview/educator-source-tablet.png), [phone](../../.local-review/UX11-educator-source-preview/educator-source-phone.png), [latest review measurements](../../.local-review/UX11-educator-source-preview/visual-review-latest.json). This verifies the editor source panel at four widths; it does not replace a full author-to-publish-to-grade mobile audit.
 
 ## Limits
 

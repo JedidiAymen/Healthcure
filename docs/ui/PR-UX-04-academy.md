@@ -21,7 +21,7 @@
 ## Library source
 
 - Trophy UI AchievementBadge: source https://ui.trophy.so/docs/components/achievement-badge, upstream MIT license https://github.com/trophyso/ui/blob/main/LICENSE.md, source commit 81ee8a192b781aa1dff39c972fef692b31e3359e. Existing local source at src/components/ui/achievement-badge.tsx; used only for earned server awards after opt-in.
-- Trophy UI AchievementGrid: source https://github.com/trophyso/ui/blob/81ee8a192b781aa1dff39c972fef692b31e3359e/apps/www/registry/trophy/ui/achievement-grid.tsx; MIT license at the same commit. See `docs/ui/PR-UX-06-trophy-achievement-grid.md` for the actual app-state review and still-open earned-state gate.
+- Trophy UI AchievementGrid: source https://github.com/trophyso/ui/blob/81ee8a192b781aa1dff39c972fef692b31e3359e/apps/www/registry/trophy/ui/achievement-grid.tsx; MIT license at the same commit. See `docs/ui/PR-UX-06-trophy-achievement-grid.md` for the actual app-state review, including a persisted QA-earned award.
 - Trophy UI PointsBadge: existing local source at src/components/ui/points-badge.tsx; used only for enabled server XP.
 - No external Trophy SDK, hosted service, or dependency was introduced.
 
