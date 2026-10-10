@@ -18,9 +18,9 @@ import {
 } from '@/components/ui/sidebar'
 
 const navigation = [
-  { label: 'Cases', to: '/studio/cases', icon: Boxes },
+  { label: 'Case registry', to: '/studio/cases', icon: Boxes },
   { label: 'Analysis', to: '/studio', icon: Layers3, end: true },
-  { label: 'Models', to: '/studio/models', icon: Microscope },
+  { label: 'Model lab', to: '/studio/models', icon: Microscope },
   { label: 'Experiments', to: '/studio/experiments', icon: FlaskConical },
   { label: 'Reports', to: '/studio/reports', icon: FileText },
 ]
@@ -96,6 +96,10 @@ export function Shell() {
     to: item.to,
     icon: item.value === 'professional' ? Layers3 : item.value === 'academy' ? GraduationCap : BookOpenCheck,
   }))
+  const searchableDestinations = [
+    ...workspaceLinks,
+    ...(workspaceAvailable('professional') ? navigation.map(({ label, to, icon }) => ({ label, to, icon })) : []),
+  ].filter((item, index, items) => items.findIndex((candidate) => candidate.to === item.to) === index)
   const learning = workspace === 'academy'
     ? [
       { label: 'Continue learning', to: '/academy', icon: GraduationCap, active: location.pathname === '/academy' && location.hash !== '#academy-pathways' || location.pathname.startsWith('/academy/missions/') },
@@ -104,7 +108,7 @@ export function Shell() {
     ]
     : [
       { label: 'Lessons', to: '/educator', icon: BookOpenCheck, active: location.pathname === '/educator' || location.pathname.startsWith('/educator/cases/') },
-      { label: 'Assignments & learners', to: '/educator/assignments', icon: ClipboardCheck, active: location.pathname === '/educator/assignments' },
+      { label: 'Assignments', to: '/educator/assignments', icon: ClipboardCheck, active: location.pathname === '/educator/assignments' },
       { label: 'Submissions', to: '/educator/submissions', icon: FileText, active: location.pathname === '/educator/submissions' },
     ]
   const normalizedSearch = searchText.trim().toLocaleLowerCase()
@@ -117,7 +121,7 @@ export function Shell() {
     })
   }, [normalizedSearch, sourceCases.data])
   const shownCaseCount = specialties.reduce((total, item) => total + Math.min(8, matchingCases.filter((record) => record.module === item.module).length), 0)
-  const matchingWorkspaces = workspaceLinks.filter((item) => !normalizedSearch || item.label.toLocaleLowerCase().includes(normalizedSearch))
+  const matchingWorkspaces = searchableDestinations.filter((item) => !normalizedSearch || item.label.toLocaleLowerCase().includes(normalizedSearch))
   const matchingSpecialties = (workspaceAvailable('professional') ? specialties : []).filter((item) => !normalizedSearch || `${item.label} ${item.audience}`.toLocaleLowerCase().includes(normalizedSearch))
   const openDestination = (destination: string) => {
     setSearchOpen(false)

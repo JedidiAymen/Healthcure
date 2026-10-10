@@ -611,7 +611,7 @@ export function LessonEditorPage() {
                 <div className="my-3 grid gap-1 border-t border-border pt-3"><span className="text-sm font-semibold">Lesson blocks</span><small className="text-xs leading-relaxed text-muted-foreground">Arrange by drag, keyboard, or move controls.</small></div>
                 <div className="grid gap-2 [&_button]:min-h-12">
                   {blockTypes.filter((type) => type !== "CVS self-check" || selectedCase?.module === "surgivision").map((type) => (
-                    <Button type="button" variant="outline" size="sm" className="h-auto w-full justify-start gap-2.5 py-2 text-left" key={type} onClick={() => add(type)} aria-label={`Add ${type} block`}>
+                    <Button type="button" variant="outline" size="sm" className="h-auto w-full justify-start gap-2.5 py-2 text-left" key={type} onClick={() => add(type)} aria-label={type} aria-description={`Add a ${type} block to the current lesson`} title={`Add ${type} block`}>
                       {(() => { const PaletteIcon = blockPalette[type].icon; return <PaletteIcon aria-hidden="true" className="size-4 shrink-0 text-primary" />; })()}
                       <span className="grid min-w-0 flex-1 gap-0.5">
                         <span className="truncate text-xs font-semibold">{type}</span>
