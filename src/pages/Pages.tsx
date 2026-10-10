@@ -104,6 +104,8 @@ import { queryKeys } from "@/lib/query-client";
 import { renderDoseSlicePixels } from "@/lib/dose-visualization";
 import { filterModelCatalog, type ModelReadinessFilter } from "@/lib/model-catalog";
 import { canSubmitMission, getMissionProgress } from "@/lib/academy-mission-progress";
+import { offlineStore } from "@/lib/mission-offline";
+import { clearDraft, enqueueSubmit, isNetworkError, loadDraft, saveDraft } from "@/lib/offline-queue";
 import { CvsSelfCheck, CvsSelfCheckSummary } from "@/features/surgivision/CvsSelfCheck";
 import clinicalTeamImage from "../assets/clinical-team.jpg";
 import radiologyReviewImage from "../assets/radiology-team.jpg";
@@ -2126,6 +2128,12 @@ export function Mission() {
   const [busy, setBusy] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [offlineNotice, setOfflineNotice] = useState("");
+  useEffect(() => {
+    if (!attempt || attempt.state !== "started") return;
+    const timer = window.setTimeout(() => { void saveDraft(offlineStore(), attempt.attempt_id, answers).catch(() => undefined); }, 600);
+    return () => window.clearTimeout(timer);
+  }, [attempt, answers]);
   useEffect(() => {
     if (!missionId) return;
     let live = true;
@@ -2139,7 +2147,12 @@ export function Mission() {
     api.studentStartAttempt(missionId).then(value => {
       if (!live) return;
       setAttempt(value);
-      setAnswers(Object.fromEntries(value.observations.map(item => [item.block_id, item.response])));
+      const serverAnswers = Object.fromEntries(value.observations.map(item => [item.block_id, item.response]));
+      setAnswers(serverAnswers);
+      // Degraded mode: restore answers typed on this device that never reached the server.
+      if (value.state === "started") void loadDraft(offlineStore(), value.attempt_id).then(draft => {
+        if (live && draft) { setAnswers({ ...serverAnswers, ...Object.fromEntries(Object.entries(draft.answers).filter(([, text]) => text.trim())) }); setOfflineNotice("Restored unsaved answers from this device."); }
+      }).catch(() => undefined);
       setViewerEvidence(value.viewer_evidence);
     }).catch(e => { if (live) setError(e instanceof Error ? e.message : "The assigned lesson could not be opened"); }).finally(() => { if (live) setBusy(false); });
     return () => { live = false; };
@@ -2162,13 +2175,26 @@ export function Mission() {
     finally { setSaving(false); }
   };
   const submit = async () => {
-    const updated = await save();
-    if (!updated) return;
-    setSaving(true);
+    if (!attempt) return;
+    const idempotencyKey = crypto.randomUUID();
+    const queue = async () => {
+      // Offline: keep the submit with its key; it is replayed automatically when the connection returns.
+      await enqueueSubmit(offlineStore(), { attemptId: attempt.attempt_id, revision: attempt.revision, idempotencyKey, answers, viewerEvidence });
+      setError(""); setOfflineNotice("You are offline. Your submission is queued on this device and will be sent automatically.");
+    };
+    if (!navigator.onLine) { await queue(); return; }
+    setSaving(true); setError("");
     try {
-      await api.submitStudentAttempt(updated.attempt_id, updated.revision, crypto.randomUUID());
+      const updated = await api.saveStudentAttempt(attempt.attempt_id, attempt.revision, Object.entries(answers).map(([block_id, response]) => ({ block_id, response })), viewerEvidence);
+      setAttempt(updated);
+      await api.submitStudentAttempt(updated.attempt_id, updated.revision, idempotencyKey);
+      await clearDraft(offlineStore(), updated.attempt_id).catch(() => undefined);
+      setOfflineNotice("");
       setAttempt(await api.studentAttempt(updated.attempt_id));
-    } catch (e) { setError(e instanceof Error ? e.message : "Submission could not be sent"); }
+    } catch (e) {
+      if (isNetworkError(e)) await queue();
+      else setError(e instanceof Error ? e.message : "Submission could not be sent");
+    }
     finally { setSaving(false); }
   };
   if (busy) return <Card><CardHeader><CardTitle>Opening your assignment…</CardTitle><CardDescription>Loading the student-safe lesson version.</CardDescription></CardHeader><CardContent><Skeleton className="h-24"/></CardContent></Card>;
@@ -2195,6 +2221,7 @@ export function Mission() {
       <AcademyAchievementAnnouncement studentId={user?.id} enabled={progress.data.achievements_enabled} achievements={progress.data.achievements}/>
       <StudentMissionStepper progress={missionProgress}/>
       {error && <Alert variant="destructive"><CircleAlert/><AlertTitle>Action could not be completed</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
+      {offlineNotice && <Alert role="status"><CircleAlert/><AlertTitle>Saved on this device</AlertTitle><AlertDescription>{offlineNotice}</AlertDescription></Alert>}
       <Card id="mission-explore" className="mb-4"><CardHeader><div className="eyebrow">Explore evidence</div><CardTitle>{attempt.challenge.case_label}</CardTitle><CardDescription>The scientific viewer is limited to the case attached to this assignment. Reference labels {debrief?.reference_evidence ? "are now available after educator review." : "remain hidden until educator review."}</CardDescription></CardHeader><CardContent><Suspense fallback={<Skeleton className="h-72"/>}>{attempt.challenge.module === "dosetwin" ? <DoseViewer key={attempt.challenge.case_id} caseId={attempt.challenge.case_id} guided onEvidenceChange={setViewerEvidence} viewerEvidence={viewerEvidence?.kind === "dosetwin" ? viewerEvidence : null} locked={locked}/> : attempt.challenge.module === "surgivision" ? <SurgiViewer key={attempt.challenge.case_id} frameId={attempt.challenge.case_id} availableFrameIds={[attempt.challenge.case_id]} guided releasedReference={debrief?.reference_evidence} viewerEvidence={viewerEvidence} onEvidenceChange={setViewerEvidence} locked={locked}/> : <FistulaViewer key={sourceId} recordId={sourceId} availableRecordIds={[sourceId]} guided viewerEvidence={viewerEvidence?.kind === "fistulaguard" ? viewerEvidence : null} onEvidenceChange={setViewerEvidence} locked={locked}/>}</Suspense><div id="mission-observe" className="mt-4 rounded-lg border bg-muted/20 px-3 py-2 text-sm"><b>{viewerEvidence ? "Evidence selected" : "Select evidence to submit"}</b><span className="ml-2 text-muted-foreground">{evidenceSummary}</span></div></CardContent></Card>
       <div id="mission-explain" className="flex flex-col gap-4">{attempt.challenge.blocks.map((block, index) => <Card key={block.id}><CardHeader><div className="eyebrow">{block.type} · {String(index+1).padStart(2,"0")}</div><CardTitle>{block.title}</CardTitle><CardDescription>{block.content}</CardDescription></CardHeader>{block.type === "Question" && <CardContent><FieldGroup><Field><FieldLabel htmlFor={`answer-${block.id}`}>Your observation</FieldLabel><Textarea id={`answer-${block.id}`} value={answers[block.id] ?? ""} disabled={locked} onChange={event => setAnswers(previous => ({...previous, [block.id]: event.target.value}))} placeholder="Describe what the evidence supports and what remains uncertain." rows={5}/></Field></FieldGroup></CardContent>}{block.type === "CVS self-check" && <CardContent><CvsSelfCheck attemptId={attempt.attempt_id} blockId={block.id} locked={locked} onCommitted={markSelfCheckCommitted}/></CardContent>}</Card>)}</div>
       <div id="mission-submit" className="mt-4 flex flex-col gap-4">
