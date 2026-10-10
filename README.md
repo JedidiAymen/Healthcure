@@ -15,7 +15,7 @@ Reviewing candidate radiotherapy dose distributions is information-intensive, an
 
 Every decision is **for further expert review, not for patient treatment**.
 
-**Supporting modules, all fully usable:**
+**Additional source-backed research and education workspaces:**
 - **SurgiVision:** expert-annotated laparoscopic frames, annotator-disagreement filters, side-by-side compare, and a CVS self-check lesson block.
 - **FistulaGuard:** measured FiSaV fistula recordings, zero-phase filters, ECG beat analysis, and a simulated telemetry device with frame integrity checks.
 - **Academy and Educator:** lessons, cohorts, grading, and delayed debriefs.
@@ -109,4 +109,4 @@ CI (`.github/workflows/ui-and-api.yml`) runs these on Ubuntu with Python 3.13 an
 - **Privacy by design:** datasets carry pseudonymous source IDs only, and derived labels keep the minimum fields.
 - **No legal compliance claim:** GDPR and INPDP obligations are documented, not claimed solved.
 
-More in [`docs/HACKCURE_COMPLIANCE.md`](docs/HACKCURE_COMPLIANCE.md), [`docs/DECISIONS.md`](docs/DECISIONS.md), [`docs/BLOCKERS.md`](docs/BLOCKERS.md) and [`RUN_LOCAL.md`](RUN_LOCAL.md).
+For the locally selected `pt_241` walkthrough and account preparation, see [`RUN_LOCAL.md`](RUN_LOCAL.md) and [`docs/LOCAL_ACCESS_AND_PROFILES.md`](docs/LOCAL_ACCESS_AND_PROFILES.md). Read [`docs/DEMO_ASSETS.md`](docs/DEMO_ASSETS.md) for installed source boundaries, and [`docs/HACKCURE_COMPLIANCE.md`](docs/HACKCURE_COMPLIANCE.md), [`docs/DECISIONS.md`](docs/DECISIONS.md), and [`docs/BLOCKERS.md`](docs/BLOCKERS.md) for demo status and remaining gates.

@@ -2,6 +2,8 @@
 
 This is a planning document for the HackCure jury and the team. It describes the current research/education product and separates verified local controls from future institutional work. It is not legal advice, clinical validation, a deployment authorization, or evidence of a health outcome. Assumptions must be validated with domain experts, buyers, and qualified legal advisers before they are presented as facts.
 
+**Snapshot:** repository branch `feat/experiments-run-workspace`, commit `7a754d8` (2026-10-10). This dossier reflects the implementation notes in [`STATUS.md`](STATUS.md) and [`PROGRESS.md`](PROGRESS.md), including UX-49/50. The user-provided HackCure proposal labels its additions as proposed unless marked existing; the accompanying gap assessment is a secondary editorial review of an older commit. The organizers' primary cahier PDF is not in this checkout, and its exact wording has not been independently checked here. Do not treat proposal ideas, assessment scores, or this planning document as organizer approval or proof of legal/clinical compliance.
+
 ## 1. Target workflow and users
 
 - **Current problem framing:** researchers and educators need a traceable way to inspect a radiotherapy benchmark reference beside a published archived prediction, understand measured differences, and record a reasoned research review. This is a research/education problem; no reduction in clinical errors or patient outcomes has been measured.
@@ -19,6 +21,7 @@ This is a planning document for the HackCure jury and the team. It describes the
 | Rigor | The `pt_201` DoseTwin summary metrics were cross-checked against the official evaluator (`openkbp-pt201-validation.json`). The `pt_241` comparison uses its matching reference and archived prediction, not an MEDFORGE model. | Reproduce source-level validation with institution-approved inputs and independent technical/domain review. The `pt_201` check does not validate the `pt_241` prediction or establish clinical utility. |
 | Accounts and roles | Local profiles are operator-provisioned. Educator/admin can prepare general research records; `clinical_reviewer`/admin can record DoseTwin research reviews; students are scoped to assigned learning cases. | Institutional identity and access policy, least-privilege review, account lifecycle and separation-of-duties review. |
 | Interoperability | A minimal FHIR R4 representation of the DoseTwin research review is exported and schema-validated. There is no live hospital-system connection. | Agree on profiles, terminology and exchange semantics with an institutional integration partner; test against a non-production endpoint. |
+| Demo readiness | Local source assets, imported `pt_241` comparison and profile/database state are machine-local; the jury walkthrough and exact setup are documented in [`HACKCURE_COMPLIANCE.md`](HACKCURE_COMPLIANCE.md) and [`LOCAL_ACCESS_AND_PROFILES.md`](LOCAL_ACCESS_AND_PROFILES.md). UX-49/50 update the local UI and Academy investigation flow. | Recheck assets, account and saved report on the selected machine; rehearse the complete walkthrough and backup there. The current notes do not prove an independent clean-clone setup or completed jury rehearsal. |
 
 ## 3. Regulatory and privacy scope
 

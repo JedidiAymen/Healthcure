@@ -43,7 +43,7 @@ Updated 2026-10-10. This file records the sources present in this local checkout
 
 ## Shared use and prohibited claims
 
-- The default profile has 1,993 primary registry records: one OpenKBP case (`pt_201`), 1,933 Endoscapes annotated frames, and 59 FiSaV recordings. A separate isolated local launch profile adds `pt_241` for DoseTwin review. The Endoscapes sequence browser and Appendix300 video player expose additional media with distinct source identities. These are independent research datasets; they do not describe one patient or linked clinical pathway.
+- The default registry has 1,993 primary records: one OpenKBP case (`pt_201`), 1,933 Endoscapes annotated frames, and 59 FiSaV recordings. When its local source files are installed, the default app exposes `pt_241` as a separately selectable DoseTwin case; the dedicated `start_local_openkbp_pt241.sh` launcher instead uses an isolated database for that review. The Endoscapes sequence browser and Appendix300 video player expose additional media with distinct source identities. These are independent research datasets; they do not describe one patient or linked clinical pathway.
 - Do not add raw media, source datasets or checkpoints to Git. Keep source license, original IDs, hashes, units and provenance with derived results.
 - No installed model checkpoint is claimed as runnable. No prediction, diagnosis, clinical clearance, treatment plan, patient outcome or professional certification is fabricated.
 - External jury or public display remains gated where explicit data-use permission has not been recorded.
