@@ -40,3 +40,14 @@ Statuses refer to this checkout, not to whether upstream research exists. `Imple
 | Academy | Student evidence attempt, hidden answers, grading, reveal, opt-in XP/activities and rubric progress | Implemented for local learning delivery; isolated Endoscapes and FiSaV signed-in flows verified | Student role and cohort membership gate challenge access; the same scientific viewer is restricted to the assigned case. The chosen OpenKBP voxel/ROI, Endoscapes image point or FiSaV channel/time window is source-validated and persists in the attempt for educator review. The isolated Endoscapes review confirmed the rubric and Reveal block were absent before grading, pre-grade debrief was denied, and reference annotations appeared in the viewer only after the educator grade. The FiSaV review selected PZT2 samples from `pat001` at 0–10 seconds, submitted a source-bounded observation and released a criterion-scored debrief. Academy/Educator phone/tablet review is complete. Answer drafts use revisions, submission requires an idempotency key and a valid viewer selection. XP and activity awards are separately controlled, private and off by default; the first activity badge is awarded once only for a reviewed source-backed investigation. Progress groups latest instructor-scored rubric dimensions within a lesson and does not claim clinical mastery. No automatic medical grading or fake scores are seeded. |
 
 The complete source capability register and archived design rationale remain in [`docs/source/v0.8/`](source/v0.8/).
+
+## 2026-10-10 additions (branch `upgrade/hackcure-compliance`)
+
+| Domain | Capability | Status | Notes |
+|---|---|---|---|
+| DoseTwin | Reference vs archived prediction research review | Implemented | Decision plus rationale, immutable, audited, exportable (JSON and FHIR R4). The archived prediction is badged, never our inference. |
+| DoseTwin | Voxel-level difference inspector | Implemented | Reference Gy, prediction Gy, signed difference, structure membership |
+| FistulaGuard | Signal-quality checks with abstention | Implemented | Rule-based named checks |
+| FistulaGuard | Simulated telemetry device (MQTT, CRC32, sequence checks) | Implemented | Simulated only; no model applied |
+| FistulaGuard | Stenosis risk index | Blocked | Protocol frozen at v1.1 and not run; label criterion undocumented |
+| Platform | FHIR R4 export | Implemented (minimal) | DiagnosticReport bundle for research reviews, tagged HTEST |
