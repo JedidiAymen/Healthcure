@@ -1,6 +1,6 @@
 # UX-06 — Trophy Achievement Grid
 
-**Status: Integrated; real earned state pending.** The official Trophy Grid now renders only awards returned by the student's API after opting in. The normal local preview has no educator-reviewed award, so the real grid state is deliberately not fabricated.
+**Status: Integrated; source-backed QA-earned state visually verified.** The official Trophy Grid renders only awards returned by the student's API after opting in. The award shown below was generated in an isolated QA database through an educator-reviewed FiSaV assignment; it is interface evidence, not a real learner's achievement or clinical competency.
 
 ## What changed
 
@@ -18,11 +18,11 @@
 
 ## Verification and actual-app review
 
-- Desktop 1440×900, tablet 768×1024 and phone 390×844: no horizontal overflow or browser exceptions. With opt-in disabled, recognition stays off. With opt-in enabled and no award, the honest empty state appears and the award grid stays unmounted.
-- Private local captures are ignored by Git under `.local-review/TROPHY-GRID/`.
+- On the current review branch, used the isolated local `review-student` state bound to authentic FiSaV `pat001` evidence and two educator-reviewed rubric attempts. The authenticated API returned 20 opted-in XP and one `First Evidence Investigation` award; the actual Trophy grid, description and earned date rendered at desktop 1440×900, tablet 768×1024 and phone 390×844. All three sizes had no horizontal overflow or browser exceptions. The fixture is temporary QA data, not learner research or evidence of competence.
+- Current captures are ignored local files under `.local-review/ACADEMY-AWARD-REVIEW/`; the earlier opt-out and no-award empty-state screenshots remain under `.local-review/TROPHY-GRID/`.
 - `npm run lint`, `npm run typecheck`, `npm run test` (25 passed), and `npm run build` passed.
 - Build delta against parent `a72e5cd`: Academy CSS +0.28 kB raw / +0.04 kB gzip; Pages chunk +0.62 kB raw / +0.19 kB gzip. No dependency or remote-asset delta.
-- Grid badges are non-interactive list items, so they add no keyboard stops. There is no motion or external image request. A genuine awarded badge has not been exercised in-browser because no authentic reviewed award exists in the disposable account.
+- Grid badges are non-interactive list items, so they add no keyboard stops. There is no motion or external image request. This QA review verifies authorized award rendering; it does not establish any real learner's progress.
 
 ## Files
 
