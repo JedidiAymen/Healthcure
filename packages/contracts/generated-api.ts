@@ -2718,8 +2718,34 @@ export interface components {
             procedure_label: string;
             /** Sha256 */
             sha256: string;
+            source_annotation?: components["schemas"]["SurgicalClipSourceAnnotation"] | null;
             /** Source Url */
             source_url: string;
+        };
+        /**
+         * SurgicalClipSourceAnnotation
+         * @description A source-linked timestamp and grade, never a model-generated output.
+         */
+        SurgicalClipSourceAnnotation: {
+            /** Event Label */
+            event_label: string;
+            /** Final Laparoscopic Grade */
+            final_laparoscopic_grade: string;
+            /**
+             * Grade Scale
+             * @constant
+             */
+            grade_scale: "Gomes";
+            /** Metadata Bitstream Id */
+            metadata_bitstream_id: string;
+            /** Metadata Bytes */
+            metadata_bytes: number;
+            /** Metadata File */
+            metadata_file: string;
+            /** Metadata Md5 */
+            metadata_md5: string;
+            /** Timestamp Seconds */
+            timestamp_seconds: number;
         };
         /** SurgicalFrameArtifact */
         SurgicalFrameArtifact: {

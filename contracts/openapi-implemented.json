@@ -4371,6 +4371,16 @@
             "title": "Sha256",
             "type": "string"
           },
+          "source_annotation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SurgicalClipSourceAnnotation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "source_url": {
             "title": "Source Url",
             "type": "string"
@@ -4390,6 +4400,60 @@
           "limitations"
         ],
         "title": "SurgicalClipRecord",
+        "type": "object"
+      },
+      "SurgicalClipSourceAnnotation": {
+        "additionalProperties": false,
+        "description": "A source-linked timestamp and grade, never a model-generated output.",
+        "properties": {
+          "event_label": {
+            "title": "Event Label",
+            "type": "string"
+          },
+          "final_laparoscopic_grade": {
+            "title": "Final Laparoscopic Grade",
+            "type": "string"
+          },
+          "grade_scale": {
+            "const": "Gomes",
+            "title": "Grade Scale",
+            "type": "string"
+          },
+          "metadata_bitstream_id": {
+            "title": "Metadata Bitstream Id",
+            "type": "string"
+          },
+          "metadata_bytes": {
+            "exclusiveMinimum": 0.0,
+            "title": "Metadata Bytes",
+            "type": "integer"
+          },
+          "metadata_file": {
+            "title": "Metadata File",
+            "type": "string"
+          },
+          "metadata_md5": {
+            "pattern": "^[0-9a-f]{32}$",
+            "title": "Metadata Md5",
+            "type": "string"
+          },
+          "timestamp_seconds": {
+            "minimum": 0.0,
+            "title": "Timestamp Seconds",
+            "type": "number"
+          }
+        },
+        "required": [
+          "event_label",
+          "timestamp_seconds",
+          "final_laparoscopic_grade",
+          "grade_scale",
+          "metadata_file",
+          "metadata_bitstream_id",
+          "metadata_bytes",
+          "metadata_md5"
+        ],
+        "title": "SurgicalClipSourceAnnotation",
         "type": "object"
       },
       "SurgicalFrameArtifact": {
