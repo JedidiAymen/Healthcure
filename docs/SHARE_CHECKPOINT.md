@@ -16,11 +16,11 @@ The Student Academy and educator workflow include pathway pages, cohort assignme
 - Local source/route smoke: `npm run smoke:local` — 19 app routes plus installed-source checks passed.
 - Responsive review: Academy assignment/pathway and Progress layouts checked at 390×844 and 768×1024; no horizontal page overflow. Keyboard focus was seen on the assigned lesson link.
 
-The Progress screen currently has no educator-reviewed grades in its isolated preview database. Therefore populated rubric-history chart interaction/keyboard review and full keyboard traversal of the new pathway screens remain open. See `docs/RELEASE_CHECKLIST.md` for the exact gates and `docs/STATUS.md` for the implementation history.
+The Progress screen currently has no educator-reviewed grades in its isolated preview database. Therefore populated rubric-history chart interaction/keyboard review remains open. Academy pathway selection now has a keyboard focus and Enter-navigation check at desktop, tablet and phone sizes; an unassigned learner’s path detail correctly shows the no-lessons state. See `docs/RELEASE_CHECKLIST.md` for the exact gates and `docs/STATUS.md` for the implementation history.
 
 ## What remains open
 
-- Finish interactive review of a populated Progress chart, criterion selector, values table, and keyboard access; complete Academy pathway keyboard traversal.
+- Finish interactive review of a populated Progress chart, criterion selector, values table, and keyboard access. A reviewed grade is needed to populate that view without inventing sample progress.
 - Complete instructor-approved competency mapping and the authored curriculum.
 - Keep the service bound to loopback. General research routes do not have production authorization, and hosting is disabled.
 - Resolve dataset display/redistribution rights for the intended audience before sharing any data-backed screenshots or running a public demo. OpenKBP data rights and CVS-AdaptNet checkpoint-specific terms/provenance remain unresolved; other sources also have attribution and scope requirements. See `docs/BLOCKERS.md` and `docs/RELEASE_CHECKLIST.md`.
