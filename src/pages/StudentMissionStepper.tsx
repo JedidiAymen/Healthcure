@@ -49,7 +49,6 @@ export function StudentMissionStepper({ progress }: StudentMissionStepperProps) 
                 <span className="text-[11px] leading-4 text-muted-foreground">{status(index)}</span>
               </span>
             </a>
-            {index < steps.length - 1 && <Separator aria-hidden="true" orientation="vertical" className="ml-[15px] h-3 sm:hidden" />}
           </li>
         ))}
       </ol>
