@@ -40,8 +40,8 @@ process.stdin.on("end", () => {
 '
 "${compose[@]}" up -d --no-build --pull never
 
-printf '\nLocal HackCure stack started at https://127.0.0.1:%s\n' "${MEDFORGE_HTTPS_PORT:-8443}"
-printf 'Flagship route: https://127.0.0.1:%s/studio/dosetwin/cases/openkbp%%3Apt_241\n' "${MEDFORGE_HTTPS_PORT:-8443}"
+printf '\nLocal HackCure stack started at https://localhost:%s\n' "${MEDFORGE_HTTPS_PORT:-8443}"
+printf 'Flagship route: https://localhost:%s/studio/dosetwin/cases/openkbp%%3Apt_241\n' "${MEDFORGE_HTTPS_PORT:-8443}"
 printf 'Shared host/API database: %s/medforge.sqlite3\n' "$DB_DIR"
 printf 'Stop with: docker compose -f docker-compose.yml -f docker-compose.hackcure.yml down\n'
 printf 'No demo accounts are seeded by this profile. App startup may apply database schema migrations.\n'

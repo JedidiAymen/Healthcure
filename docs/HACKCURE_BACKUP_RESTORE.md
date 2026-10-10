@@ -26,6 +26,8 @@ python3 scripts/hackcure_backup_restore.py restore-check data/hackcure-docker/ba
 
 `restore-check` validates every ZIP member and hash, extracts to a temporary directory under ignored `data/`, checks the copied SQLite database with `PRAGMA quick_check`, and cross-checks the source manifest against the restored source files. The temporary directory is removed when the check ends. It never restores over `data/hackcure-docker/medforge.sqlite3`, writes into a Docker volume, starts a container, applies migrations, or changes an account.
 
+On 2026-10-11, the current local HackCure database and `pt_241 / set_1` source files were archived and restore-checked successfully: 15 members verified and SQLite `quick_check` returned `ok`. This rehearsal database still has no imported comparison/report or reviewer account, so the backup is not an event-ready state.
+
 ## What this does not prove
 
 This is a local archive-integrity rehearsal, not the outstanding second-machine/backup-access-point event rehearsal in [`HACKCURE_COMPLIANCE.md`](HACKCURE_COMPLIANCE.md). It does not prove that Docker images are available offline, that the app boots from the archive, that credentials or keys can be recovered, that the archive is encrypted, or that the dataset may be displayed outside this machine. Keep the separate live-state preflight and visual rehearsal gates in [`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md).
