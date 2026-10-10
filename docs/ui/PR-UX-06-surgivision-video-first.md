@@ -18,4 +18,4 @@ Passed: `npm run typecheck`, `npm run lint`, `npm run test` (36 tests), `npm run
 
 ## Review artifacts
 
-No application screenshot is claimed for this milestone. The 200%-zoom Educator picker check now compares the CSS `40vh` cap with the browser's visual viewport, which matches how viewport units are resolved in Chromium during emulation.
+No application screenshot is claimed for this milestone. The Educator picker zoom check compares the CSS `40vh` cap with `window.innerHeight`, the layout viewport used by CSS viewport units. Chromium's emulated `visualViewport.height` can differ and is not used as that cap's expected basis.
