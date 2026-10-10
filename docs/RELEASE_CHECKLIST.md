@@ -70,6 +70,8 @@ Updated 2026-10-10. This is a local-demo checklist. MEDFORGE is **not v1.0 locke
 
 ## Required before an external demo
 
+- [x] The local demo guide names one flagship route (`pt_241`) and the same-database reviewer/artifact preflight; optional Academy credentials and published/assigned lesson requirements are explicit. Shell and SurgiVision video evidence have been reviewed responsively. The local screenshots and remaining L2/L3 gaps are recorded in [`PR-UX-51`](ui/PR-UX-51-role-shell-video-inspector-and-hackcure-readiness.md).
+
 - [ ] Rights reviewer records permission for the intended Endoscapes and OpenKBP display and audience. Current OpenKBP dataset rights are not established; Endoscapes requires scope-specific non-commercial attribution review.
 - [ ] Confirm FiSaV attribution and the planned educational context; keep its excluded demographics workbook excluded.
 - [x] Review rendered attribution and dataset limitations at desktop (1440×900), tablet (768×1024) and phone (390×844) widths. DoseTwin visibly separates the OpenKBP code license from unconfirmed dataset rights and links the pinned source; SurgiVision names its non-commercial CC BY-NC-SA sample and annotated-stills scope; FistulaGuard displays FiSaV DOI, CC BY 4.0, source hash and analysis limitations. All nine source-panel states returned HTTP 200 with no page errors or horizontal overflow. Private captures are in `.local-review/ATTRIBUTION/`.
