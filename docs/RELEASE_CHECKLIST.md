@@ -4,6 +4,7 @@ Updated 2026-10-10. This is a local-demo checklist. MEDFORGE is **not v1.0 locke
 
 ## Verified in this checkout
 
+- [x] UX-50 guided Academy stepper retains source evidence, learner-safe gates, offline submission, and review flow; FistulaGuard follows waveform-first full-width analysis; Model Lab filters exact registered operations and source terms. Typecheck/diff check pass; manual FistulaGuard and Model Lab review recorded. See [`PR-UX-50`](ui/PR-UX-50-guided-learning-and-scientific-inspection.md).
 - [x] UX-49 Home role chooser, real in-progress Academy investigation spotlight, and Educator authoring-canvas presentation reuse the existing shadcn/Base UI and Tailwind stack. Manual Home review at 390×844, 768×1024, 1280×800 and 1440×900; `npm run typecheck` and `git diff --check` pass. See [`PR-UX-49`](ui/PR-UX-49-workspace-entry-educator-canvas.md).
 - [x] A clean frontend install succeeds with `npm ci`; every direct dependency is pinned in `package.json` and `package-lock.json`. `npm run lint` and `npm run build` pass after the clean install.
 - [x] React/Vite/TypeScript production build passes.

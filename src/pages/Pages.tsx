@@ -1350,11 +1350,23 @@ export function Models() {
   const { data, loading, error } = useApi(queryKeys.models, api.models, [] as ModelRecord[]);
   const [moduleFilter, setModuleFilter] = useState<"all" | ModelRecord["module"]>("all");
   const [readinessFilter, setReadinessFilter] = useState<ModelReadinessFilter>("all");
+  const [operationFilter, setOperationFilter] = useState("all");
+  const [licenseFilter, setLicenseFilter] = useState("all");
   const [searchText, setSearchText] = useState("");
   const [selectedModelId, setSelectedModelId] = useState("");
+  const registeredOperations = useMemo(
+    () => [...new Set(data.flatMap((model) => model.operation_ids))].sort((a, b) => a.localeCompare(b)),
+    [data],
+  );
+  const registeredLicenses = useMemo(
+    () => [...new Set(data.map((model) => model.source_license))].sort((a, b) => a.localeCompare(b)),
+    [data],
+  );
   const visibleModels = useMemo(
-    () => filterModelCatalog(data, { module: moduleFilter, readiness: readinessFilter, search: searchText }),
-    [data, moduleFilter, readinessFilter, searchText],
+    () => filterModelCatalog(data, { module: moduleFilter, readiness: readinessFilter, search: searchText })
+      .filter((model) => operationFilter === "all" || model.operation_ids.includes(operationFilter))
+      .filter((model) => licenseFilter === "all" || model.source_license === licenseFilter),
+    [data, moduleFilter, readinessFilter, operationFilter, licenseFilter, searchText],
   );
   const selectedModel = visibleModels.find((model) => model.id === selectedModelId) ?? visibleModels[0];
   const readyCount = data.filter((model) => model.readiness === "ready").length;
@@ -1397,6 +1409,28 @@ export function Models() {
               <ToggleGroupItem value="gated" aria-label="Gated methods" className="h-8 px-3">Gated</ToggleGroupItem>
             </ToggleGroup>
           </div>
+          <FieldGroup className="mb-3 grid gap-2 sm:grid-cols-2">
+            <Field className="grid min-w-0 gap-1.5">
+              <FieldLabel htmlFor="model-operation-filter">Registered operation</FieldLabel>
+              <Select value={operationFilter} onValueChange={(value) => setOperationFilter(value ?? "all")}>
+                <SelectTrigger id="model-operation-filter" className="w-full"><SelectValue placeholder="All registered operations" /></SelectTrigger>
+                <SelectContent><SelectGroup>
+                  <SelectItem value="all">All registered operations</SelectItem>
+                  {registeredOperations.map((operation) => <SelectItem key={operation} value={operation}>{operation}</SelectItem>)}
+                </SelectGroup></SelectContent>
+              </Select>
+            </Field>
+            <Field className="grid min-w-0 gap-1.5">
+              <FieldLabel htmlFor="model-license-filter">License / use terms</FieldLabel>
+              <Select value={licenseFilter} onValueChange={(value) => setLicenseFilter(value ?? "all")}>
+                <SelectTrigger id="model-license-filter" className="w-full"><SelectValue placeholder="All source terms" /></SelectTrigger>
+                <SelectContent><SelectGroup>
+                  <SelectItem value="all">All source terms</SelectItem>
+                  {registeredLicenses.map((license) => <SelectItem key={license} value={license}>{license}</SelectItem>)}
+                </SelectGroup></SelectContent>
+              </Select>
+            </Field>
+          </FieldGroup>
           <ToggleGroup multiple={false} value={[moduleFilter]} onValueChange={(value) => { if (value[0]) setModuleFilter(value[0] as typeof moduleFilter); }} aria-label="Filter model methods by research workspace" className="mb-4 flex h-auto flex-wrap justify-start gap-1 rounded-lg border border-border bg-muted/35 p-1">
             <ToggleGroupItem value="all" aria-label="All methods" className="h-8 px-3">All methods</ToggleGroupItem>
             <ToggleGroupItem value="surgivision" aria-label="SurgiVision methods" className="h-8 px-3">SurgiVision</ToggleGroupItem>
@@ -1439,7 +1473,7 @@ export function Models() {
                       </TableRow>;
                     })}
                     {loading && <TableRow><TableCell colSpan={5}><div className="grid gap-2 py-2"><Skeleton className="h-8 w-full"/><Skeleton className="h-8 w-full"/><Skeleton className="h-8 w-full"/></div></TableCell></TableRow>}
-                    {!loading && visibleModels.length === 0 && <TableRow><TableCell colSpan={5} className="h-24 whitespace-normal text-center text-sm text-muted-foreground">{searchText || readinessFilter !== "all" ? "No registered methods match this search and filter." : "No methods are registered for this workspace."}</TableCell></TableRow>}
+                    {!loading && visibleModels.length === 0 && <TableRow><TableCell colSpan={5} className="h-24 whitespace-normal text-center text-sm text-muted-foreground">{searchText || readinessFilter !== "all" || operationFilter !== "all" || licenseFilter !== "all" ? "No registered methods match this search and filter." : "No methods are registered for this workspace."}</TableCell></TableRow>}
                   </TableBody>
                 </Table>
               </CardContent>
@@ -2323,6 +2357,7 @@ export function Mission() {
   const { missionId } = useParams();
   const progress = useApi(queryKeys.studentProgress, api.studentProgress, { xp: 0, xp_enabled: false, achievements_enabled: false, graded_attempts: 0, average_score: null, assigned_activities: 0, next_activity: null, rubric_dimensions: [], rubric_history: [], achievements: [] } as StudentProgress);
   const [attempt, setAttempt] = useState<StudentAttempt | null>(null);
+  const [activeMissionStep, setActiveMissionStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [viewerEvidence, setViewerEvidence] = useState<StudentViewerEvidence | null>(null);
   const [committedSelfChecks, setCommittedSelfChecks] = useState<Record<string, boolean>>({});
@@ -2342,6 +2377,7 @@ export function Mission() {
     let live = true;
     setBusy(true);
     setAttempt(null);
+    setActiveMissionStep(0);
     setAnswers({});
     setViewerEvidence(null);
     setCommittedSelfChecks({});
@@ -2352,6 +2388,15 @@ export function Mission() {
       setAttempt(value);
       const serverAnswers = Object.fromEntries(value.observations.map(item => [item.block_id, item.response]));
       setAnswers(serverAnswers);
+      // Restore the learner's place on this device; fall back to the latest server-saved work.
+      let savedStep: number | null = null;
+      try {
+        const stored = window.localStorage.getItem(`academy-mission-step:${value.attempt_id}`);
+        const parsedStep = stored === null ? Number.NaN : Number(stored);
+        if (Number.isInteger(parsedStep) && parsedStep >= 0 && parsedStep <= 4) savedStep = parsedStep;
+      } catch { /* Storage can be unavailable in private browsing; server work still restores below. */ }
+      const hasSavedAnswers = value.observations.some(item => item.response.trim().length > 0);
+      setActiveMissionStep(value.state !== "started" ? 4 : savedStep ?? (value.viewer_evidence ? 2 : hasSavedAnswers ? 3 : 0));
       // Degraded mode: restore answers typed on this device that never reached the server.
       if (value.state === "started") void loadDraft(offlineStore(), value.attempt_id).then(draft => {
         if (live && draft) { setAnswers({ ...serverAnswers, ...Object.fromEntries(Object.entries(draft.answers).filter(([, text]) => text.trim())) }); setOfflineNotice("Restored unsaved answers from this device."); }
@@ -2369,6 +2414,11 @@ export function Mission() {
     }).catch(e => { if (live) setError(e instanceof Error ? e.message : "The assigned lesson could not be opened"); }).finally(() => { if (live) setBusy(false); });
     return () => { live = false; };
   }, [missionId]);
+  useEffect(() => {
+    if (!attempt || attempt.state !== "started") return;
+    try { window.localStorage.setItem(`academy-mission-step:${attempt.attempt_id}`, String(activeMissionStep)); }
+    catch { /* Staging remains usable when local storage is unavailable. */ }
+  }, [attempt, activeMissionStep]);
   useEffect(() => {
     if (!attempt || attempt.state !== "graded") return;
     let live = true;
@@ -2416,6 +2466,17 @@ export function Mission() {
   const questionBlocks = attempt.challenge.blocks.filter(block => block.type === "Question");
   const selfCheckIds = attempt.challenge.blocks.filter(block => block.type === "CVS self-check").map(block => block.id);
   const missionProgress = getMissionProgress(attempt.state, Boolean(viewerEvidence), questionBlocks.map(block => block.id), answers, selfCheckIds, committedSelfChecks);
+  const furthestMissionStep = attempt.state !== "started" ? 4 : missionProgress.questionsComplete ? 4 : viewerEvidence ? 3 : 1;
+  const activeStep = Math.max(0, Math.min(activeMissionStep, furthestMissionStep, 4));
+  const stageControls = (nextStep: number | null, nextLabel: string, canContinue = true) => (
+    <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+      <div className="flex flex-wrap gap-2">
+        {activeStep > 0 && <Button type="button" variant="outline" onClick={() => setActiveMissionStep(activeStep - 1)}>Previous step</Button>}
+        {!locked && <Button type="button" variant="outline" disabled={saving} onClick={() => void save()}>{saving ? "Saving…" : "Save draft"}</Button>}
+      </div>
+      {nextStep !== null && <Button type="button" disabled={!canContinue} onClick={() => setActiveMissionStep(nextStep)}>{nextLabel}<ArrowRight data-icon="inline-end"/></Button>}
+    </div>
+  );
   const evidenceSummary = viewerEvidence?.kind === "dosetwin"
     ? `OpenKBP voxel x ${viewerEvidence.voxel[0]} · y ${viewerEvidence.voxel[1]} · z ${viewerEvidence.voxel[2]} · ${viewerEvidence.roi}`
     : viewerEvidence?.kind === "surgivision"
@@ -2425,24 +2486,48 @@ export function Mission() {
         : "No source selection yet";
   return (
     <>
-      <div id="mission-brief"><Header
-        eyebrow={`Student academy / ${attempt.challenge.module} / Assignment`}
-        title={attempt.challenge.title}
-        description={`${attempt.challenge.case_label} · versioned source lesson · ${attempt.challenge.source_license}`}
-      /></div>
+      <div id="mission-brief" hidden={activeStep !== 0}>
+        <Header
+          eyebrow={`Student academy / ${attempt.challenge.module} / Investigation`}
+          title={attempt.challenge.title}
+          description={`${attempt.challenge.case_label} · versioned source lesson · ${attempt.challenge.source_license}`}
+        />
+        <Card className="mb-4 border-primary/20 bg-card">
+          <CardHeader><div className="eyebrow">Investigation brief</div><CardTitle>Start with the source, then explain what it supports</CardTitle><CardDescription>This lesson uses the assigned case only. Your educator reviews your written observations before releasing reference material.</CardDescription></CardHeader>
+          <CardContent className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-lg border bg-background p-4"><p className="m-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Assigned case</p><p className="mb-0 mt-2 font-medium">{attempt.challenge.case_label}</p></div>
+            <div className="rounded-lg border bg-background p-4"><p className="m-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Source terms</p><p className="mb-0 mt-2 font-medium">{attempt.challenge.source_license}</p></div>
+          </CardContent>
+        </Card>
+        {stageControls(1, "Explore source evidence")}
+      </div>
       <AcademyAchievementAnnouncement studentId={user?.id} enabled={progress.data.achievements_enabled} achievements={progress.data.achievements}/>
-      <StudentMissionStepper progress={missionProgress}/>
+      <StudentMissionStepper progress={missionProgress} activeStep={activeStep} onStepChange={setActiveMissionStep}/>
       {error && <Alert variant="destructive"><CircleAlert/><AlertTitle>Action could not be completed</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
       {offlineNotice && <Alert role="status"><CircleAlert/><AlertTitle>Saved on this device</AlertTitle><AlertDescription>{offlineNotice}</AlertDescription></Alert>}
-      <Card id="mission-explore" className="mb-4"><CardHeader><div className="eyebrow">Explore evidence</div><CardTitle>{attempt.challenge.case_label}</CardTitle><CardDescription>The scientific viewer is limited to the case attached to this assignment. Reference labels {debrief?.reference_evidence ? "are now available after educator review." : "remain hidden until educator review."}</CardDescription></CardHeader><CardContent><Suspense fallback={<Skeleton className="h-72"/>}>{attempt.challenge.module === "dosetwin" ? <DoseViewer key={attempt.challenge.case_id} caseId={attempt.challenge.case_id} guided onEvidenceChange={setViewerEvidence} viewerEvidence={viewerEvidence?.kind === "dosetwin" ? viewerEvidence : null} locked={locked}/> : attempt.challenge.module === "surgivision" ? <SurgiViewer key={attempt.challenge.case_id} frameId={attempt.challenge.case_id} availableFrameIds={[attempt.challenge.case_id]} guided releasedReference={debrief?.reference_evidence} viewerEvidence={viewerEvidence} onEvidenceChange={setViewerEvidence} locked={locked}/> : <FistulaViewer key={sourceId} recordId={sourceId} availableRecordIds={[sourceId]} guided viewerEvidence={viewerEvidence?.kind === "fistulaguard" ? viewerEvidence : null} onEvidenceChange={setViewerEvidence} locked={locked}/>}</Suspense><div id="mission-observe" className="mt-4 rounded-lg border bg-muted/20 px-3 py-2 text-sm"><b>{viewerEvidence ? "Evidence selected" : "Select evidence to submit"}</b><span className="ml-2 text-muted-foreground">{evidenceSummary}</span></div></CardContent></Card>
-      <div id="mission-explain" className="flex flex-col gap-4">{attempt.challenge.blocks.map((block, index) => <Card key={block.id}><CardHeader><div className="eyebrow">{block.type} · {String(index+1).padStart(2,"0")}</div><CardTitle>{block.title}</CardTitle><CardDescription>{block.content}</CardDescription></CardHeader>{block.type === "Question" && <CardContent><FieldGroup><Field><FieldLabel htmlFor={`answer-${block.id}`}>Your observation</FieldLabel><Textarea id={`answer-${block.id}`} value={answers[block.id] ?? ""} disabled={locked} onChange={event => setAnswers(previous => ({...previous, [block.id]: event.target.value}))} placeholder="Describe what the evidence supports and what remains uncertain." rows={5}/></Field></FieldGroup></CardContent>}{block.type === "CVS self-check" && <CardContent><CvsSelfCheck attemptId={attempt.attempt_id} blockId={block.id} locked={locked} onCommitted={markSelfCheckCommitted}/></CardContent>}</Card>)}</div>
-      <div id="mission-submit" className="mt-4 flex flex-col gap-4">
+      <section id="mission-explore" hidden={activeStep !== 1} aria-labelledby="mission-explore-title">
+        <Card className="mb-4"><CardHeader><div className="eyebrow">Explore evidence · {attempt.challenge.module}</div><CardTitle id="mission-explore-title">Inspect the assigned source</CardTitle><CardDescription>The scientific viewer is limited to the case attached to this assignment. Reference labels {debrief?.reference_evidence ? "are now available after educator review." : "remain hidden until educator review."}</CardDescription></CardHeader><CardContent><Suspense fallback={<Skeleton className="h-72"/>}>{attempt.challenge.module === "dosetwin" ? <DoseViewer key={attempt.challenge.case_id} caseId={attempt.challenge.case_id} guided onEvidenceChange={setViewerEvidence} viewerEvidence={viewerEvidence?.kind === "dosetwin" ? viewerEvidence : null} locked={locked}/> : attempt.challenge.module === "surgivision" ? <SurgiViewer key={attempt.challenge.case_id} frameId={attempt.challenge.case_id} availableFrameIds={[attempt.challenge.case_id]} guided releasedReference={debrief?.reference_evidence} viewerEvidence={viewerEvidence} onEvidenceChange={setViewerEvidence} locked={locked}/> : <FistulaViewer key={sourceId} recordId={sourceId} availableRecordIds={[sourceId]} guided viewerEvidence={viewerEvidence?.kind === "fistulaguard" ? viewerEvidence : null} onEvidenceChange={setViewerEvidence} locked={locked}/>}</Suspense></CardContent></Card>
+        {stageControls(2, "Review selected evidence", Boolean(viewerEvidence))}
+        {!viewerEvidence && <p className="mt-3 text-sm text-muted-foreground">Select a location, frame, or signal interval in the viewer to continue. The selection is stored as source evidence with your assignment.</p>}
+      </section>
+      <section id="mission-observe" hidden={activeStep !== 2} aria-labelledby="mission-observe-title">
+        <Card className="mb-4"><CardHeader><div className="eyebrow">Observe · Source record</div><CardTitle id="mission-observe-title">Check the evidence you selected</CardTitle><CardDescription>Confirm the selection belongs to the assigned source. This records an observation for educator review; it does not produce a diagnosis or model result.</CardDescription></CardHeader><CardContent><div className="rounded-lg border bg-muted/20 p-4"><p className="m-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Recorded source selection</p><p className="mb-0 mt-2 break-words font-medium">{evidenceSummary}</p></div></CardContent></Card>
+        {stageControls(3, "Explain your observation", Boolean(viewerEvidence))}
+      </section>
+      <section id="mission-explain" hidden={activeStep !== 3} aria-labelledby="mission-explain-title">
+        <div className="mb-4"><Header eyebrow="Explain · Learner observations" title="What does this evidence support?" description="Use the lesson prompts to describe what you observed, cite the selected source, and state what remains uncertain."/></div>
+        <div className="flex flex-col gap-4">{attempt.challenge.blocks.map((block, index) => <Card key={block.id}><CardHeader><div className="eyebrow">{block.type} · {String(index+1).padStart(2,"0")}</div><CardTitle>{block.title}</CardTitle><CardDescription>{block.content}</CardDescription></CardHeader>{block.type === "Question" && <CardContent><FieldGroup><Field><FieldLabel htmlFor={`answer-${block.id}`}>Your observation</FieldLabel><Textarea id={`answer-${block.id}`} value={answers[block.id] ?? ""} disabled={locked} onChange={event => setAnswers(previous => ({...previous, [block.id]: event.target.value}))} placeholder="Describe what the evidence supports and what remains uncertain." rows={5}/></Field></FieldGroup></CardContent>}{block.type === "CVS self-check" && <CardContent><CvsSelfCheck attemptId={attempt.attempt_id} blockId={block.id} locked={locked} onCommitted={markSelfCheckCommitted}/></CardContent>}</Card>)}</div>
+        {stageControls(4, "Review and submit", missionProgress.questionsComplete && Boolean(viewerEvidence))}
+        {!missionProgress.questionsComplete && <p className="mt-3 text-sm text-muted-foreground">Complete each lesson question and commit any self-check before continuing.</p>}
+      </section>
+      <section id="mission-submit" hidden={activeStep !== 4} className="flex flex-col gap-4" aria-labelledby="mission-submit-title">
+        <Card><CardHeader><div className="eyebrow">Submit · Educator review</div><CardTitle id="mission-submit-title">Review your investigation</CardTitle><CardDescription>Your selected source evidence and answers will be sent to your educator. Reference material remains private until the educator releases it.</CardDescription></CardHeader><CardContent className="grid gap-3 sm:grid-cols-2"><div className="rounded-lg border p-3"><p className="m-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Source evidence</p><p className="mb-0 mt-2 break-words text-sm">{evidenceSummary}</p></div><div className="rounded-lg border p-3"><p className="m-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Lesson responses</p><p className="mb-0 mt-2 text-sm">{questionBlocks.filter(block => (answers[block.id] ?? "").trim()).length} of {questionBlocks.length} answered{selfCheckIds.length ? ` · ${selfCheckIds.filter(id => committedSelfChecks[id]).length} of ${selfCheckIds.length} self-checks committed` : ""}</p></div></CardContent></Card>
         {attempt.state === "review_required" && <Card><CardHeader><CardTitle>Submission received</CardTitle><CardDescription>Your educator will review your observations before releasing feedback and reference material.</CardDescription></CardHeader></Card>}
         {debrief && <Card><CardHeader><CardTitle>Educator debrief</CardTitle><CardDescription>{debrief.score}/{debrief.max_score} · {debrief.xp_awarded} XP</CardDescription></CardHeader><CardContent><p>{debrief.feedback}</p><div className="mt-4 border-t pt-4"><b>Scored criteria</b><div className="mt-3 flex flex-col gap-3">{debrief.criterion_scores.map(criterion => <div className="rounded-lg border bg-muted/20 p-3" key={criterion.id}><div className="flex flex-wrap justify-between gap-2"><b>{criterion.title}</b><b>{criterion.earned_points}/{criterion.max_points}</b></div><p className="text-sm text-muted-foreground">{criterion.description}</p>{criterion.note && <p className="mt-2 whitespace-pre-wrap">{criterion.note}</p>}</div>)}</div><b className="mt-4 block">Rubric notes</b><p>{debrief.rubric}</p></div>{debrief.reveal_blocks.length > 0 && <div className="mt-4 flex flex-col gap-3 border-t pt-4"><b>Educator reference</b>{debrief.reveal_blocks.map(block => <section key={block.id}><h3 className="font-medium">{block.title}</h3><p className="whitespace-pre-wrap text-muted-foreground">{block.content}</p></section>)}</div>}</CardContent></Card>}
         {!locked && <div className="flex flex-wrap gap-2"><Button variant="outline" disabled={saving} onClick={() => void save()}>{saving ? "Saving…" : "Save draft"}</Button><Button disabled={saving || !canSubmitMission(missionProgress, Boolean(viewerEvidence))} onClick={() => void submit()}>{saving ? "Submitting…" : "Submit for educator review"}</Button></div>}
         {!locked && !missionProgress.questionsComplete && questionBlocks.length > 0 && <p className="text-sm text-muted-foreground">Answer all {questionBlocks.length} lesson {questionBlocks.length === 1 ? "question" : "questions"} and select evidence before submitting.</p>}
         {!locked && selfCheckIds.some(id => !committedSelfChecks[id]) && <p className="text-sm text-muted-foreground">Commit your CVS self-check before submitting.</p>}
-      </div>
+      </section>
     </>
   );
 }
