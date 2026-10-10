@@ -885,6 +885,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/surgivision/clips": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Surgivision Clips */
+        get: operations["surgivision_clips_api_v1_surgivision_clips_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/surgivision/clips/{clip_id}/video": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Surgivision Clip Video */
+        get: operations["surgivision_clip_video_api_v1_surgivision_clips__clip_id__video_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/surgivision/cvs-coverage": {
         parameters: {
             query?: never;
@@ -965,6 +999,23 @@ export interface paths {
         };
         /** Surgivision Media Detail */
         get: operations["surgivision_media_detail_api_v1_surgivision_media__media_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/surgivision/media/{media_id}/sampled-frames": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Surgivision Sampled Frames */
+        get: operations["surgivision_sampled_frames_api_v1_surgivision_media__media_id__sampled_frames_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2459,6 +2510,40 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
+        /**
+         * SurgicalClipRecord
+         * @description A locally verified, explicitly licensed continuous surgical video clip.
+         */
+        SurgicalClipRecord: {
+            /** Asset Uri */
+            asset_uri: string;
+            /** Citation */
+            citation: string;
+            /** Clip Id */
+            clip_id: string;
+            /**
+             * Dataset Id
+             * @constant
+             */
+            dataset_id: "Appendix300";
+            /** Duration Sec */
+            duration_sec: number;
+            /** License Label */
+            license_label: string;
+            /** Limitations */
+            limitations: string[];
+            /**
+             * Media Kind
+             * @constant
+             */
+            media_kind: "native_video";
+            /** Procedure Label */
+            procedure_label: string;
+            /** Sha256 */
+            sha256: string;
+            /** Source Url */
+            source_url: string;
+        };
         /** SurgicalFrameArtifact */
         SurgicalFrameArtifact: {
             /** Asset Key */
@@ -2530,13 +2615,13 @@ export interface components {
             /** Asset Uri */
             asset_uri?: string | null;
             /** Capabilities */
-            capabilities: "browse_annotated_frames"[];
+            capabilities: ("browse_annotated_frames" | "browse_sampled_sequence")[];
             /**
              * Dataset Id
              * @default Endoscapes-BBox201
-             * @constant
+             * @enum {string}
              */
-            dataset_id: "Endoscapes-BBox201";
+            dataset_id: "Endoscapes-BBox201" | "Endoscapes2023";
             /** Duration Sec */
             duration_sec?: number | null;
             /** First Frame Id */
@@ -2561,6 +2646,11 @@ export interface components {
             metadata_validation_status: "validated" | "unverified";
             /** Native Fps */
             native_fps?: number | null;
+            /**
+             * Sampled Frame Count
+             * @default 0
+             */
+            sampled_frame_count: number;
             /** Sampling Fps */
             sampling_fps?: number | null;
             /** Source Revision */
@@ -2575,12 +2665,33 @@ export interface components {
              */
             split: "train" | "val" | "test";
         };
+        /**
+         * SurgicalSequenceFrame
+         * @description One source-verified still in an explicitly sampled Endoscapes sequence.
+         */
+        SurgicalSequenceFrame: {
+            /** Frame Number */
+            frame_number: number;
+            /** Height */
+            height: number;
+            /** Id */
+            id: string;
+            /** Image Sha256 */
+            image_sha256: string;
+            /** Sequence Position */
+            sequence_position: number;
+            /**
+             * Split
+             * @enum {string}
+             */
+            split: "train" | "val" | "test";
+            /** Video Id */
+            video_id: number;
+            /** Width */
+            width: number;
+        };
         /** ValidationError */
         ValidationError: {
-            /** Context */
-            ctx?: Record<string, never>;
-            /** Input */
-            input?: unknown;
             /** Location */
             loc: (string | number)[];
             /** Message */
@@ -4733,6 +4844,59 @@ export interface operations {
             };
         };
     };
+    surgivision_clips_api_v1_surgivision_clips_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SurgicalClipRecord"][];
+                };
+            };
+        };
+    };
+    surgivision_clip_video_api_v1_surgivision_clips__clip_id__video_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                Range?: string | null;
+            };
+            path: {
+                clip_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     surgivision_cvs_coverage_api_v1_surgivision_cvs_coverage_get: {
         parameters: {
             query?: never;
@@ -4866,6 +5030,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SurgicalMediaRecord"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    surgivision_sampled_frames_api_v1_surgivision_media__media_id__sampled_frames_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                media_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SurgicalSequenceFrame"][];
                 };
             };
             /** @description Validation Error */

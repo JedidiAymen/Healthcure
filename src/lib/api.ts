@@ -73,6 +73,8 @@ export type ViewerEvidenceState = {
 export type SurgicalAnnotation = ApiSchemas['SurgicalAnnotation'];
 export type SurgicalFrameRecord = ApiSchemas['SurgicalFrameRecord'];
 export type SurgicalMediaRecord = ApiSchemas['SurgicalMediaRecord'];
+export type SurgicalSequenceFrame = ApiSchemas['SurgicalSequenceFrame'];
+export type SurgicalClipRecord = ApiSchemas['SurgicalClipRecord'];
 export type CvsCoverage = ApiSchemas['CvsCoverage'];
 export type SignalRecord = ApiSchemas['SignalRecord'];
 export type SignalWindow = ApiSchemas['SignalWindow'];
@@ -404,12 +406,16 @@ export const api = {
     post<EducatorAttemptReview>(`/api/v1/educator/attempts/${encodeURIComponent(attemptId)}/grade`, { criterion_scores, feedback, reason }, { "Idempotency-Key": idempotencyKey }),
   modules: () => request<Capability[]>("/api/v1/modules"),
   cases: () => request<CaseRecord[]>("/api/v1/cases"),
+  caseDetails: (caseId: string) => request<CaseRecord>(`/api/v1/cases/${encodeURIComponent(caseId)}`),
   surgicalFrame: (frameId: string) =>
     request<SurgicalFrameRecord>(
       `/api/v1/surgivision/frames/${encodeURIComponent(frameId)}`,
     ),
   surgicalMedia: () => request<SurgicalMediaRecord[]>("/api/v1/surgivision/media"),
   surgicalMediaRecord: (mediaId: string) => request<SurgicalMediaRecord>(`/api/v1/surgivision/media/${encodeURIComponent(mediaId)}`),
+  surgicalSequenceFrames: (mediaId: string) => request<SurgicalSequenceFrame[]>(`/api/v1/surgivision/media/${encodeURIComponent(mediaId)}/sampled-frames`),
+  surgicalClips: () => request<SurgicalClipRecord[]>("/api/v1/surgivision/clips"),
+  surgicalClipVideoUrl: (clipId: string) => `${API}/api/v1/surgivision/clips/${encodeURIComponent(clipId)}/video`,
   surgicalCoverage: () => request<CvsCoverage>("/api/v1/surgivision/cvs-coverage"),
   surgicalImage: async (frameId: string) => {
     const headers: Record<string, string> = {};

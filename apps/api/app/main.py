@@ -23,14 +23,14 @@ from contextlib import contextmanager
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi import Header, Depends
 from fastapi.responses import JSONResponse
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import ValidationError
 import numpy as np
 from .schemas import (
     ApiError, Case, Health, ModuleStatus, ModelRecord, ModelValidationRequest,
     DvhPoint, DvhMetrics, DvhSummary, DoseArtifact, DoseArtifactSlice, DoseArtifactComparison, ModelValidationResponse, RunCreateRequest, RunRecord, ViewerManifest, VoxelSlice, RoiMaskVolume, VoxelVolumeArtifact,
-    SurgicalFrameArtifact, SurgicalFrameRecord, SurgicalMediaRecord, CvsCoverage, SignalArtifact, SignalRecord, SignalWindow, SignalSpectrum, SignalSpectrogram, SignalFeatures
+    SurgicalFrameArtifact, SurgicalFrameRecord, SurgicalMediaRecord, SurgicalSequenceFrame, SurgicalClipRecord, CvsCoverage, SignalArtifact, SignalRecord, SignalWindow, SignalSpectrum, SignalSpectrogram, SignalFeatures
 )
 from .schemas import ReportCreateRequest, ReportRecord, SurgicalFrameReportCreateRequest, DoseTwinComparisonReportCreateRequest
 from .schemas import (LocalLoginRequest, LocalSession, LocalUser, EducatorEvidenceItem,
@@ -46,6 +46,7 @@ from .dose_artifacts import (INDEX_CONVENTION, MAX_UPLOAD_BYTES, SHAPE as DOSE_S
 from .endoscapes import SOURCE_URL as ENDOSCAPES_URL, case_record as _endoscapes_case_record, installed_cases as _endoscapes_cases, installed_frame as _endoscapes_frame
 from . import endoscapes as _endoscapes
 from . import fisav as _fisav
+from . import appendix300 as _appendix300
 
 ROOT = Path(__file__).resolve().parents[3]
 MIGRATIONS = ROOT/'db'/'migrations'
@@ -423,7 +424,7 @@ def create_app() -> FastAPI:
         fistula_records=_fisav.installed_records()
         fistula_ready=bool(fistula_records)
         return [
-            ModuleStatus(id='surgivision',capability_state='ready' if surgical_ready else 'requires-setup',detail=f'{len(surgical_cases)} source-verified Endoscapes frames from BBox201 keyframes; continuous video is not installed' if surgical_ready else 'Set MEDFORGE_ENDOSCAPES_ROOT to a verified local research sample'),
+            ModuleStatus(id='surgivision',capability_state='ready' if surgical_ready else 'requires-setup',detail=f'{len(surgical_cases)} annotated Endoscapes frames and 1 fps sampled sequences; {"a separately licensed Appendix300 excerpt is installed" if _appendix300.clip_record() else "no continuous surgical clip is installed"}' if surgical_ready else 'Set MEDFORGE_ENDOSCAPES_ROOT to a verified local research sample'),
             ModuleStatus(id='dosetwin',capability_state='ready' if ready else 'requires-setup',detail='OpenKBP local case summary available' if ready else 'Set MEDFORGE_OPENKBP_CASE_DIR'),
             ModuleStatus(id='fistulaguard',capability_state='ready' if fistula_ready else 'requires-setup',detail=f'Source-verified FiSaV CSV cohort available ({len(fistula_records)} recordings); no classifier is enabled' if fistula_ready else 'Set MEDFORGE_FISAV_ROOT to a verified local FiSaV research sample')]
 
@@ -451,12 +452,13 @@ def create_app() -> FastAPI:
     def manifest(case_id:str):
         frame=_endoscapes_frame(case_id)
         if frame:
+            sampled=frame.dataset_id=='Endoscapes2023'
             return ViewerManifest(
                 case_id=frame.id,modality='surgical-video',
                 artifacts=[SurgicalFrameArtifact(asset_key=f'endoscapes/{frame.split}/{frame.file_name}',frame_count=1,has_real_video=False)],
-                provenance_label='Endoscapes reference frame and official research annotations; no model output',
+                provenance_label='Endoscapes 1 fps sampled source frame; no model output' if sampled else 'Endoscapes reference frame and official research annotations; no model output',
                 source_url=ENDOSCAPES_URL,
-                limitations=['Installed images are official Endoscapes-BBox201 keyframes; continuous video and unlabeled intermediate frames are not installed','COCO annotations are reference labels, not predictions','Critical View of Safety values are image-level source labels, not a surgical clearance'],
+                limitations=['This is one still from the 1 fps Endoscapes sequence; it is not continuous video or a timestamped playback track','COCO boxes and CVS values are present only where the official BBox201 annotations provide them','Critical View of Safety values are image-level source labels, not a surgical clearance'],
             )
         if case_id.startswith('fisav:'):
             record_id=case_id.split(':',1)[1]
@@ -492,21 +494,39 @@ def create_app() -> FastAPI:
                 continue
             grouped.setdefault((match.group(1),int(source.group(1))),[]).append(case)
         records=[]
+        sampled = {
+            (item['split'], item['video_id']): item
+            for item in _endoscapes.sampled_video_catalog()
+        }
         limitations=[
-            'Continuous video and unannotated intermediate frames are not installed.',
-            'BBox201 images are widely spaced annotated stills; no playback timeline or frame timestamps are available.',
+            'The 1 fps sequence contains sampled still images, not continuous video playback.',
+            'Official BBox annotations apply only to their original keyframes; other sampled frames have no overlays.',
             'No temporal phase or instrument-triplet labels are available for this source split.',
         ]
-        for (split,video_id),cases in sorted(grouped.items()):
+        for split,video_id in sorted(set(grouped) | set(sampled)):
+            cases=grouped.get((split,video_id),[])
             frame_ids=sorted((case.id for case in cases),key=lambda value:int(value.rsplit('_',1)[1]))
+            sequence=sampled.get((split,video_id))
+            if not sequence and not frame_ids:
+                continue
+            first_frame=sequence['first_frame_id'] if sequence else frame_ids[0]
+            last_frame=sequence['last_frame_id'] if sequence else frame_ids[-1]
+            capabilities=[]
+            if sequence:
+                capabilities.append('browse_sampled_sequence')
+            if frame_ids:
+                capabilities.append('browse_annotated_frames')
             records.append(SurgicalMediaRecord(
                 media_id=f'endoscapes-bbox201:{split}:video-{video_id}',
-                source_video_id=video_id,split=split,media_kind='annotated_stills',
-                annotated_frame_count=len(frame_ids),first_frame_id=frame_ids[0],last_frame_id=frame_ids[-1],
+                dataset_id='Endoscapes2023' if sequence else 'Endoscapes-BBox201',
+                source_video_id=video_id,split=split,media_kind='sampled_sequence' if sequence else 'annotated_stills',
+                sampling_fps=sequence['sampling_fps'] if sequence else None,
+                sampled_frame_count=sequence['frame_count'] if sequence else 0,
+                annotated_frame_count=len(frame_ids),first_frame_id=first_frame,last_frame_id=last_frame,
                 source_url=ENDOSCAPES_URL,license_label='CC BY-NC-SA 4.0',
                 allowed_use='Non-commercial research and education with attribution; review the source license before reuse.',
                 source_revision=ENDOSCAPES_SOURCE_REVISION,metadata_validation_status='validated',
-                capabilities=['browse_annotated_frames'],limitations=limitations,
+                capabilities=capabilities,limitations=limitations,
             ))
         return records
 
@@ -518,6 +538,61 @@ def create_app() -> FastAPI:
         if record is None:
             raise HTTPException(status_code=404,detail={'code':'SURGICAL_MEDIA_NOT_INSTALLED','message':'No authorized local surgical media record matches this ID'})
         return record
+
+    @app.get('/api/v1/surgivision/media/{media_id}/sampled-frames',response_model=list[SurgicalSequenceFrame])
+    def surgivision_sampled_frames(media_id:str):
+        match=re.fullmatch(r'endoscapes-bbox201:(train|val|test):video-(\d+)',media_id)
+        if match is None:
+            raise HTTPException(status_code=404,detail={'code':'SURGICAL_SEQUENCE_NOT_INSTALLED','message':'No verified sampled sequence matches this ID'})
+        split,video_id=match.group(1),int(match.group(2))
+        record=next((item for item in surgivision_media() if item.media_id==media_id),None)
+        if record is None or 'browse_sampled_sequence' not in record.capabilities:
+            raise HTTPException(status_code=404,detail={'code':'SURGICAL_SEQUENCE_NOT_INSTALLED','message':'No verified sampled sequence matches this ID'})
+        return _endoscapes.sampled_sequence_frames(split,video_id)
+
+    @app.get('/api/v1/surgivision/clips',response_model=list[SurgicalClipRecord])
+    def surgivision_clips():
+        record=_appendix300.clip_record()
+        return [record] if record else []
+
+    @app.get('/api/v1/surgivision/clips/{clip_id}/video')
+    def surgivision_clip_video(clip_id:str,range_header:str|None=Header(default=None,alias='Range')):
+        if not re.fullmatch(r'appendix300-[a-z0-9-]+',clip_id):
+            raise HTTPException(status_code=404,detail={'code':'SURGICAL_CLIP_NOT_INSTALLED','message':'No verified licensed surgical clip matches this ID'})
+        path=_appendix300.video_path(clip_id)
+        if path is None:
+            raise HTTPException(status_code=404,detail={'code':'SURGICAL_CLIP_NOT_INSTALLED','message':'No verified licensed surgical clip matches this ID'})
+        size=path.stat().st_size
+        headers={'Accept-Ranges':'bytes','Content-Type':'video/mp4','Cache-Control':'private, max-age=300'}
+        if range_header is None:
+            return FileResponse(path,media_type='video/mp4',headers=headers)
+        unit,separator,value=range_header.partition('=')
+        if not separator or unit.strip().lower()!='bytes' or ',' in value:
+            raise HTTPException(status_code=416,detail='Only one byte range is supported',headers={'Content-Range':f'bytes */{size}'})
+        start_text,end_text=value.strip().split('-',1)
+        try:
+            if not start_text:
+                suffix=int(end_text)
+                if suffix<=0:raise ValueError
+                start=max(0,size-suffix);end=size-1
+            else:
+                start=int(start_text);end=min(int(end_text),size-1) if end_text else size-1
+        except ValueError as error:
+            raise HTTPException(status_code=416,detail='Invalid byte range',headers={'Content-Range':f'bytes */{size}'}) from error
+        if start<0 or end<start or start>=size:
+            raise HTTPException(status_code=416,detail='Requested byte range is unsatisfiable',headers={'Content-Range':f'bytes */{size}'})
+        length=end-start+1
+        def content():
+            with path.open('rb') as stream:
+                stream.seek(start)
+                remaining=length
+                while remaining:
+                    chunk=stream.read(min(64*1024,remaining))
+                    if not chunk:break
+                    remaining-=len(chunk)
+                    yield chunk
+        headers.update({'Content-Range':f'bytes {start}-{end}/{size}','Content-Length':str(length)})
+        return StreamingResponse(content(),status_code=206,media_type='video/mp4',headers=headers)
 
     @app.get('/api/v1/surgivision/frames/{frame_id}',response_model=SurgicalFrameRecord)
     def surgical_frame(frame_id:str,authorization:str|None=Header(default=None)):

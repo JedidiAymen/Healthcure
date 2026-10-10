@@ -4031,6 +4031,77 @@
         "title": "SurgicalAnnotation",
         "type": "object"
       },
+      "SurgicalClipRecord": {
+        "additionalProperties": false,
+        "description": "A locally verified, explicitly licensed continuous surgical video clip.",
+        "properties": {
+          "asset_uri": {
+            "title": "Asset Uri",
+            "type": "string"
+          },
+          "citation": {
+            "title": "Citation",
+            "type": "string"
+          },
+          "clip_id": {
+            "title": "Clip Id",
+            "type": "string"
+          },
+          "dataset_id": {
+            "const": "Appendix300",
+            "title": "Dataset Id",
+            "type": "string"
+          },
+          "duration_sec": {
+            "exclusiveMinimum": 0.0,
+            "title": "Duration Sec",
+            "type": "number"
+          },
+          "license_label": {
+            "title": "License Label",
+            "type": "string"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
+          },
+          "media_kind": {
+            "const": "native_video",
+            "title": "Media Kind",
+            "type": "string"
+          },
+          "procedure_label": {
+            "title": "Procedure Label",
+            "type": "string"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "source_url": {
+            "title": "Source Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "clip_id",
+          "dataset_id",
+          "procedure_label",
+          "media_kind",
+          "duration_sec",
+          "asset_uri",
+          "source_url",
+          "license_label",
+          "citation",
+          "sha256",
+          "limitations"
+        ],
+        "title": "SurgicalClipRecord",
+        "type": "object"
+      },
       "SurgicalFrameArtifact": {
         "additionalProperties": false,
         "properties": {
@@ -4186,7 +4257,7 @@
             "type": "string"
           },
           "annotated_frame_count": {
-            "minimum": 1.0,
+            "minimum": 0.0,
             "title": "Annotated Frame Count",
             "type": "integer"
           },
@@ -4203,15 +4274,21 @@
           },
           "capabilities": {
             "items": {
-              "const": "browse_annotated_frames",
+              "enum": [
+                "browse_annotated_frames",
+                "browse_sampled_sequence"
+              ],
               "type": "string"
             },
             "title": "Capabilities",
             "type": "array"
           },
           "dataset_id": {
-            "const": "Endoscapes-BBox201",
             "default": "Endoscapes-BBox201",
+            "enum": [
+              "Endoscapes-BBox201",
+              "Endoscapes2023"
+            ],
             "title": "Dataset Id",
             "type": "string"
           },
@@ -4277,6 +4354,12 @@
             ],
             "title": "Native Fps"
           },
+          "sampled_frame_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Sampled Frame Count",
+            "type": "integer"
+          },
           "sampling_fps": {
             "anyOf": [
               {
@@ -4330,15 +4413,68 @@
         "title": "SurgicalMediaRecord",
         "type": "object"
       },
+      "SurgicalSequenceFrame": {
+        "additionalProperties": false,
+        "description": "One source-verified still in an explicitly sampled Endoscapes sequence.",
+        "properties": {
+          "frame_number": {
+            "minimum": 0.0,
+            "title": "Frame Number",
+            "type": "integer"
+          },
+          "height": {
+            "exclusiveMinimum": 0.0,
+            "title": "Height",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "image_sha256": {
+            "title": "Image Sha256",
+            "type": "string"
+          },
+          "sequence_position": {
+            "minimum": 0.0,
+            "title": "Sequence Position",
+            "type": "integer"
+          },
+          "split": {
+            "enum": [
+              "train",
+              "val",
+              "test"
+            ],
+            "title": "Split",
+            "type": "string"
+          },
+          "video_id": {
+            "exclusiveMinimum": 0.0,
+            "title": "Video Id",
+            "type": "integer"
+          },
+          "width": {
+            "exclusiveMinimum": 0.0,
+            "title": "Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "split",
+          "video_id",
+          "sequence_position",
+          "frame_number",
+          "width",
+          "height",
+          "image_sha256"
+        ],
+        "title": "SurgicalSequenceFrame",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
-          "ctx": {
-            "title": "Context",
-            "type": "object"
-          },
-          "input": {
-            "title": "Input"
-          },
           "loc": {
             "items": {
               "anyOf": [
@@ -7844,6 +7980,81 @@
         "summary": "Get Run"
       }
     },
+    "/api/v1/surgivision/clips": {
+      "get": {
+        "operationId": "surgivision_clips_api_v1_surgivision_clips_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SurgicalClipRecord"
+                  },
+                  "title": "Response Surgivision Clips Api V1 Surgivision Clips Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Surgivision Clips"
+      }
+    },
+    "/api/v1/surgivision/clips/{clip_id}/video": {
+      "get": {
+        "operationId": "surgivision_clip_video_api_v1_surgivision_clips__clip_id__video_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "clip_id",
+            "required": true,
+            "schema": {
+              "title": "Clip Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Range",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Range"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Surgivision Clip Video"
+      }
+    },
     "/api/v1/surgivision/cvs-coverage": {
       "get": {
         "operationId": "surgivision_cvs_coverage_api_v1_surgivision_cvs_coverage_get",
@@ -8042,6 +8253,49 @@
           }
         },
         "summary": "Surgivision Media Detail"
+      }
+    },
+    "/api/v1/surgivision/media/{media_id}/sampled-frames": {
+      "get": {
+        "operationId": "surgivision_sampled_frames_api_v1_surgivision_media__media_id__sampled_frames_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "media_id",
+            "required": true,
+            "schema": {
+              "title": "Media Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SurgicalSequenceFrame"
+                  },
+                  "title": "Response Surgivision Sampled Frames Api V1 Surgivision Media  Media Id  Sampled Frames Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Surgivision Sampled Frames"
       }
     },
     "/healthz": {

@@ -26,7 +26,7 @@ Open <http://127.0.0.1:5173>. Leave the terminal running; press Ctrl+C there to 
 
 The app currently provisions **student** and **educator** local accounts. Research browsing is an unauthenticated local profile, not a separate researcher login. The UI does not provide admin or researcher account provisioning; those labels in API types are not supported sign-in profiles. No default usernames/passwords or shareable demo credentials are seeded in a fresh database.
 
-This review checkout reuses the already-installed OpenKBP `pt_201`, Endoscapes stills and FiSaV recordings through ignored local links in `data/`; raw files stay outside Git. On another computer, run `npm run doctor` to see which source assets are present, then follow the pinned acquisition steps in [`RUN_LOCAL.md`](../RUN_LOCAL.md). Source datasets are not automatically copied when a Git branch is pushed.
+This review checkout reuses the already-installed OpenKBP `pt_201`, complete Endoscapes sampled-frame release, FiSaV recordings and one Appendix300 MP4 excerpt through ignored local data paths; raw files stay outside Git. On another computer, run `npm run doctor` to see which source assets are present, then follow the acquisition steps in [`RUN_LOCAL.md`](../RUN_LOCAL.md). Source datasets are not automatically copied when a Git branch is pushed.
 
 ## Create the local sign-in credentials
 
@@ -59,4 +59,4 @@ Passwords are not recoverable from the database. To replace a forgotten local pa
 - A Professional Studio page being open does not authenticate or authorize general research API requests. Keep the API bound to loopback; do not expose it to a LAN or public host.
 - Signing in as an educator or student grants only the implemented local education routes. It does not establish production identity, hospital access, SSO, or full API role-based access control.
 - A local account is not a medical license or proof of clinical authority. The app is not approved for diagnosis, treatment decisions, clinical deployment, or public dataset hosting.
-- The installed SurgiVision set contains annotated stills, not continuous video. DoseTwin currently has one verified case, `pt_201`; a second-dose comparison is unavailable until a complete compatible, authorized source is installed.
+- Endoscapes in SurgiVision is a 1 fps sampled-still sequence with annotations only on the source-labeled keyframes. A separate 38.1-second continuous Appendix300 clip is available under CC BY 4.0; it shows appendectomy, not cholecystectomy, and is not supplied with instrument masks. DoseTwin currently has one verified case, `pt_201`; a second-dose comparison is unavailable until the compatible OpenKBP-Opt source archive can be retrieved and installed.

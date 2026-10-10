@@ -104,11 +104,94 @@ def test_surgivision_media_manifest_exposes_annotated_stills_without_video_capab
     assert train["native_fps"] is None
     assert train["sampling_fps"] is None
     assert train["duration_sec"] is None
-    assert any("Continuous video" in item for item in train["limitations"])
+    assert any("not continuous video" in item.lower() for item in train["limitations"])
     detail = client.get("/api/v1/surgivision/media/endoscapes-bbox201:train:video-120")
     assert detail.status_code == 200
     assert detail.json()["source_revision"] == train["source_revision"]
     assert client.get("/api/v1/surgivision/media/../../etc/passwd").status_code == 404
+
+
+def _install_sampled_release(root: Path) -> None:
+    import zlib
+
+    split_dir = root / "train"
+    split_dir.mkdir(parents=True)
+    images = []
+    records = []
+    for frame_number in (0, 1, 2):
+        name = f"120_{frame_number}.jpg"
+        content = f"sampled-frame-{frame_number}".encode()
+        (split_dir / name).write_bytes(content)
+        images.append({
+            "id": frame_number + 1,
+            "file_name": name,
+            "width": 480,
+            "height": 854,
+            "video_id": 120,
+            "frame_id": frame_number,
+        })
+        records.append({
+            "path": f"endoscapes/train/{name}",
+            "size_bytes": len(content),
+            "sha256": hashlib.sha256(content).hexdigest(),
+            "crc32": f"{zlib.crc32(content):08x}",
+        })
+    annotation = json.dumps({
+        "videos": [{"id": 120.0, "name": 120.0, "fps": 1}],
+        "images": images,
+        "annotations": [],
+        "categories": [],
+    }).encode()
+    (split_dir / "annotation_coco_vid.json").write_bytes(annotation)
+    records.append({
+        "path": "endoscapes/train/annotation_coco_vid.json",
+        "size_bytes": len(annotation),
+        "sha256": hashlib.sha256(annotation).hexdigest(),
+        "crc32": f"{zlib.crc32(annotation):08x}",
+    })
+    manifest_bytes = "".join(json.dumps(item, separators=(",", ":")) + "\n" for item in records).encode()
+    (root / "medforge-full-release-files.jsonl").write_bytes(manifest_bytes)
+    (root / "medforge-full-release-manifest.json").write_text(json.dumps({
+        "schema": "medforge.source-manifest.endoscapes-full-release.v1",
+        "dataset": "Endoscapes2023",
+        "file_manifest": "medforge-full-release-files.jsonl",
+        "file_manifest_sha256": hashlib.sha256(manifest_bytes).hexdigest(),
+        "installed_files": len(records),
+        "media_scope": "Sampled still frames and source annotations; not encoded continuous video.",
+    }))
+
+
+def test_surgivision_exposes_verified_sampled_sequence_without_fabricating_labels(tmp_path, monkeypatch):
+    root = tmp_path / "full-endoscapes"
+    root.mkdir()
+    _install_sampled_release(root)
+    monkeypatch.setenv("MEDFORGE_ENDOSCAPES_ROOT", str(root))
+    monkeypatch.setenv("MEDFORGE_DB_PATH", str(tmp_path / "sampled.sqlite3"))
+    monkeypatch.setenv("MEDFORGE_SOURCE_KIND", "synthetic-test")
+    monkeypatch.delenv("MEDFORGE_OPENKBP_CASE_DIR", raising=False)
+
+    with TestClient(create_app()) as client:
+        media = client.get("/api/v1/surgivision/media").json()
+        assert len(media) == 1
+        assert media[0]["dataset_id"] == "Endoscapes2023"
+        assert media[0]["media_kind"] == "sampled_sequence"
+        assert media[0]["sampling_fps"] == 1
+        assert media[0]["sampled_frame_count"] == 3
+        assert media[0]["annotated_frame_count"] == 0
+        assert media[0]["capabilities"] == ["browse_sampled_sequence"]
+
+        sequence = client.get("/api/v1/surgivision/media/endoscapes-bbox201:train:video-120/sampled-frames")
+        assert sequence.status_code == 200
+        frames = sequence.json()
+        assert [item["frame_number"] for item in frames] == [0, 1, 2]
+        assert [item["sequence_position"] for item in frames] == [0, 1, 2]
+        assert all(item["split"] == "train" for item in frames)
+
+        frame = client.get("/api/v1/surgivision/frames/endoscapes:train:120_1")
+        assert frame.status_code == 200
+        assert frame.json()["dataset_id"] == "Endoscapes2023"
+        assert frame.json()["annotations"] == []
+        assert frame.json()["cvs_criteria"] == []
 
 
 def test_surgivision_media_manifest_is_empty_when_no_verified_source_is_installed(coverage_client, monkeypatch):

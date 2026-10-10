@@ -393,7 +393,7 @@ class SurgicalFrameRecord(StrictModel):
 class SurgicalMediaRecord(StrictModel):
     """Verified video-source inventory. Annotated stills never imply playable footage."""
     media_id: str
-    dataset_id: Literal['Endoscapes-BBox201'] = 'Endoscapes-BBox201'
+    dataset_id: Literal['Endoscapes-BBox201','Endoscapes2023'] = 'Endoscapes-BBox201'
     source_video_id: int = Field(gt=0)
     split: Literal['train','val','test']
     media_kind: Literal['native_video','sampled_sequence','annotated_stills']
@@ -401,7 +401,7 @@ class SurgicalMediaRecord(StrictModel):
     native_fps: float | None = None
     sampling_fps: float | None = None
     duration_sec: float | None = None
-    annotated_frame_count: int = Field(ge=1)
+    annotated_frame_count: int = Field(ge=0)
     first_frame_id: str
     last_frame_id: str
     source_url: str
@@ -409,7 +409,33 @@ class SurgicalMediaRecord(StrictModel):
     allowed_use: str
     source_revision: str
     metadata_validation_status: Literal['validated','unverified']
-    capabilities: list[Literal['browse_annotated_frames']]
+    sampled_frame_count: int = Field(default=0, ge=0)
+    capabilities: list[Literal['browse_annotated_frames','browse_sampled_sequence']]
+    limitations: list[str]
+
+class SurgicalSequenceFrame(StrictModel):
+    """One source-verified still in an explicitly sampled Endoscapes sequence."""
+    id: str
+    split: Literal['train','val','test']
+    video_id: int = Field(gt=0)
+    sequence_position: int = Field(ge=0)
+    frame_number: int = Field(ge=0)
+    width: int = Field(gt=0)
+    height: int = Field(gt=0)
+    image_sha256: str
+
+class SurgicalClipRecord(StrictModel):
+    """A locally verified, explicitly licensed continuous surgical video clip."""
+    clip_id: str
+    dataset_id: Literal['Appendix300']
+    procedure_label: str
+    media_kind: Literal['native_video']
+    duration_sec: float = Field(gt=0)
+    asset_uri: str
+    source_url: str
+    license_label: str
+    citation: str
+    sha256: str
     limitations: list[str]
 
 class CvsCriterionCoverage(StrictModel):

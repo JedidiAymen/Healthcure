@@ -135,6 +135,207 @@ def _index() -> dict[str, Any] | None:
     return _load_index(signature) if signature else None
 
 
+def _sampled_signature(root: Path) -> tuple[Any, ...] | None:
+    manifest_path = root / "medforge-full-release-manifest.json"
+    file_manifest = root / "medforge-full-release-files.jsonl"
+    if not manifest_path.is_file() or not file_manifest.is_file():
+        return None
+    watched = [manifest_path, file_manifest]
+    watched.extend(sorted(root.glob("*/annotation_coco_vid.json")))
+    stats = tuple((str(path), path.stat().st_size, path.stat().st_mtime_ns) for path in watched)
+    return stats
+
+
+@lru_cache(maxsize=4)
+def _load_sampled_index(signature: tuple[Any, ...]) -> dict[str, Any] | None:
+    """Load the complete 1 fps inventory only from the sealed full-release manifest."""
+    manifest_path = Path(signature[0][0])
+    root = manifest_path.parent
+    file_manifest_path = Path(signature[1][0])
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf8"))
+        if manifest.get("schema") != "medforge.source-manifest.endoscapes-full-release.v1":
+            return None
+        if manifest.get("file_manifest") != file_manifest_path.name:
+            return None
+        if _sha256(file_manifest_path) != manifest.get("file_manifest_sha256"):
+            return None
+        if manifest.get("media_scope") != "Sampled still frames and source annotations; not encoded continuous video.":
+            return None
+
+        files: dict[str, dict[str, Any]] = {}
+        records_by_path: dict[str, dict[str, Any]] = {}
+        line_count = 0
+        with file_manifest_path.open("r", encoding="utf8") as stream:
+            for line in stream:
+                item = json.loads(line)
+                member = item.get("path")
+                if not isinstance(member, str) or not member.startswith("endoscapes/"):
+                    return None
+                line_count += 1
+                records_by_path[member] = item
+                parts = Path(member).parts
+                if len(parts) == 3 and parts[1] in ("train", "val", "test") and parts[2].endswith(".jpg"):
+                    if not isinstance(item.get("size_bytes"), int) or not isinstance(item.get("sha256"), str):
+                        return None
+                    files[f"{parts[1]}/{parts[2]}"] = item
+        if line_count != manifest.get("installed_files"):
+            return None
+
+        result: dict[str, Any] = {"root": root, "splits": {}}
+        for split in ("train", "val", "test"):
+            annotation_path = root / split / "annotation_coco_vid.json"
+            if not annotation_path.is_file():
+                continue
+            annotation_record = records_by_path.get(f"endoscapes/{split}/annotation_coco_vid.json")
+            if annotation_record is None or _sha256(annotation_path) != annotation_record.get("sha256"):
+                continue
+            coco = json.loads(annotation_path.read_text(encoding="utf8"))
+            source_fps = {}
+            for video in coco.get("videos", []):
+                if not isinstance(video, dict):
+                    continue
+                try:
+                    candidate_id = int(video.get("id"))
+                    candidate_fps = float(video.get("fps"))
+                except (TypeError, ValueError):
+                    continue
+                if candidate_id > 0 and math.isfinite(candidate_fps) and candidate_fps > 0:
+                    source_fps[candidate_id] = candidate_fps
+            videos: dict[int, list[dict[str, Any]]] = {}
+            for image in coco.get("images", []):
+                if not isinstance(image, dict):
+                    continue
+                name, video_id = image.get("file_name"), image.get("video_id")
+                if not isinstance(name, str) or Path(name).name != name or not name.endswith(".jpg"):
+                    continue
+                if isinstance(video_id, bool) or not isinstance(video_id, int) or video_id <= 0:
+                    continue
+                if any(not isinstance(image.get(key), int) or image[key] <= 0 for key in ("width", "height")):
+                    continue
+                file_record = files.get(f"{split}/{name}")
+                if file_record is None:
+                    continue
+                try:
+                    frame_number = int(Path(name).stem.split("_")[1])
+                except (ValueError, IndexError):
+                    continue
+                videos.setdefault(video_id, []).append({
+                    "file_name": name,
+                    "video_id": video_id,
+                    "sampling_fps": source_fps.get(video_id),
+                    "frame_number": frame_number,
+                    "width": image["width"],
+                    "height": image["height"],
+                    "size_bytes": file_record["size_bytes"],
+                    "sha256": file_record["sha256"],
+                    "annotation_sha256": annotation_record["sha256"],
+                    "split": split,
+                })
+            for frames in videos.values():
+                frames.sort(key=lambda item: item["frame_number"])
+            result["splits"][split] = videos
+        return result
+    except (OSError, ValueError, TypeError, KeyError, json.JSONDecodeError):
+        return None
+
+
+def _sampled_index() -> dict[str, Any] | None:
+    root = root_dir()
+    if root is None:
+        return None
+    signature = _sampled_signature(root)
+    return _load_sampled_index(signature) if signature else None
+
+
+def sampled_frame_count(split: str, video_id: int) -> int:
+    index = _sampled_index()
+    if index is None or split not in ("train", "val", "test"):
+        return 0
+    return len(index["splits"].get(split, {}).get(video_id, []))
+
+
+def sampled_video_catalog() -> list[dict[str, Any]]:
+    """Return source-validated 1 fps video summaries without hashing every frame."""
+    index = _sampled_index()
+    if index is None:
+        return []
+    catalog = []
+    for split in ("train", "val", "test"):
+        for video_id, frames in index["splits"].get(split, {}).items():
+            if not frames:
+                continue
+            catalog.append({
+                "split": split,
+                "video_id": video_id,
+                "sampling_fps": frames[0].get("sampling_fps"),
+                "frame_count": len(frames),
+                "first_frame_id": f"endoscapes:{split}:{Path(frames[0]['file_name']).stem}",
+                "last_frame_id": f"endoscapes:{split}:{Path(frames[-1]['file_name']).stem}",
+            })
+    return catalog
+
+
+def sampled_sequence_frames(split: str, video_id: int) -> list[dict[str, Any]]:
+    """Return the official sampled-frame inventory for one video, with 1 fps semantics."""
+    index = _sampled_index()
+    if index is None or split not in ("train", "val", "test"):
+        return []
+    frames = index["splits"].get(split, {}).get(video_id, [])
+    result = []
+    for position, frame in enumerate(frames):
+        image_path = index["root"] / split / frame["file_name"]
+        if not image_path.is_file():
+            continue
+        stat = image_path.stat()
+        if stat.st_size != frame["size_bytes"] or _cached_sha256(str(image_path), stat.st_size, stat.st_mtime_ns) != frame["sha256"]:
+            continue
+        result.append({
+            "id": f"endoscapes:{split}:{Path(frame['file_name']).stem}",
+            "split": split,
+            "video_id": video_id,
+            "sequence_position": position,
+            "frame_number": frame["frame_number"],
+            "width": frame["width"],
+            "height": frame["height"],
+            "image_sha256": frame["sha256"],
+        })
+    return result
+
+
+def _sampled_frame(frame_id: str) -> SurgicalFrameRecord | None:
+    try:
+        frame_id = unquote(frame_id, errors="strict")
+    except UnicodeDecodeError:
+        return None
+    match = re.fullmatch(r"endoscapes:(train|val|test):(\d+_\d+)", frame_id)
+    if match is None:
+        return None
+    split, stem = match.groups()
+    index = _sampled_index()
+    if index is None:
+        return None
+    for frames in index["splits"].get(split, {}).values():
+        frame = next((item for item in frames if Path(item["file_name"]).stem == stem), None)
+        if frame is None:
+            continue
+        image_path = index["root"] / split / frame["file_name"]
+        if not image_path.is_file():
+            return None
+        stat = image_path.stat()
+        image_hash = _cached_sha256(str(image_path), stat.st_size, stat.st_mtime_ns)
+        if stat.st_size != frame["size_bytes"] or image_hash != frame["sha256"]:
+            return None
+        return SurgicalFrameRecord(
+            id=frame_id, dataset_id="Endoscapes2023", split=split,
+            video_id=frame["video_id"], frame_number=frame["frame_number"],
+            file_name=frame["file_name"], width=frame["width"], height=frame["height"],
+            image_sha256=image_hash, annotation_sha256=frame["annotation_sha256"],
+            annotations=[], cvs_criteria=(), image_path=str(image_path),
+        )
+    return None
+
+
 def _valid_image(entry: dict[str, Any]) -> tuple[Path, str] | None:
     split_dir: Path = entry["split_dir"]
     file_name = entry["meta"].get("file_name")
@@ -309,7 +510,7 @@ def installed_frame(frame_id: str | None = None) -> SurgicalFrameRecord | None:
     """Validate one selected frame without hashing or materializing its neighbors."""
     index = _index()
     if index is None:
-        return None
+        return _sampled_frame(frame_id or "")
     selected_split = None
     selected_name = frame_id
     if frame_id:
@@ -325,6 +526,7 @@ def installed_frame(frame_id: str | None = None) -> SurgicalFrameRecord | None:
             selected_name = f"{selected_name}.jpg"
         elif split_id:
             selected_split, selected_name = split_id.groups()
+            frame_id = f"endoscapes:{selected_split}:{selected_name}"
             selected_name = f"{selected_name}.jpg"
         elif bare_id:
             selected_name = f"{frame_id}.jpg"
@@ -336,7 +538,7 @@ def installed_frame(frame_id: str | None = None) -> SurgicalFrameRecord | None:
             entry = index["splits"].get(split, {}).get(selected_name)
             if entry:
                 return _record(entry)
-        return None
+        return _sampled_frame(frame_id or "")
     for split in ("train", "val", "test"):
         for entry in index["splits"].get(split, {}).values():
             record = _record(entry)

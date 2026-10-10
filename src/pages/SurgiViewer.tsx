@@ -1,17 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { MouseEvent as ReactMouseEvent, PointerEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { AlertCircle, Check, Download, FlaskConical, Image, LoaderCircle, Move, Save, ZoomIn, ZoomOut } from 'lucide-react'
-import { api, type CvsCoverage, type CvsInferenceRunRecord, type EvidenceReport, type ModelValidation, type StudentReferenceEvidence, type StudentSurgiViewerEvidence, type StudentViewerEvidence, type SurgicalAnnotation, type SurgicalFrameRecord, type SurgicalMediaRecord } from '../lib/api'
+import { AlertCircle, Check, ChevronLeft, ChevronRight, Download, FlaskConical, Image, LoaderCircle, Move, Save, ZoomIn, ZoomOut } from 'lucide-react'
+import { api, type CvsCoverage, type CvsInferenceRunRecord, type EvidenceReport, type ModelValidation, type StudentReferenceEvidence, type StudentSurgiViewerEvidence, type StudentViewerEvidence, type SurgicalAnnotation, type SurgicalClipRecord, type SurgicalFrameRecord, type SurgicalMediaRecord, type SurgicalSequenceFrame } from '../lib/api'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList } from '@/components/ui/combobox'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { Slider } from '@/components/ui/slider'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { parseSurgicalViewPreferences, type SurgicalViewPreferences } from '@/lib/workspace-preferences'
 import { buildSurgicalFrameReport } from '@/lib/surgical-evidence'
@@ -55,8 +56,15 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
   const [frame,setFrame]=useState<SurgicalFrameRecord|null>(null)
   const [sourceMedia,setSourceMedia]=useState<SurgicalMediaRecord|null>(null)
   const [sourceMediaError,setSourceMediaError]=useState('')
+  const [sampledFrames,setSampledFrames]=useState<SurgicalSequenceFrame[]>([])
+  const [sampledFramesError,setSampledFramesError]=useState('')
+  const [publicClip,setPublicClip]=useState<SurgicalClipRecord|null>(null)
+  const [showPublicClip,setShowPublicClip]=useState(false)
+  const sampledMediaId=sourceMedia?.media_id
+  const sampledMediaCount=sourceMedia?.sampled_frame_count
   const [imageUrl,setImageUrl]=useState('')
   const [imageError,setImageError]=useState('')
+  const [imageSize,setImageSize]=useState<{width:number;height:number}|null>(null)
   const [error,setError]=useState('')
   const [loading,setLoading]=useState(true)
   const [showBoxes,setShowBoxes]=useState(()=>savedPreferences?.show_boxes??true)
@@ -100,7 +108,7 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
     return()=>{live=false}
   },[activeFrameId,guided])
   useEffect(()=>{let live=true;const saved=guided?null:readSurgicalViewPreferences(activeFrameId);setLoading(true);setFrame(null);setSelected(saved?.selected_annotation_id??null);setShowBoxes(saved?.show_boxes??true);setScale(saved?.zoom??1);setPan({x:0,y:0});api.surgicalFrame(activeFrameId).then(value=>{if(live){setFrame(value);setError('')}}).catch(e=>{if(live)setError(e instanceof Error?e.message:'Unable to load local frame')}).finally(()=>{if(live)setLoading(false)});return()=>{live=false}},[activeFrameId,guided])
-  useEffect(()=>{let live=true;let objectUrl='';setImageUrl('');setImageError('');api.surgicalImage(activeFrameId).then(url=>{objectUrl=url;if(live)setImageUrl(url);else URL.revokeObjectURL(url)}).catch(e=>{if(live)setImageError(e instanceof Error?e.message:'Unable to load the assigned source image')});return()=>{live=false;if(objectUrl)URL.revokeObjectURL(objectUrl)}},[activeFrameId])
+  useEffect(()=>{let live=true;let objectUrl='';setImageUrl('');setImageSize(null);setImageError('');api.surgicalImage(activeFrameId).then(url=>{objectUrl=url;if(live)setImageUrl(url);else URL.revokeObjectURL(url)}).catch(e=>{if(live)setImageError(e instanceof Error?e.message:'Unable to load the assigned source image')});return()=>{live=false;if(objectUrl)URL.revokeObjectURL(objectUrl)}},[activeFrameId])
   useEffect(()=>{
     if(guided||!frame)return
     let live=true
@@ -109,10 +117,26 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
     api.surgicalMediaRecord(mediaId).then(record=>{if(live)setSourceMedia(record)}).catch(error=>{if(live)setSourceMediaError(error instanceof Error?error.message:'Source media capability could not be verified')})
     return()=>{live=false}
   },[guided,frame])
+  useEffect(()=>{
+    if(guided||!sampledMediaId||!sampledMediaCount){setSampledFrames([]);return}
+    let live=true
+    setSampledFramesError('')
+    api.surgicalSequenceFrames(sampledMediaId)
+      .then(value=>{if(live)setSampledFrames(value)})
+      .catch(error=>{if(live)setSampledFramesError(error instanceof Error?error.message:'The sampled frame sequence could not be loaded')})
+    return()=>{live=false}
+  },[guided,sampledMediaId,sampledMediaCount])
+  useEffect(()=>{
+    if(guided){setPublicClip(null);setShowPublicClip(false);return}
+    let live=true
+    api.surgicalClips().then(items=>{if(live)setPublicClip(items[0]??null)}).catch(()=>{if(live)setPublicClip(null)})
+    return()=>{live=false}
+  },[guided])
   const referenceIsReleased=Boolean(frame && releasedReference?.case_id===frame.id)
   const displayedAnnotations=useMemo(()=>referenceIsReleased ? releasedReference!.annotations : frame?.annotations ?? [],[referenceIsReleased,releasedReference,frame])
   const displayedCvs=useMemo(()=>referenceIsReleased ? releasedReference!.cvs_criteria : frame?.cvs_criteria ?? [],[referenceIsReleased,releasedReference,frame])
   const selectedAnnotation=useMemo(()=>displayedAnnotations.find(a=>a.id===selected)??null,[displayedAnnotations,selected])
+  const framePixelDimensionsMatch=!frame||!imageSize||(imageSize.width===frame.width&&imageSize.height===frame.height)
   useEffect(()=>{if(frame&&selected!==null&&!frame.annotations.some(annotation=>annotation.id===selected))setSelected(null)},[frame,selected])
   const frameOptions=useMemo<FrameOption[]>(()=>availableFrameIds.map(id=>{
     const [,split,stem]=id.split(':')
@@ -227,13 +251,26 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><Badge variant="outline">{frame.split}</Badge><Badge variant="outline">Video {frame.video_id} · frame {frame.frame_number}</Badge><Badge variant="outline">{frame.width} × {frame.height} px</Badge>{guided&&!referenceIsReleased?<Badge variant="outline">Reference labels withheld</Badge>:<><Badge variant="outline">{displayedAnnotations.length} annotations</Badge><Badge variant="outline">{displayedAnnotations.filter(annotation=>annotation.segmentation&&!Array.isArray(annotation.segmentation)).length} RLE masks</Badge>{!guided&&<span className="text-[11px]">{availableFrameIds.length.toLocaleString()} verified frames</span>}</>}</div>
     </div>
     {!guided&&<section className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 gap-y-2 rounded-lg border border-border bg-card px-3 py-2.5 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center" aria-label="Source media mode">
-      <Badge variant="outline" className="shrink-0 border-primary/25 bg-primary/5 text-primary">{sourceMedia?.media_kind==='annotated_stills'?'Annotated stills':sourceMedia?'Media available':sourceMediaError?'Media status unavailable':'Checking media mode'}</Badge>
+      <Badge variant="outline" className="shrink-0 border-primary/25 bg-primary/5 text-primary">{sourceMedia?.media_kind==='sampled_sequence'?'1 fps sampled frames':sourceMedia?.media_kind==='annotated_stills'?'Annotated stills':sourceMedia?'Media available':sourceMediaError?'Media status unavailable':'Checking media mode'}</Badge>
       <div className="min-w-0 flex-1">
-        <p className="m-0 text-sm font-semibold">{sourceMedia?.media_kind==='annotated_stills'?'Continuous recording is not installed':'Surgical source availability'}</p>
+        <p className="m-0 text-sm font-semibold">{sourceMedia?.media_kind==='sampled_sequence'?'Sampled frame inspection · continuous video not installed':sourceMedia?.media_kind==='annotated_stills'?'Continuous recording is not installed':'Surgical source availability'}</p>
         <p className="m-0 text-xs leading-5 text-muted-foreground">{sourceMedia?.limitations[0]??(sourceMediaError?'Verified frame inspection remains available; the source media registry could not be checked.':'Checking the verified media manifest. Playback and time-based tracks appear only for an installed, authorized recording.')}</p>
       </div>
-      {sourceMedia&&<span className="col-start-2 min-w-0 break-words text-xs tabular-nums text-muted-foreground sm:col-start-3 sm:whitespace-nowrap">{sourceMedia.annotated_frame_count.toLocaleString()} verified stills · {sourceMedia.split} · video {sourceMedia.source_video_id}</span>}
+      {sourceMedia&&<span className="col-start-2 min-w-0 break-words text-xs tabular-nums text-muted-foreground sm:col-start-3 sm:whitespace-nowrap">{sourceMedia.sampled_frame_count.toLocaleString()} sampled · {sourceMedia.annotated_frame_count.toLocaleString()} annotated · {sourceMedia.split} · video {sourceMedia.source_video_id}</span>}
     </section>}
+    {!guided&&Boolean(sourceMedia?.sampled_frame_count&&sourceMedia.sampled_frame_count>0)&&<section className="grid min-w-0 gap-2 rounded-lg border border-border bg-card px-3 py-2.5 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center" aria-label="Endoscapes sampled frame sequence">
+      <div className="min-w-0"><p className="m-0 text-sm font-semibold">1 fps source sequence</p><p className="m-0 text-xs text-muted-foreground">Sampled stills; the frame index is not a timestamp.</p></div>
+      {sampledFrames.length>0&&<Slider aria-label="Sampled frame position" min={0} max={sampledFrames.length-1} step={1} value={[Math.max(0,sampledFrames.findIndex(item=>item.id===activeFrameId))]} onValueChange={value=>{const position=Number(Array.isArray(value)?value[0]:value);const item=sampledFrames[position];if(item)navigate(`/studio/surgivision/cases/${encodeURIComponent(item.id)}`)}}/>}
+      <div className="flex items-center justify-between gap-2 sm:justify-end"><Button variant="outline" size="icon-sm" aria-label="Previous sampled frame" disabled={sampledFrames.findIndex(item=>item.id===activeFrameId)<=0} onClick={()=>{const index=sampledFrames.findIndex(item=>item.id===activeFrameId);const item=sampledFrames[index-1];if(item)navigate(`/studio/surgivision/cases/${encodeURIComponent(item.id)}`)}}><ChevronLeft/></Button><span className="min-w-24 text-center text-xs tabular-nums text-muted-foreground" role="status">{sampledFrames.length?`${Math.max(0,sampledFrames.findIndex(item=>item.id===activeFrameId))+1} / ${sampledFrames.length}`:sampledFramesError||'Loading sequence'}</span><Button variant="outline" size="icon-sm" aria-label="Next sampled frame" disabled={sampledFrames.findIndex(item=>item.id===activeFrameId)<0||sampledFrames.findIndex(item=>item.id===activeFrameId)>=sampledFrames.length-1} onClick={()=>{const index=sampledFrames.findIndex(item=>item.id===activeFrameId);const item=sampledFrames[index+1];if(item)navigate(`/studio/surgivision/cases/${encodeURIComponent(item.id)}`)}}><ChevronRight/></Button></div>
+    </section>}
+    {!guided&&publicClip&&<Card className="overflow-hidden border-primary/20">
+      <CardHeader className="gap-1"><div className="flex flex-wrap items-center gap-2"><Badge variant="outline" className="border-primary/25 bg-primary/5 text-primary">Licensed continuous footage</Badge><Badge variant="secondary">{publicClip.procedure_label} · {publicClip.duration_sec.toFixed(1)} sec</Badge></div><CardTitle className="mt-1">Appendix300 source excerpt</CardTitle><CardDescription>Authentic, de-identified laparoscopic appendectomy footage from a separate procedure dataset. It is not the cholecystectomy frame sequence above and includes no instrument masks.</CardDescription></CardHeader>
+      <CardContent className="grid gap-3">
+        {showPublicClip?<video className="aspect-video max-h-[36rem] w-full rounded-lg bg-black" controls playsInline preload="metadata" src={api.surgicalClipVideoUrl(publicClip.clip_id)} aria-label="Appendix300 laparoscopic appendectomy excerpt"/>:<Button variant="outline" className="w-fit" onClick={()=>setShowPublicClip(true)}><Image data-icon="inline-start"/>Load licensed video excerpt</Button>}
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-2 text-xs text-muted-foreground"><span>{publicClip.license_label} · SHA-256 {publicClip.sha256.slice(0,12)}…</span><a className="text-primary hover:underline" href={publicClip.source_url} target="_blank" rel="noreferrer">OPARA dataset and citation ↗</a></div>
+        <p className="m-0 text-xs leading-relaxed text-muted-foreground">{publicClip.citation}</p>
+      </CardContent>
+    </Card>}
     <div className="grid min-w-0 items-start gap-3 xl:grid-cols-[minmax(0,3fr)_minmax(17rem,1fr)]">
       <Card className="min-w-0 overflow-hidden">
         <CardHeader className="flex-row items-center justify-between gap-3 px-3 py-3">
@@ -250,14 +287,15 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
           </div>
         </CardHeader>
         <CardContent className="px-3 pb-3 pt-0">
+        {!framePixelDimensionsMatch&&<Alert variant="destructive"><AlertTitle>Source image dimensions need verification</AlertTitle><AlertDescription>The JPEG is {imageSize?.width} × {imageSize?.height} pixels, while its source record says {frame.width} × {frame.height}. Source overlays and coordinate selection are paused until their pixel mapping is verified.</AlertDescription></Alert>}
         {!guided&&<div className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 px-2.5 py-2"><span className="text-xs font-medium text-muted-foreground">Source overlays</span><ToggleGroup multiple variant="outline" size="sm" aria-label="Surgical source overlays" value={[...(showBoxes?['boxes']:[]),...(showMasks?['masks']:[])]} onValueChange={value=>{setShowBoxes(value.includes('boxes'));setShowMasks(value.includes('masks'))}}><ToggleGroupItem value="boxes" aria-label="Toggle official COCO boxes">COCO boxes</ToggleGroupItem><ToggleGroupItem value="masks" aria-label="Toggle official RLE masks">RLE masks</ToggleGroupItem></ToggleGroup></div>}
         {!guided&&saveFrameReportError&&<Alert variant="destructive"><AlertDescription>{saveFrameReportError}</AlertDescription></Alert>}
         {!guided&&reportMatchesView&&<div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm"><span className="flex items-center gap-2 text-muted-foreground"><Check className="text-primary"/>Frame evidence saved to Reports.</span><Link className="font-medium text-primary underline-offset-4 hover:underline" to="/studio/reports">View report history</Link></div>}
         <div ref={viewportRef} className={`surgi-canvas${zoom>1?' is-zoomed':''}`} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={()=>setDrag(null)} onPointerCancel={()=>setDrag(null)} onWheel={event=>{if(event.ctrlKey){event.preventDefault();setScale(zoom+(event.deltaY<0?.1:-.1))}}}>
-          <div className="surgi-frame-transform" onClick={selectEvidencePoint} style={{transform:`translate(${pan.x}px,${pan.y}px) scale(${zoom})`,aspectRatio:`${frame.width}/${frame.height}`,cursor:guided&&!locked&&!referenceIsReleased?'crosshair':undefined}}>
-            {imageUrl?<img src={imageUrl} alt={`Endoscapes source image, ${frame.split} split, video ${frame.video_id}, frame ${frame.frame_number}`} draggable={false}/>:<div className="grid h-full place-items-center px-4 text-center text-sm text-muted-foreground">{imageError||'Loading assigned source image…'}</div>}
-            <canvas ref={maskCanvas} className="surgi-mask-layer" aria-hidden="true"/>
-            {(showBoxes||(guided&&evidencePoint))&&<svg className="surgi-annotation-layer" viewBox={`0 0 ${frame.width} ${frame.height}`} preserveAspectRatio="none" role="group" aria-label="Official COCO reference boxes">
+          <div className="surgi-frame-transform" onClick={framePixelDimensionsMatch?selectEvidencePoint:undefined} style={{transform:`translate(${pan.x}px,${pan.y}px) scale(${zoom})`,aspectRatio:imageSize?`${imageSize.width}/${imageSize.height}`:`${frame.width}/${frame.height}`,cursor:guided&&!locked&&!referenceIsReleased&&framePixelDimensionsMatch?'crosshair':undefined}}>
+            {imageUrl?<img src={imageUrl} alt={`Endoscapes source image, ${frame.split} split, video ${frame.video_id}, frame ${frame.frame_number}`} onLoad={event=>setImageSize({width:event.currentTarget.naturalWidth,height:event.currentTarget.naturalHeight})} draggable={false}/>:<div className="grid h-full place-items-center px-4 text-center text-sm text-muted-foreground">{imageError||'Loading assigned source image…'}</div>}
+            {framePixelDimensionsMatch&&<canvas ref={maskCanvas} className="surgi-mask-layer" aria-hidden="true"/>}
+            {framePixelDimensionsMatch&&(showBoxes||(guided&&evidencePoint))&&<svg className="surgi-annotation-layer" viewBox={`0 0 ${frame.width} ${frame.height}`} preserveAspectRatio="none" role="group" aria-label="Official COCO reference boxes">
               {showBoxes&&displayedAnnotations.map(annotation=><Annotation key={annotation.id} annotation={annotation} selected={selected===annotation.id} onSelect={()=>setSelected(annotation.id)}/>) }
               {guided&&evidencePoint&&<g aria-label={`Your evidence point at ${evidencePoint.x}, ${evidencePoint.y} source pixels`}><circle cx={evidencePoint.x} cy={evidencePoint.y} r={11} fill="#101624" fillOpacity=".8" stroke="#8498ff" strokeWidth={3} vectorEffect="non-scaling-stroke"/><circle cx={evidencePoint.x} cy={evidencePoint.y} r={2} fill="#ffffff"/></g>}
             </svg>}

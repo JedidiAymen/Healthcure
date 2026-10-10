@@ -112,13 +112,15 @@ const specialtyData = {
       "Frame and annotation review",
       "COCO anatomy and tool bounding boxes",
       "Image-level CVS label array",
+      "Endoscapes 1 fps sampled-frame browsing",
+      "Licensed Appendix300 video excerpt playback",
     ],
     blockers: [
-      "Continuous video and unlabeled intermediate frames are not installed",
+      "Endoscapes is a sampled-still release; its sequence is not continuous video",
       "CVS-AdaptNet remains gated on independent checkpoint hash and terms",
     ],
     unavailableMethods: [
-      { task: "Continuous recording playback and synchronized timeline", reason: "Authorized native or sampled video media and time-aligned tracks are not installed." },
+      { task: "Continuous video aligned with Endoscapes frames and annotations", reason: "Endoscapes provides sampled stills; the separate Appendix300 clip is appendectomy footage with no aligned Endoscapes tracks." },
       { task: "Single-frame model inference", reason: "Checkpoint identity and checkpoint-specific terms remain unverified." },
     ],
   },
@@ -865,7 +867,27 @@ export function DomainWorkspace({ module }: { module: ModuleId }) {
     Icon = m.icon,
     { caseId = "current" } = useParams();
   const cases = useApi(queryKeys.cases, api.cases, [] as CaseRecord[]);
-  if (cases.loading) {
+  const [directRecord,setDirectRecord]=useState<CaseRecord|null>(null)
+  const [directRecordLoading,setDirectRecordLoading]=useState(false)
+  const [surgicalClipAvailable,setSurgicalClipAvailable]=useState(false)
+  useEffect(()=>{
+    if(module!=="surgivision"){setSurgicalClipAvailable(false);return}
+    let live=true
+    api.surgicalClips().then(clips=>{if(live)setSurgicalClipAvailable(clips.length>0)}).catch(()=>{if(live)setSurgicalClipAvailable(false)})
+    return()=>{live=false}
+  },[module])
+  useEffect(()=>{
+    if(caseId==="current"||cases.loading||cases.error||cases.data.some(item=>item.id===caseId)){
+      setDirectRecordLoading(false)
+      if(caseId==="current"||cases.data.some(item=>item.id===caseId))setDirectRecord(null)
+      return
+    }
+    let live=true
+    setDirectRecordLoading(true)
+    api.caseDetails(caseId).then(record=>{if(live)setDirectRecord(record.module===module?record:null)}).catch(()=>{if(live)setDirectRecord(null)}).finally(()=>{if(live)setDirectRecordLoading(false)})
+    return()=>{live=false}
+  },[caseId,cases.data,cases.error,cases.loading,module])
+  if (cases.loading||directRecordLoading) {
     return (
       <div className="flex flex-col gap-4" aria-busy="true" aria-live="polite">
         <span className="sr-only">Checking the local case registry</span>
@@ -889,10 +911,10 @@ export function DomainWorkspace({ module }: { module: ModuleId }) {
       </div>
     );
   }
-  const record =
-    caseId === "current"
-      ? cases.data.find((c) => c.module === module)
-      : cases.data.find((c) => c.id === caseId);
+  const listedRecord = caseId === "current"
+    ? cases.data.find((c) => c.module === module)
+    : cases.data.find((c) => c.id === caseId)
+  const record = listedRecord??(directRecord?.id===caseId?directRecord:undefined)
   return (
     <>
       <nav aria-label="Breadcrumb" className="mb-5 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
@@ -1012,7 +1034,7 @@ export function DomainWorkspace({ module }: { module: ModuleId }) {
               <TableHeader><TableRow className="hover:bg-transparent"><TableHead className="w-full whitespace-normal">Method or view</TableHead><TableHead className="w-28 text-right">Availability</TableHead></TableRow></TableHeader>
             <TableBody>
             {m.tasks.map((task, i) => {
-              const available = Boolean(record && record.status === "ready");
+              const available = Boolean(record && record.status === "ready" && (task!=="Licensed Appendix300 video excerpt playback"||surgicalClipAvailable));
               return (
                 <TableRow key={task}>
                   <TableCell className="whitespace-normal"><span className="mr-2 inline-block font-mono text-xs text-muted-foreground">{String(i + 1).padStart(2, "0")}</span>{task}</TableCell>
