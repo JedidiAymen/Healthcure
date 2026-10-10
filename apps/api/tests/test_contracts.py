@@ -507,6 +507,16 @@ def test_authentic_fisav_learning_delivery_with_delayed_reference_release(client
     stale=client.put(f'/api/v1/academy/attempts/{attempt_id}/draft',headers=student,json={'expected_revision':0,'observations':[]})
     assert stale.status_code==409
     source_evidence={'kind':'fistulaguard','case_id':case['id'],'record_id':case['source_case_id'],'channel':'raw PZT1','start_sec':2.5,'duration_sec':5}
+    source_record=client.get(f"/api/v1/fistulaguard/records/{case['source_case_id']}",headers=student).json()
+    source_window=client.get(f"/api/v1/fistulaguard/records/{case['source_case_id']}/waveform?channel=raw%20PZT1&start_sec=2.5&duration_sec=5",headers=student)
+    assert source_window.status_code==200
+    source_window=source_window.json()
+    assert source_window['case_id']==source_record['case_id']==case['id']
+    assert source_window['source_sha256']==source_record['source_sha256'] and source_window['start_sec']==source_evidence['start_sec']
+    expected_samples=source_record['sample_rate_hz']*source_evidence['duration_sec']
+    assert abs(source_window['original_sample_count']-expected_samples)<=expected_samples*0.01+2
+    assert abs(source_window['duration_sec']-source_evidence['duration_sec'])<=source_evidence['duration_sec']*0.01
+    assert source_window['duration_sec']==4.9969 and source_window['original_sample_count']==50000
     wrong_source=client.put(f'/api/v1/academy/attempts/{attempt_id}/draft',headers=student,json={'expected_revision':1,'observations':saved.json()['observations'],'viewer_evidence':{**source_evidence,'case_id':'fisav:pat002'}})
     assert wrong_source.status_code==422 and wrong_source.json()['detail']['code']=='VIEWER_EVIDENCE_CASE_MISMATCH'
     saved=client.put(f'/api/v1/academy/attempts/{attempt_id}/draft',headers=student,json={'expected_revision':1,'observations':saved.json()['observations'],'viewer_evidence':source_evidence})

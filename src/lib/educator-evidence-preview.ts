@@ -33,11 +33,20 @@ export function verifyAssignedSignalEvidence(
   const mismatch = (message: string): never => { throw new Error(`EVIDENCE_MISMATCH: ${message}`); };
   if (record.case_id !== evidence.case_id || record.source_case_id !== evidence.record_id) mismatch("The FiSaV record differs from the assigned case.");
   if (!/^[a-f\d]{64}$/i.test(record.source_sha256)) throw new Error("The FiSaV source checksum is unavailable or invalid.");
-  const timeTolerance = 1 / record.sample_rate_hz;
-  if (window.case_id !== record.case_id || window.source_sha256 !== record.source_sha256 || window.channel !== evidence.channel) {
-    mismatch("The FiSaV window belongs to a different source, checksum, or channel.");
+  if (!Number.isFinite(record.sample_rate_hz) || record.sample_rate_hz <= 0) throw new Error("The FiSaV source sample rate is unavailable or invalid.");
+  if (window.case_id !== record.case_id || window.source_sha256 !== record.source_sha256 || window.channel !== evidence.channel
+    || window.source_sample_rate_hz !== record.sample_rate_hz || window.start_sec !== evidence.start_sec) {
+    mismatch("The FiSaV window differs from the assigned record, checksum, channel, or exact start time.");
   }
-  if (Math.abs(window.start_sec - evidence.start_sec) > timeTolerance || Math.abs(window.duration_sec - evidence.duration_sec) > timeTolerance) {
-    mismatch("The FiSaV window does not match the saved learner time range.");
+  const expectedSamples = record.sample_rate_hz * evidence.duration_sec;
+  const allowedSampleDeviation = Math.ceil(expectedSamples * 0.01) + 2;
+  if (!Number.isFinite(expectedSamples) || !Number.isInteger(window.original_sample_count) || window.original_sample_count < 1
+    || Math.abs(window.original_sample_count - expectedSamples) > allowedSampleDeviation) {
+    mismatch("The FiSaV source sample count falls outside the selected time range.");
+  }
+  const allowedDurationDeviation = Math.max(2 / record.sample_rate_hz, evidence.duration_sec * 0.01);
+  if (!Number.isFinite(window.duration_sec) || window.duration_sec <= 0
+    || Math.abs(window.duration_sec - evidence.duration_sec) > allowedDurationDeviation) {
+    mismatch("The FiSaV source duration falls outside the selected time range.");
   }
 }

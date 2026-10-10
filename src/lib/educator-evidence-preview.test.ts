@@ -17,7 +17,12 @@ describe("educator evidence preview gate", () => {
   it("maps an exact assigned FiSaV source window for checksum-verified preview", () => {
     expect(assessEducatorEvidencePreview(attempt())).toEqual({ state: "ready", evidence: attempt().viewer_evidence });
     expect(() => verifyAssignedSignalEvidence(fisavEvidence, signalRecord, signalWindow)).not.toThrow();
-    expect(() => verifyAssignedSignalEvidence(fisavEvidence, signalRecord, { ...signalWindow, source_sha256: "b".repeat(64) })).toThrow(/different source, checksum, or channel/);
+    // Authentic FiSaV response: 5.0 seconds requested, 4.9969 source-aligned seconds, 50,000 samples.
+    expect(() => verifyAssignedSignalEvidence(fisavEvidence, signalRecord, { ...signalWindow, duration_sec: 4.9969, original_sample_count: 50000 })).not.toThrow();
+    expect(() => verifyAssignedSignalEvidence(fisavEvidence, signalRecord, { ...signalWindow, source_sha256: "b".repeat(64) })).toThrow(/differs from the assigned record/);
+    expect(() => verifyAssignedSignalEvidence(fisavEvidence, signalRecord, { ...signalWindow, duration_sec: 4.9, original_sample_count: 50000 })).toThrow(/source duration falls outside/);
+    expect(() => verifyAssignedSignalEvidence(fisavEvidence, signalRecord, { ...signalWindow, duration_sec: 4.9969, original_sample_count: 49000 })).toThrow(/source sample count falls outside/);
+    expect(() => verifyAssignedSignalEvidence(fisavEvidence, signalRecord, { ...signalWindow, start_sec: 12.5001 })).toThrow(/exact start time/);
   });
 
   it("distinguishes absent evidence, missing assignment identity, and mismatched sources", () => {
