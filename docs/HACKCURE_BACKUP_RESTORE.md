@@ -1,6 +1,6 @@
 # HackCure local backup and restore check
 
-This workflow applies only to the local Docker HackCure profile described in [`RUN_LOCAL.md`](../RUN_LOCAL.md). It backs up the profile's unencrypted SQLite demo database together with the checksum-verified OpenKBP-Opt `pt_241` source manifest, complete case arrays, matching reference, and archived `set_1` prediction. It does not contain Docker images, credentials stored outside the database, Caddy certificates, or other datasets.
+This workflow applies only to the local Docker HackCure profile described in [`RUN_LOCAL.md`](../RUN_LOCAL.md). It backs up the profile's unencrypted SQLite demo database together with the checksum-verified OpenKBP-Opt `pt_241` source manifest, complete case arrays, matching reference, and archived `set_1` prediction. It does not contain Docker images, credentials stored outside the database, Caddy certificates, or other datasets. Docker images can be bundled separately with [`scripts/hackcure_bundle_images.sh`](../scripts/hackcure_bundle_images.sh).
 
 The archive contains sensitive local research material and may contain local account and review records. It stays under ignored `data/hackcure-docker/backups/`; protect it with host account permissions and full-disk encryption. Do not push, email, upload, or copy it to a shared location. Dataset rights remain local-only and are not expanded by making a backup.
 
@@ -15,6 +15,27 @@ python3 scripts/hackcure_backup_restore.py create
 The command checks the installed source files against `data/openkbp-opt/pt_241/medforge-source-manifest.json`, opens the exact profile database read-only, uses SQLite's online backup API to capture a consistent snapshot, verifies the copied database, and writes a timestamped ZIP. It does not change the live database or source files. Existing backup archives are never replaced.
 
 The archive manifest records member names, byte counts, SHA-256 hashes, and the source/profile identity. `create` confirms file-level integrity only; it does not certify that imported comparison records, saved reports, reviewer credentials, Academy assignments, or a full event walkthrough are ready.
+
+## Bundle Docker images for offline transfer
+
+After the local HackCure images have been built or pulled, create a compressed image bundle:
+
+```sh
+./scripts/hackcure_bundle_images.sh
+```
+
+The script requires the API, web, Caddy and Mosquitto images used by the overlay, verifies that at least 1 GB is free before writing, and saves the images plus a SHA-256 sidecar and manifest under ignored `data/hackcure-docker/backups/images/`. It does not stop or rebuild the running stack. This package is local-only and must be transferred privately with the matching code revision and data backup; do not upload it publicly.
+
+On the second machine, first verify the archive:
+
+```sh
+cd data/hackcure-docker/backups/images
+sha256sum -c hackcure-images-<timestamp>.tar.gz.sha256
+gzip -t hackcure-images-<timestamp>.tar.gz
+gzip -dc hackcure-images-<timestamp>.tar.gz | docker image load
+```
+
+Then check that all four image tags listed in the JSON manifest are present, restore and verify the separate data archive using the institution/team-approved transfer process, and run the HackCure Compose preflight. On 2026-10-11, a fresh local Compose project booted all four services with `--no-build --pull never`; `/healthz`, the `pt_241` browser route, and its source-backed viewer manifest returned HTTP 200. This confirms the host's saved images support a same-machine no-pull startup. It does not prove a second-machine restore, network-isolated boot, or successful data archive transfer. The Compose profile requires version 2.24.4 or newer; see [`RUN_LOCAL.md`](../RUN_LOCAL.md).
 
 ## Restore rehearsal without touching live state
 
