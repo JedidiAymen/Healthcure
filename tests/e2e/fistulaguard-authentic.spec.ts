@@ -1,5 +1,6 @@
 import { mkdir } from 'node:fs/promises'
 import { expect, test } from '@playwright/test'
+import { completeResearchSignInIfPrompted } from './research-sign-in'
 
 type SignalRecord = {
   id: string
@@ -128,9 +129,10 @@ test('authentic FiSaV switches records, bounds windows, and reopens saved compar
   await expect(page.getByRole('columnheader', { name: /Reference · 12\.500000 s/ })).toBeVisible()
 
   const saveResponsePromise = page.waitForResponse(response =>
-    response.request().method() === 'POST' && new URL(response.url()).pathname === '/api/v1/comparisons',
+    response.request().method() === 'POST' && new URL(response.url()).pathname === '/api/v1/comparisons' && response.status() !== 401,
   )
   await page.getByRole('button', { name: 'Save comparison' }).click()
+  await completeResearchSignInIfPrompted(page)
   const saveResponse = await saveResponsePromise
   expect(saveResponse.ok()).toBeTruthy()
   const saved = await saveResponse.json() as SavedComparison

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { completeResearchSignInIfPrompted } from './research-sign-in'
 
 type DoseArtifact = {
   id: string
@@ -39,9 +40,10 @@ test('authentic pt_241 comparison report reopens with ROI evidence and source ha
   await expect(comparison.getByText(artifact!.source_file_sha256, { exact: true })).toBeVisible()
 
   const saveResponsePromise = page.waitForResponse(response =>
-    response.request().method() === 'POST' && new URL(response.url()).pathname === '/api/v1/reports/dosetwin-comparison',
+    response.request().method() === 'POST' && new URL(response.url()).pathname === '/api/v1/reports/dosetwin-comparison' && response.status() !== 401,
   )
   await comparison.getByRole('button', { name: 'Save comparison report' }).click()
+  await completeResearchSignInIfPrompted(page)
   const saveResponse = await saveResponsePromise
   expect(saveResponse.ok()).toBeTruthy()
   const report = await saveResponse.json() as ComparisonReport
