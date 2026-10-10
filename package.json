@@ -9,6 +9,7 @@
     "lint": "eslint src vite.config.ts eslint.config.js",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "test:e2e:ci": "playwright test --grep-invert @source",
     "capture:ui-review": "node scripts/capture_ui_review.mjs",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --pretty false",

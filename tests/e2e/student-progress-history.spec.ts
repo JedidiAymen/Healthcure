@@ -83,7 +83,7 @@ test('rubric history keeps same-second reviews separate and arrow-key inspectabl
   await page.getByLabel('Username').fill('review-student')
   await page.getByLabel('Password').fill('temporary-review-password')
   await page.getByRole('button', { name: 'Sign in as student' }).click()
-  await expect(page.getByText('First Evidence Investigation', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'First Evidence Investigation' })).toBeVisible()
 
   const chart = page.getByRole('application', { name: /Educator-reviewed rubric history.*Evidence use/ })
   await expect(chart).toBeVisible()
