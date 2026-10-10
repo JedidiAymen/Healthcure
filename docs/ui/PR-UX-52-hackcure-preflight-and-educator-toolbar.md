@@ -8,6 +8,7 @@
 
 - `npm run doctor -- --hackcure-preflight` adds read-only checks for the documented local `pt_241` walkthrough: source-manifest hashes, matching archived `set_1` input, its imported artifact and saved comparison report, existence of a local reviewer/admin role with sign-in credentials, loopback-only development launcher configuration, and optional published/assigned Academy readiness.
 - SQLite is opened in `mode=ro` with `query_only`. Output omits account usernames/IDs and credentials. This mode does not create or update migrations, accounts, passwords, learner state, review records, source files, or the database. It only reports what is present.
+- The source path follows the app's `MEDFORGE_OPENKBP_FULL_CASES_JSON` comparison-capable map; a viewer-only `MEDFORGE_OPENKBP_CASES_JSON` entry cannot satisfy this review. Reviewer presence mirrors sign-in's platform-scope role grant and local-credential requirements.
 - `RUN_LOCAL.md` documents the invocation, required vs optional gates, selected DB behavior and limits.
 - The Educator lesson editor keeps its existing title and save/review/publish controls visible while scrolling, matching the locked handoff's sticky draft-status toolbar. No save, publish, permission, rubric, ordering, or learner-preview logic changed.
 
@@ -31,5 +32,6 @@ No dependency was installed. The sticky toolbar uses existing Tailwind 4.3.3 (MI
 - `npm run doctor -- --hackcure-preflight` — source, import, report and loopback checks passed; reviewer gate failed because this local DB has no provisioned reviewer; optional Academy lesson check failed because none is published/assigned. Exit status: `1`.
 - `git diff --check` — passed.
 - `npm run typecheck -- --pretty false` — passed.
+- An independent read-only code review found and fixed two false-positive cases before push: viewer-only case mappings no longer count as comparison-capable `pt_241`, and reviewer readiness now requires the same platform-scope grant and local credential that the sign-in path checks. The focused preflight was rerun after these corrections.
 - No broad tests or account/data changes. The Educator sticky toolbar was typechecked, but no new authenticated screenshot was captured because no signed-in Educator browser session was available. Existing authenticated Educator screenshots predate this sticky-toolbar adjustment and are not presented as proof of it.
 - The command is not a clean-clone, hosted-service, display-rights, clinical, legal, or institutional acceptance check. It cannot supply missing accounts, artifacts or Academy assignments.
