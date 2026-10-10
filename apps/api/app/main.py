@@ -43,6 +43,9 @@ from .surgivision_review import register_surgivision_review_routes, self_check_b
 from . import db_driver
 from . import audit
 from .audit import register_audit_routes
+from .telemetry import TelemetryHub, register_telemetry_routes
+from .account_privacy import register_account_privacy_routes
+from .research_review import register_research_review_fhir_route, register_research_review_routes
 from .fistulaguard_tools import register_fistulaguard_tool_routes
 from .openkbp import dose_statistics, sha256, validate_case
 from .dose_artifacts import (INDEX_CONVENTION, MAX_UPLOAD_BYTES, SHAPE as DOSE_SHAPE,
@@ -407,7 +410,7 @@ def create_app() -> FastAPI:
             user=_current_user(conn,request.headers.get('authorization'))
         if user is None or user['role']!='student':
             return await call_next(request)
-        if path.startswith(('/api/v1/academy/','/api/v1/auth/')) or path=='/api/v1/modules':
+        if path.startswith(('/api/v1/academy/','/api/v1/auth/','/api/v1/account/')) or path=='/api/v1/modules':
             return await call_next(request)
         parts=unquote(path).split('/')
         case_id=None
@@ -1464,6 +1467,10 @@ def create_app() -> FastAPI:
     register_surgivision_review_routes(app, _db)
     register_fistulaguard_tool_routes(app, _db)
     register_audit_routes(app, _db)
+    register_research_review_routes(app, _db)
+    register_research_review_fhir_route(app, _db)
+    register_telemetry_routes(app, TelemetryHub())
+    register_account_privacy_routes(app, _db)
     return app
 
 app=create_app()

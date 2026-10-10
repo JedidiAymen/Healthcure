@@ -245,6 +245,13 @@ export type EducatorAttemptReview = {
 };
 export type CvsSelfCheckResult = ApiSchemas['CvsSelfCheckResult'];
 export type SignalFilterResult = ApiSchemas['SignalFilterResult'];
+export type SignalQuality = ApiSchemas['SignalQuality'];
+export type TelemetryStatus = ApiSchemas['TelemetryStatus'];
+export type TelemetryWindow = ApiSchemas['TelemetryWindow'];
+export type ResearchReview = ApiSchemas['ResearchReview'];
+export type VoxelDifference = ApiSchemas['VoxelDifference'];
+export type ResearchReviewDecision = ResearchReview['decision'];
+export type ResearchReviewCreate = ApiSchemas['ResearchReviewCreate'];
 export type BeatAnalysis = ApiSchemas['BeatAnalysis'];
 export type SignalAnnotation = ApiSchemas['SignalAnnotation'];
 export type SignalAnnotationCreate = ApiSchemas['SignalAnnotationCreate'];
@@ -460,6 +467,17 @@ export const api = {
       throw new Error(detail?.detail?.message ?? `API returned ${response.status}`);
     }
   },
+  signalQuality: (recordId: string, channel: string, startSec: number, durationSec: number) =>
+    request<SignalQuality>(`/api/v1/fistulaguard/records/${encodeURIComponent(recordId)}/quality?${new URLSearchParams({ channel, start_sec: String(startSec), duration_sec: String(durationSec) })}`, 30000),
+  telemetryDevices: () => request<TelemetryStatus>('/api/v1/telemetry/devices'),
+  telemetryWindow: (deviceId: string, seconds = 5) => request<TelemetryWindow>(`/api/v1/telemetry/devices/${encodeURIComponent(deviceId)}/window?seconds=${seconds}`),
+  doseVoxel: (caseId: string, artifactId: string, voxel: [number, number, number]) =>
+    request<VoxelDifference>(`/api/v1/cases/${encodeURIComponent(caseId)}/dose-artifacts/${encodeURIComponent(artifactId)}/voxel?x=${voxel[0]}&y=${voxel[1]}&z=${voxel[2]}`, 15000),
+  researchReviews: (caseId: string, artifactId: string) =>
+    request<ResearchReview[]>(`/api/v1/research-reviews?case_id=${encodeURIComponent(caseId)}&artifact_id=${encodeURIComponent(artifactId)}`, 15000),
+  createResearchReview: (input: ResearchReviewCreate) => post<ResearchReview>('/api/v1/research-reviews', input, {}, 30000),
+  researchReviewDocument: (reviewId: string, format: 'export' | 'fhir') =>
+    request<unknown>(`/api/v1/research-reviews/${encodeURIComponent(reviewId)}/${format}`, 15000),
   surgicalFrames: (filters: SurgicalFrameFilters = {}) => {
     const query = new URLSearchParams(Object.entries(filters).filter(([, value]) => value !== undefined && value !== "").map(([key, value]) => [key, String(value)]));
     return request<SurgicalFrameBrowse>(`/api/v1/surgivision/frames${query.size ? `?${query}` : ""}`);

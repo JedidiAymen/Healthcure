@@ -209,6 +209,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/account/erase": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Account Erase */
+        post: operations["account_erase_api_v1_account_erase_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/account/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Account Export */
+        get: operations["account_export_api_v1_account_export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/audit/mine": {
         parameters: {
             query?: never;
@@ -378,6 +412,23 @@ export interface paths {
         };
         /** Dose Artifact Slice */
         get: operations["dose_artifact_slice_api_v1_cases__case_id__dose_artifacts__artifact_id__slice_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cases/{case_id}/dose-artifacts/{artifact_id}/voxel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dose Voxel Difference */
+        get: operations["dose_voxel_difference_api_v1_cases__case_id__dose_artifacts__artifact_id__voxel_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -803,6 +854,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/fistulaguard/records/{record_id}/quality": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fistulaguard Quality */
+        get: operations["fistulaguard_quality_api_v1_fistulaguard_records__record_id__quality_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/fistulaguard/records/{record_id}/spectrogram": {
         parameters: {
             query?: never;
@@ -966,6 +1034,81 @@ export interface paths {
         };
         /** Get Report */
         get: operations["get_report_api_v1_reports__report_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research-reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Research Review List */
+        get: operations["research_review_list_api_v1_research_reviews_get"];
+        put?: never;
+        /** Research Review Create */
+        post: operations["research_review_create_api_v1_research_reviews_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research-reviews/{review_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Research Review Get */
+        get: operations["research_review_get_api_v1_research_reviews__review_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research-reviews/{review_id}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Research Review Export
+         * @description Auditable JSON report: the frozen review, its provenance, and the audit-chain entry that recorded it.
+         */
+        get: operations["research_review_export_api_v1_research_reviews__review_id__export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/research-reviews/{review_id}/fhir": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Research Review Fhir
+         * @description Minimal FHIR R4 Bundle of one review, tagged educational and test data (not a clinical record).
+         */
+        get: operations["research_review_fhir_api_v1_research_reviews__review_id__fhir_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1236,6 +1379,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/telemetry/devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Telemetry Devices */
+        get: operations["telemetry_devices_api_v1_telemetry_devices_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/telemetry/devices/{device_id}/window": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Telemetry Window */
+        get: operations["telemetry_window_api_v1_telemetry_devices__device_id__window_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/healthz": {
         parameters: {
             query?: never;
@@ -1257,6 +1434,13 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AccountEraseRequest */
+        AccountEraseRequest: {
+            /** Confirm */
+            confirm: string;
+            /** Password */
+            password: string;
+        };
         /** ApiError */
         ApiError: {
             /** Action */
@@ -2206,6 +2390,17 @@ export interface components {
             /** Version Id */
             version_id: string;
         };
+        /** QualityCheck */
+        QualityCheck: {
+            /** Measured */
+            measured: number;
+            /** Name */
+            name: string;
+            /** Passed */
+            passed: boolean;
+            /** Threshold */
+            threshold: string;
+        };
         /** ReportCreateRequest */
         ReportCreateRequest: {
             /** Run Id */
@@ -2231,6 +2426,143 @@ export interface components {
              * @enum {string}
              */
             status: "draft" | "generated" | "failed";
+        };
+        /** ResearchReview */
+        ResearchReview: {
+            /** Artifact Id */
+            artifact_id: string;
+            /** Audit Row Hash */
+            audit_row_hash?: string | null;
+            /**
+             * Boundary
+             * @default For further expert review, not for patient treatment.
+             */
+            boundary: string;
+            /** Case Id */
+            case_id: string;
+            /** Created At */
+            created_at: string;
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "accept_for_further_expert_assessment" | "request_revision" | "reject_research_candidate";
+            /** Decision Label */
+            decision_label: string;
+            /** Does Not Mean */
+            does_not_mean?: string[];
+            evidence: components["schemas"]["ResearchReviewEvidence"];
+            /** Id */
+            id: string;
+            provenance: components["schemas"]["ResearchReviewProvenance"];
+            /** Rationale */
+            rationale: string;
+            /** Reviewer Id */
+            reviewer_id: string;
+            /** Reviewer Name */
+            reviewer_name: string;
+            /** Reviewer Role */
+            reviewer_role: string;
+            /** Supersedes Id */
+            supersedes_id: string | null;
+        };
+        /** ResearchReviewCreate */
+        ResearchReviewCreate: {
+            /** Artifact Id */
+            artifact_id: string;
+            /**
+             * Axis
+             * @default 2
+             */
+            axis: number;
+            /** Case Id */
+            case_id: string;
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "accept_for_further_expert_assessment" | "request_revision" | "reject_research_candidate";
+            /**
+             * Index
+             * @default 64
+             */
+            index: number;
+            /** Rationale */
+            rationale: string;
+            /**
+             * Roi
+             * @enum {string}
+             */
+            roi: "Brainstem" | "SpinalCord" | "RightParotid" | "LeftParotid" | "Esophagus" | "Larynx" | "Mandible" | "PTV56" | "PTV63" | "PTV70";
+            /** Supersedes Id */
+            supersedes_id?: string | null;
+            /** Voxel */
+            voxel?: [
+                number,
+                number,
+                number
+            ] | null;
+        };
+        /** ResearchReviewEvidence */
+        ResearchReviewEvidence: {
+            /** Maximum Absolute Delta Gy */
+            maximum_absolute_delta_gy: number;
+            /** Mean Absolute Delta Gy */
+            mean_absolute_delta_gy: number;
+            /** Mean Delta Gy */
+            mean_delta_gy: number;
+            /** Prediction Mean Gy */
+            prediction_mean_gy: number;
+            /** Prediction Metrics */
+            prediction_metrics: {
+                [key: string]: unknown;
+            };
+            /** Reference Mean Gy */
+            reference_mean_gy: number;
+            /** Reference Metrics */
+            reference_metrics: {
+                [key: string]: unknown;
+            };
+            /** Roi */
+            roi: string;
+            /** View */
+            view: {
+                [key: string]: unknown;
+            };
+            voxel: components["schemas"]["VoxelDifference"] | null;
+            /** Voxel Count */
+            voxel_count: number;
+        };
+        /** ResearchReviewProvenance */
+        ResearchReviewProvenance: {
+            /** Case Source Revision */
+            case_source_revision: string | null;
+            /** Method Code Sha256 */
+            method_code_sha256: string;
+            /** Method Version */
+            method_version: string;
+            /** Prediction Checkpoint Sha256 */
+            prediction_checkpoint_sha256: string;
+            /** Prediction File Name */
+            prediction_file_name: string;
+            /** Prediction Model Revision */
+            prediction_model_revision: string;
+            /** Prediction Rights Basis */
+            prediction_rights_basis: string;
+            /** Prediction Sha256 */
+            prediction_sha256: string;
+            /**
+             * Provenance Kind
+             * @enum {string}
+             */
+            provenance_kind: "SOURCE_BENCHMARK" | "ARCHIVED_PREDICTION" | "RULE_BASED_METHOD" | "IN_APP_MODEL_INFERENCE";
+            /** Reference Dose Sha256 */
+            reference_dose_sha256: string;
+            /**
+             * Reference Kind
+             * @enum {string}
+             */
+            reference_kind: "SOURCE_BENCHMARK" | "ARCHIVED_PREDICTION" | "RULE_BASED_METHOD" | "IN_APP_MODEL_INFERENCE";
         };
         /**
          * RoiMaskVolume
@@ -2497,6 +2829,36 @@ export interface components {
             source_sha256: string;
             /** Start Sec */
             start_sec: number;
+        };
+        /** SignalQuality */
+        SignalQuality: {
+            /** Channel */
+            channel: string;
+            /** Checks */
+            checks: components["schemas"]["QualityCheck"][];
+            /** Duration Sec */
+            duration_sec: number;
+            /** Limitations */
+            limitations: string[];
+            /**
+             * Provenance Kind
+             * @default RULE_BASED_METHOD
+             * @constant
+             */
+            provenance_kind: "RULE_BASED_METHOD";
+            /** Record Id */
+            record_id: string;
+            /** Source Sha256 */
+            source_sha256: string;
+            /** Start Sec */
+            start_sec: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "usable" | "insufficient quality, not scored";
+            /** Usable */
+            usable: boolean;
         };
         /** SignalRecord */
         SignalRecord: {
@@ -3339,6 +3701,66 @@ export interface components {
             /** Width */
             width: number;
         };
+        /** TelemetryDevice */
+        TelemetryDevice: {
+            /** Device Id */
+            device_id: string;
+            integrity: components["schemas"]["TelemetryIntegrity"];
+            /** Label */
+            label: string;
+            /** Last Seen */
+            last_seen: string | null;
+            /** Sample Rate Hz */
+            sample_rate_hz: number;
+            /** Simulated */
+            simulated: boolean;
+        };
+        /** TelemetryIntegrity */
+        TelemetryIntegrity: {
+            /** Crc Failures */
+            crc_failures: number;
+            /** Frames Received */
+            frames_received: number;
+            /** Integrity Ok */
+            integrity_ok: boolean;
+            /** Malformed */
+            malformed: number;
+            /** Missing Frames */
+            missing_frames: number;
+            /** Out Of Order */
+            out_of_order: number;
+        };
+        /** TelemetryStatus */
+        TelemetryStatus: {
+            /** Broker */
+            broker: string | null;
+            /** Connected */
+            connected: boolean;
+            /** Devices */
+            devices: components["schemas"]["TelemetryDevice"][];
+            /** Label */
+            label: string;
+        };
+        /** TelemetryWindow */
+        TelemetryWindow: {
+            /** Channels */
+            channels: string[];
+            /** Device Id */
+            device_id: string;
+            /** Heart Rate Bpm */
+            heart_rate_bpm: number | null;
+            /** Heart Rate Method */
+            heart_rate_method: string;
+            integrity: components["schemas"]["TelemetryIntegrity"];
+            /** Label */
+            label: string;
+            /** Seconds */
+            seconds: number;
+            /** Time Sec */
+            time_sec: number[][];
+            /** Values */
+            values: number[][];
+        };
         /** ValidationError */
         ValidationError: {
             /** Context */
@@ -3396,6 +3818,45 @@ export interface components {
             provenance_label: string;
             /** Source Url */
             source_url: string;
+        };
+        /** VoxelDifference */
+        VoxelDifference: {
+            /** Artifact Id */
+            artifact_id: string;
+            /** Case Id */
+            case_id: string;
+            /**
+             * Coordinate Frame
+             * @default openkbp-processed-voxel-grid
+             */
+            coordinate_frame: string;
+            /**
+             * Delta Gy
+             * @description prediction minus reference
+             */
+            delta_gy: number;
+            /** Prediction Gy */
+            prediction_gy: number;
+            /** Prediction Sha256 */
+            prediction_sha256: string;
+            /**
+             * Provenance Kind
+             * @default ARCHIVED_PREDICTION
+             * @enum {string}
+             */
+            provenance_kind: "SOURCE_BENCHMARK" | "ARCHIVED_PREDICTION" | "RULE_BASED_METHOD" | "IN_APP_MODEL_INFERENCE";
+            /** Reference Dose Sha256 */
+            reference_dose_sha256: string;
+            /** Reference Gy */
+            reference_gy: number;
+            /** Roi Memberships */
+            roi_memberships: string[];
+            /** Voxel */
+            voxel: [
+                number,
+                number,
+                number
+            ];
         };
         /** VoxelSlice */
         VoxelSlice: {
@@ -3934,6 +4395,72 @@ export interface operations {
             };
         };
     };
+    account_erase_api_v1_account_erase_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountEraseRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    account_export_api_v1_account_export_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     audit_mine_api_v1_audit_mine_get: {
         parameters: {
             query?: {
@@ -4324,6 +4851,44 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    dose_voxel_difference_api_v1_cases__case_id__dose_artifacts__artifact_id__voxel_get: {
+        parameters: {
+            query: {
+                x: number;
+                y: number;
+                z: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                case_id: string;
+                artifact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoxelDifference"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -5359,6 +5924,41 @@ export interface operations {
             };
         };
     };
+    fistulaguard_quality_api_v1_fistulaguard_records__record_id__quality_get: {
+        parameters: {
+            query?: {
+                channel?: string;
+                start_sec?: number;
+                duration_sec?: number;
+            };
+            header?: never;
+            path: {
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignalQuality"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     fistulaguard_spectrogram_api_v1_fistulaguard_records__record_id__spectrogram_get: {
         parameters: {
             query?: {
@@ -5720,6 +6320,174 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    research_review_list_api_v1_research_reviews_get: {
+        parameters: {
+            query?: {
+                case_id?: string | null;
+                artifact_id?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResearchReview"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    research_review_create_api_v1_research_reviews_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResearchReviewCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResearchReview"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    research_review_get_api_v1_research_reviews__review_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                review_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResearchReview"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    research_review_export_api_v1_research_reviews__review_id__export_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                review_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    research_review_fhir_api_v1_research_reviews__review_id__fhir_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                review_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -6198,6 +6966,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SurgicalSequenceFrame"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    telemetry_devices_api_v1_telemetry_devices_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TelemetryStatus"];
+                };
+            };
+        };
+    };
+    telemetry_window_api_v1_telemetry_devices__device_id__window_get: {
+        parameters: {
+            query?: {
+                seconds?: number;
+            };
+            header?: never;
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TelemetryWindow"];
                 };
             };
             /** @description Validation Error */
