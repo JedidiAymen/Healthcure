@@ -32,6 +32,7 @@ Implemented and committed on `review/cobalt-dosetwin-d2-d3` as `ace18e5`.
 - `npm run lint` — passed.
 - `npm run typecheck` — passed.
 - `git diff --check` — passed.
+- Actual local application with the live seven-record model registry captured at 1440×900, 768×1024, and 390×844. All three requests returned HTTP 200, with no page errors or horizontal overflow. Screenshots and the viewport report are under ignored `.local-review/UX13-model-lab/` (`models-1440x900.png`, `models-768x1024.png`, `models-390x844.png`, `report.json`).
 
 ## Review access and data boundaries
 
