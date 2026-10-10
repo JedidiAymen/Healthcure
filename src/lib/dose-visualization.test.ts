@@ -41,6 +41,13 @@ describe('DoseTwin linked voxel coordinates', () => {
     expect(slicePointFromCanvasPosition(20, 30, { ...rect, width: 0 })).toBeNull()
   })
 
+  it('maps pointer positions after anisotropic display sizing, zoom and pan', () => {
+    const portraitPlane = { left: 318, top: 74, width: 320, height: 578 }
+    const zoomedPannedPlane = { left: 410, top: 162, width: 480, height: 867 }
+    expect(slicePointFromCanvasPosition(478, 363, portraitPlane)).toEqual({ row: 64, column: 64 })
+    expect(slicePointFromCanvasPosition(650, 595.5, zoomedPannedPlane)).toEqual({ row: 64, column: 64 })
+  })
+
   it('keeps dose, ROI boundary and CT display layers independently controllable', () => {
     const ct = new Float32Array(DOSE_GRID_SIZE ** 2).fill(0.5)
     const dose = new Float32Array(DOSE_GRID_SIZE ** 2)
@@ -50,11 +57,11 @@ describe('DoseTwin linked voxel coordinates', () => {
     roi[center] = 1
     const pixel = (values: Uint8ClampedArray, index: number) => Array.from(values.slice(index * 4, index * 4 + 4))
 
-    const ctOnly = renderDoseSlicePixels(ct, dose, roi, { showDose: false, showRoi: false, opacity: 0.56 })
-    expect(pixel(ctOnly, center)).toEqual([0, 0, 0, 255])
-    expect(pixel(renderDoseSlicePixels(ct, dose, roi, { showDose: true, showRoi: false, opacity: 0 }), center)).toEqual(pixel(ctOnly, center))
-    expect(pixel(renderDoseSlicePixels(ct, dose, roi, { showDose: true, showRoi: false, opacity: 0.56 }), center)).toEqual([121, 123, 26, 255])
-    expect(pixel(renderDoseSlicePixels(ct, dose, roi, { showDose: false, showRoi: true, opacity: 0.56 }), center)).toEqual([127, 245, 219, 255])
+    const ctOnly = renderDoseSlicePixels(ct, dose, roi, { showDose: false, showRoi: false, opacity: 0.56, doseMaxGy: 1, ctRange: [0, 1] })
+    expect(pixel(ctOnly, center)).toEqual([103, 103, 103, 255])
+    expect(pixel(renderDoseSlicePixels(ct, dose, roi, { showDose: true, showRoi: false, opacity: 0, doseMaxGy: 1, ctRange: [0, 1] }), center)).toEqual(pixel(ctOnly, center))
+    expect(pixel(renderDoseSlicePixels(ct, dose, roi, { showDose: true, showRoi: false, opacity: 0.56, doseMaxGy: 1, ctRange: [0, 1] }), center)).toEqual([104, 130, 132, 255])
+    expect(pixel(renderDoseSlicePixels(ct, dose, roi, { showDose: false, showRoi: true, opacity: 0.56, doseMaxGy: 1, ctRange: [0, 1] }), center)).toEqual([127, 245, 219, 255])
   })
 
   it('marks the ROI contour while leaving interior ROI pixels on the source layer', () => {
@@ -62,12 +69,42 @@ describe('DoseTwin linked voxel coordinates', () => {
     const dose = new Float32Array(DOSE_GRID_SIZE ** 2)
     const roi = new Float32Array(DOSE_GRID_SIZE ** 2)
     for (let y = 63; y <= 65; y++) for (let x = 63; x <= 65; x++) roi[y * DOSE_GRID_SIZE + x] = 1
-    const pixels = renderDoseSlicePixels(ct, dose, roi, { showDose: false, showRoi: true, opacity: 1 })
-    expect(Array.from(pixels.slice((64 * DOSE_GRID_SIZE + 64) * 4, (64 * DOSE_GRID_SIZE + 64) * 4 + 3))).toEqual([0, 0, 0])
+    const pixels = renderDoseSlicePixels(ct, dose, roi, { showDose: false, showRoi: true, opacity: 1, doseMaxGy: 1, ctRange: [0, 1] })
+    expect(Array.from(pixels.slice((64 * DOSE_GRID_SIZE + 64) * 4, (64 * DOSE_GRID_SIZE + 64) * 4 + 3))).toEqual([103, 103, 103])
     expect(Array.from(pixels.slice((64 * DOSE_GRID_SIZE + 63) * 4, (64 * DOSE_GRID_SIZE + 63) * 4 + 3))).toEqual([127, 245, 219])
   })
 
   it('rejects incomplete source planes instead of producing a partial image', () => {
     expect(() => renderDoseSlicePixels([0], [0], [0], { showDose: true, showRoi: true, opacity: 0.5 })).toThrow(RangeError)
+  })
+
+  it('keeps the same Gy value on one stable color when neighboring slices have different maxima', () => {
+    const ct = new Float32Array(DOSE_GRID_SIZE ** 2).fill(0.5)
+    const empty = new Float32Array(DOSE_GRID_SIZE ** 2)
+    const first = new Float32Array(DOSE_GRID_SIZE ** 2)
+    const second = new Float32Array(DOSE_GRID_SIZE ** 2)
+    const center = 64 * DOSE_GRID_SIZE + 64
+    first[center] = 40
+    second[center] = 40
+    second[center + 1] = 70
+    const layers = { showDose: true, showRoi: false, opacity: 0.7, doseMaxGy: 80, ctRange: [0, 1] as [number, number] }
+    const imageA = renderDoseSlicePixels(ct, first, empty, layers)
+    const imageB = renderDoseSlicePixels(ct, second, empty, layers)
+    expect(Array.from(imageA.slice(center * 4, center * 4 + 3))).toEqual(Array.from(imageB.slice(center * 4, center * 4 + 3)))
+  })
+
+  it('draws selected structure boundaries using independent stable colors', () => {
+    const ct = new Float32Array(DOSE_GRID_SIZE ** 2).fill(0.5)
+    const dose = new Float32Array(DOSE_GRID_SIZE ** 2)
+    const fallback = new Float32Array(DOSE_GRID_SIZE ** 2)
+    const first = new Float32Array(DOSE_GRID_SIZE ** 2)
+    const second = new Float32Array(DOSE_GRID_SIZE ** 2)
+    for (let y = 10; y <= 12; y++) for (let x = 10; x <= 12; x++) first[y * DOSE_GRID_SIZE + x] = 1
+    for (let y = 20; y <= 22; y++) for (let x = 20; x <= 22; x++) second[y * DOSE_GRID_SIZE + x] = 1
+    const image = renderDoseSlicePixels(ct, dose, fallback, { showDose: false, showRoi: true, opacity: 1, roiLayers: [
+      { values: first, color: [255, 0, 0] }, { values: second, color: [0, 0, 255] },
+    ] })
+    expect(Array.from(image.slice((10 * DOSE_GRID_SIZE + 11) * 4, (10 * DOSE_GRID_SIZE + 11) * 4 + 3))).toEqual([255, 0, 0])
+    expect(Array.from(image.slice((20 * DOSE_GRID_SIZE + 21) * 4, (20 * DOSE_GRID_SIZE + 21) * 4 + 3))).toEqual([0, 0, 255])
   })
 })

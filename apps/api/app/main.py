@@ -29,8 +29,8 @@ from pydantic import ValidationError
 import numpy as np
 from .schemas import (
     ApiError, Case, Health, ModuleStatus, ModelRecord, ModelValidationRequest,
-    DvhPoint, DvhSummary, ModelValidationResponse, RunCreateRequest, RunRecord, ViewerManifest, VoxelSlice, VoxelVolumeArtifact,
-    SurgicalFrameArtifact, SurgicalFrameRecord, CvsCoverage, SignalArtifact, SignalRecord, SignalWindow, SignalSpectrum, SignalSpectrogram, SignalFeatures
+    DvhPoint, DvhMetrics, DvhSummary, ModelValidationResponse, RunCreateRequest, RunRecord, ViewerManifest, VoxelSlice, VoxelVolumeArtifact,
+    SurgicalFrameArtifact, SurgicalFrameRecord, SurgicalMediaRecord, CvsCoverage, SignalArtifact, SignalRecord, SignalWindow, SignalSpectrum, SignalSpectrogram, SignalFeatures
 )
 from .schemas import ReportCreateRequest, ReportRecord, SurgicalFrameReportCreateRequest
 from .schemas import (LocalLoginRequest, LocalSession, LocalUser, EducatorEvidenceItem,
@@ -39,7 +39,7 @@ from .schemas import (LocalLoginRequest, LocalSession, LocalUser, EducatorEviden
     SignalFeatureDifference)
 from .auth import password_digest, issue_session, verify_password, current_user as _current_user, require_role
 from .learning import register_learning_routes
-from .openkbp import sha256, validate_case
+from .openkbp import dose_statistics, sha256, validate_case
 from .endoscapes import SOURCE_URL as ENDOSCAPES_URL, case_record as _endoscapes_case_record, installed_cases as _endoscapes_cases, installed_frame as _endoscapes_frame
 from . import endoscapes as _endoscapes
 from . import fisav as _fisav
@@ -204,9 +204,20 @@ def _read_cached_slice(case_dir: str, file_name: str, axis: int, index: int, mod
     path=(root/file_name).resolve()
     if path.parent != root or not path.is_file():
         raise FileNotFoundError(file_name)
-    volume=validate_sparse_volume(path)
+    volume=_read_cached_volume(str(root),file_name,path.stat().st_size,modified_ns)
     plane=np.take(volume, index, axis=axis)
     return plane.astype(np.float32,copy=False).ravel().tolist(), (int(plane.shape[0]),int(plane.shape[1]))
+
+@lru_cache(maxsize=10)
+def _read_cached_volume(case_dir: str, file_name: str, size_bytes: int, modified_ns: int) -> np.ndarray:
+    del size_bytes,modified_ns
+    root=Path(case_dir).resolve()
+    if file_name not in {'ct.csv','dose.csv','possible_dose_mask.csv'} and not re.fullmatch(r'(Brainstem|SpinalCord|RightParotid|LeftParotid|Esophagus|Larynx|Mandible|PTV56|PTV63|PTV70)\.csv',file_name):
+        raise FileNotFoundError(file_name)
+    path=(root/file_name).resolve()
+    if path.parent!=root or not path.is_file():
+        raise FileNotFoundError(file_name)
+    return validate_sparse_volume(path)
 
 def validate_sparse_volume(path: Path) -> np.ndarray:
     from .openkbp import read_sparse_csv
@@ -443,6 +454,44 @@ def create_app() -> FastAPI:
             provenance_label='OpenKBP synthetic benchmark reference dose' if _source_kind()=='benchmark' else 'SYNTHETIC TEST ONLY',
             source_url=SOURCE_URL,limitations=['No original DICOM patient orientation/origin assumed','Slices are presented in benchmark array index space'])
 
+    @app.get('/api/v1/surgivision/media',response_model=list[SurgicalMediaRecord])
+    def surgivision_media():
+        """List verified source modes without exposing local paths or implying continuous video."""
+        grouped: dict[tuple[str,int],list[Case]]={}
+        for case in _endoscapes_cases():
+            match=re.fullmatch(r'endoscapes:(train|val|test):\d+_\d+',case.id)
+            source=re.fullmatch(r'video-(\d+):frame-(\d+)',case.source_case_id)
+            if match is None or source is None:
+                continue
+            grouped.setdefault((match.group(1),int(source.group(1))),[]).append(case)
+        records=[]
+        limitations=[
+            'Continuous video and unannotated intermediate frames are not installed.',
+            'BBox201 images are widely spaced annotated stills; no playback timeline or frame timestamps are available.',
+            'No temporal phase or instrument-triplet labels are available for this source split.',
+        ]
+        for (split,video_id),cases in sorted(grouped.items()):
+            frame_ids=sorted((case.id for case in cases),key=lambda value:int(value.rsplit('_',1)[1]))
+            records.append(SurgicalMediaRecord(
+                media_id=f'endoscapes-bbox201:{split}:video-{video_id}',
+                source_video_id=video_id,split=split,media_kind='annotated_stills',
+                annotated_frame_count=len(frame_ids),first_frame_id=frame_ids[0],last_frame_id=frame_ids[-1],
+                source_url=ENDOSCAPES_URL,license_label='CC BY-NC-SA 4.0',
+                allowed_use='Non-commercial research and education with attribution; review the source license before reuse.',
+                source_revision=ENDOSCAPES_SOURCE_REVISION,metadata_validation_status='validated',
+                capabilities=['browse_annotated_frames'],limitations=limitations,
+            ))
+        return records
+
+    @app.get('/api/v1/surgivision/media/{media_id}',response_model=SurgicalMediaRecord)
+    def surgivision_media_detail(media_id:str):
+        if not re.fullmatch(r'endoscapes-bbox201:(train|val|test):video-\d+',media_id):
+            raise HTTPException(status_code=404,detail={'code':'SURGICAL_MEDIA_NOT_INSTALLED','message':'No authorized local surgical media record matches this ID'})
+        record=next((item for item in surgivision_media() if item.media_id==media_id),None)
+        if record is None:
+            raise HTTPException(status_code=404,detail={'code':'SURGICAL_MEDIA_NOT_INSTALLED','message':'No authorized local surgical media record matches this ID'})
+        return record
+
     @app.get('/api/v1/surgivision/frames/{frame_id}',response_model=SurgicalFrameRecord)
     def surgical_frame(frame_id:str,authorization:str|None=Header(default=None)):
         frame=_endoscapes_frame(frame_id)
@@ -610,22 +659,37 @@ def create_app() -> FastAPI:
     @app.get('/api/v1/cases/{case_id}/viewer/dvh',response_model=DvhSummary)
     def viewer_dvh(case_id:str,roi:str=Query('Brainstem',pattern='^(Brainstem|SpinalCord|RightParotid|LeftParotid|Esophagus|Larynx|Mandible|PTV56|PTV63|PTV70)$')):
         case=_expect_case(case_id)
-        dose_path=_case_root()/'dose.csv'; roi_path=_case_root()/f'{roi}.csv'
-        if not dose_path.is_file() or not roi_path.is_file():
+        dose_path=_case_root()/'dose.csv'; roi_path=_case_root()/f'{roi}.csv'; ct_path=_case_root()/'ct.csv'; spacing_path=_case_root()/'voxel_dimensions.csv'
+        if not dose_path.is_file() or not roi_path.is_file() or not ct_path.is_file() or not spacing_path.is_file():
             raise HTTPException(404,detail={'code':'ASSET_NOT_INSTALLED','message':f'Dose or ROI source for {roi} is missing','action':'Install the complete permitted OpenKBP case'})
         try:
-            dose=validate_sparse_volume(dose_path)
-            mask=validate_sparse_volume(roi_path).astype(bool)
+            case_dir=str(_case_root().resolve())
+            dose=_read_cached_volume(case_dir,'dose.csv',dose_path.stat().st_size,dose_path.stat().st_mtime_ns)
+            mask=_read_cached_volume(case_dir,roi_path.name,roi_path.stat().st_size,roi_path.stat().st_mtime_ns).astype(bool)
+            ct=_read_cached_volume(case_dir,'ct.csv',ct_path.stat().st_size,ct_path.stat().st_mtime_ns)
+            spacing=np.loadtxt(spacing_path,dtype=np.float64).reshape(-1)
+            if spacing.shape!=(3,) or not np.all(np.isfinite(spacing)) or not np.all(spacing>0):
+                raise ValueError('Voxel spacing requires 3 positive finite mm values')
         except (ValueError,OSError) as e:
             raise HTTPException(422,detail={'code':'INVALID_RESEARCH_DATA','message':str(e)}) from e
         values=dose[mask].astype(np.float64)
         if not values.size:
             raise HTTPException(422,detail={'code':'EMPTY_ROI','message':f'{roi} contains no voxels in this case'})
-        maximum=float(np.max(values))
-        thresholds=np.linspace(0,maximum,51) if maximum>0 else np.array([0.0])
+        display_max=float(np.max(dose))
+        if not np.isfinite(display_max) or display_max<=0:
+            raise HTTPException(422,detail={'code':'INVALID_RESEARCH_DATA','message':'A positive finite case-wide dose display range is unavailable'})
+        thresholds=np.linspace(0,display_max,51)
         curve=[DvhPoint(dose_gy=float(t),volume_percent=float(100*np.mean(values>=t))) for t in thresholds]
+        ct_range=np.percentile(ct.astype(np.float64),[2,98])
+        if not np.all(np.isfinite(ct_range)) or ct_range[1]<=ct_range[0]:
+            ct_min=float(np.min(ct));ct_max=float(np.max(ct))
+            ct_range=np.array([ct_min,ct_max if ct_max>ct_min else ct_min+1.0])
+        official_metrics=dose_statistics(dose,mask,spacing)
+        official_metrics={key:official_metrics.get(key) for key in ('volume_cc','dmean_gy','dmax_voxel_gy','d95_gy_interpolated','d0_1cc_gy_openkbp','d99_gy_openkbp','d1_gy_openkbp','v20gy_percent','note')}
         return DvhSummary(case_id=case.id,source_revision=_source_revision(),roi=roi,dose_sha256=sha256(dose_path),roi_sha256=sha256(roi_path),
-            voxel_count=int(values.size),mean_dose_gy=float(np.mean(values)),curve=curve,
+            voxel_count=int(values.size),mean_dose_gy=float(np.mean(values)),dose_display_max_gy=display_max,spacing_mm=tuple(float(value) for value in spacing),
+            ct_display_range=(float(ct_range[0]),float(ct_range[1])),ct_display_note='Global 2nd–98th percentile of this case’s processed CT benchmark values; not HU. Adjust locally for display.',
+            official_metrics=DvhMetrics.model_validate(official_metrics),curve=curve,
             method='Exploratory cumulative voxel DVH: percentage of ROI voxels at or above each dose threshold; not official benchmark metric validation.',
             source_kind=_source_kind(),origin='computed-from-synthetic-test-fixture' if _source_kind()=='synthetic-test' else 'computed-from-benchmark-arrays')
 

@@ -390,6 +390,28 @@ class SurgicalFrameRecord(StrictModel):
     cvs_criteria: tuple[float,...] = ()
     image_path: str = Field(exclude=True)
 
+class SurgicalMediaRecord(StrictModel):
+    """Verified video-source inventory. Annotated stills never imply playable footage."""
+    media_id: str
+    dataset_id: Literal['Endoscapes-BBox201'] = 'Endoscapes-BBox201'
+    source_video_id: int = Field(gt=0)
+    split: Literal['train','val','test']
+    media_kind: Literal['native_video','sampled_sequence','annotated_stills']
+    asset_uri: str | None = None
+    native_fps: float | None = None
+    sampling_fps: float | None = None
+    duration_sec: float | None = None
+    annotated_frame_count: int = Field(ge=1)
+    first_frame_id: str
+    last_frame_id: str
+    source_url: str
+    license_label: str
+    allowed_use: str
+    source_revision: str
+    metadata_validation_status: Literal['validated','unverified']
+    capabilities: list[Literal['browse_annotated_frames']]
+    limitations: list[str]
+
 class CvsCriterionCoverage(StrictModel):
     criterion_id: Literal['two_structures','hepatocystic_triangle','cystic_plate']
     criterion_label: str
@@ -579,6 +601,17 @@ class DvhPoint(StrictModel):
     dose_gy: float
     volume_percent: float
 
+class DvhMetrics(StrictModel):
+    volume_cc: float | None
+    dmean_gy: float | None
+    dmax_voxel_gy: float | None
+    d95_gy_interpolated: float | None
+    d0_1cc_gy_openkbp: float | None
+    d99_gy_openkbp: float | None
+    d1_gy_openkbp: float | None
+    v20gy_percent: float | None
+    note: str
+
 class DvhSummary(StrictModel):
     case_id: str
     source_revision: str
@@ -587,6 +620,11 @@ class DvhSummary(StrictModel):
     roi_sha256: str
     voxel_count: int = Field(ge=0)
     mean_dose_gy: float | None
+    dose_display_max_gy: float = Field(gt=0)
+    spacing_mm: tuple[float,float,float]
+    ct_display_range: tuple[float,float]
+    ct_display_note: str
+    official_metrics: DvhMetrics
     curve: list[DvhPoint]
     method: str
     source_kind: Literal['benchmark','research','synthetic-test']

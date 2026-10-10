@@ -235,6 +235,116 @@
         "title": "CvsCriterionCoverage",
         "type": "object"
       },
+      "DvhMetrics": {
+        "additionalProperties": false,
+        "properties": {
+          "d0_1cc_gy_openkbp": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "D0 1Cc Gy Openkbp"
+          },
+          "d1_gy_openkbp": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "D1 Gy Openkbp"
+          },
+          "d95_gy_interpolated": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "D95 Gy Interpolated"
+          },
+          "d99_gy_openkbp": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "D99 Gy Openkbp"
+          },
+          "dmax_voxel_gy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dmax Voxel Gy"
+          },
+          "dmean_gy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dmean Gy"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "v20gy_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "V20Gy Percent"
+          },
+          "volume_cc": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Volume Cc"
+          }
+        },
+        "required": [
+          "volume_cc",
+          "dmean_gy",
+          "dmax_voxel_gy",
+          "d95_gy_interpolated",
+          "d0_1cc_gy_openkbp",
+          "d99_gy_openkbp",
+          "d1_gy_openkbp",
+          "v20gy_percent",
+          "note"
+        ],
+        "title": "DvhMetrics",
+        "type": "object"
+      },
       "DvhPoint": {
         "additionalProperties": false,
         "properties": {
@@ -261,12 +371,35 @@
             "title": "Case Id",
             "type": "string"
           },
+          "ct_display_note": {
+            "title": "Ct Display Note",
+            "type": "string"
+          },
+          "ct_display_range": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Ct Display Range",
+            "type": "array"
+          },
           "curve": {
             "items": {
               "$ref": "#/components/schemas/DvhPoint"
             },
             "title": "Curve",
             "type": "array"
+          },
+          "dose_display_max_gy": {
+            "exclusiveMinimum": 0.0,
+            "title": "Dose Display Max Gy",
+            "type": "number"
           },
           "dose_sha256": {
             "title": "Dose Sha256",
@@ -286,6 +419,9 @@
           "method": {
             "title": "Method",
             "type": "string"
+          },
+          "official_metrics": {
+            "$ref": "#/components/schemas/DvhMetrics"
           },
           "origin": {
             "enum": [
@@ -316,6 +452,23 @@
             "title": "Source Revision",
             "type": "string"
           },
+          "spacing_mm": {
+            "maxItems": 3,
+            "minItems": 3,
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Spacing Mm",
+            "type": "array"
+          },
           "voxel_count": {
             "minimum": 0.0,
             "title": "Voxel Count",
@@ -330,6 +483,11 @@
           "roi_sha256",
           "voxel_count",
           "mean_dose_gy",
+          "dose_display_max_gy",
+          "spacing_mm",
+          "ct_display_range",
+          "ct_display_note",
+          "official_metrics",
           "curve",
           "method",
           "source_kind",
@@ -3533,15 +3691,161 @@
         "title": "SurgicalFrameReportCreateRequest",
         "type": "object"
       },
+      "SurgicalMediaRecord": {
+        "additionalProperties": false,
+        "description": "Verified video-source inventory. Annotated stills never imply playable footage.",
+        "properties": {
+          "allowed_use": {
+            "title": "Allowed Use",
+            "type": "string"
+          },
+          "annotated_frame_count": {
+            "minimum": 1.0,
+            "title": "Annotated Frame Count",
+            "type": "integer"
+          },
+          "asset_uri": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asset Uri"
+          },
+          "capabilities": {
+            "items": {
+              "const": "browse_annotated_frames",
+              "type": "string"
+            },
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "dataset_id": {
+            "const": "Endoscapes-BBox201",
+            "default": "Endoscapes-BBox201",
+            "title": "Dataset Id",
+            "type": "string"
+          },
+          "duration_sec": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Sec"
+          },
+          "first_frame_id": {
+            "title": "First Frame Id",
+            "type": "string"
+          },
+          "last_frame_id": {
+            "title": "Last Frame Id",
+            "type": "string"
+          },
+          "license_label": {
+            "title": "License Label",
+            "type": "string"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
+          },
+          "media_id": {
+            "title": "Media Id",
+            "type": "string"
+          },
+          "media_kind": {
+            "enum": [
+              "native_video",
+              "sampled_sequence",
+              "annotated_stills"
+            ],
+            "title": "Media Kind",
+            "type": "string"
+          },
+          "metadata_validation_status": {
+            "enum": [
+              "validated",
+              "unverified"
+            ],
+            "title": "Metadata Validation Status",
+            "type": "string"
+          },
+          "native_fps": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Native Fps"
+          },
+          "sampling_fps": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sampling Fps"
+          },
+          "source_revision": {
+            "title": "Source Revision",
+            "type": "string"
+          },
+          "source_url": {
+            "title": "Source Url",
+            "type": "string"
+          },
+          "source_video_id": {
+            "exclusiveMinimum": 0.0,
+            "title": "Source Video Id",
+            "type": "integer"
+          },
+          "split": {
+            "enum": [
+              "train",
+              "val",
+              "test"
+            ],
+            "title": "Split",
+            "type": "string"
+          }
+        },
+        "required": [
+          "media_id",
+          "source_video_id",
+          "split",
+          "media_kind",
+          "annotated_frame_count",
+          "first_frame_id",
+          "last_frame_id",
+          "source_url",
+          "license_label",
+          "allowed_use",
+          "source_revision",
+          "metadata_validation_status",
+          "capabilities",
+          "limitations"
+        ],
+        "title": "SurgicalMediaRecord",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
-          "ctx": {
-            "title": "Context",
-            "type": "object"
-          },
-          "input": {
-            "title": "Input"
-          },
           "loc": {
             "items": {
               "anyOf": [
@@ -6784,6 +7088,68 @@
           }
         },
         "summary": "Surgical Frame Image"
+      }
+    },
+    "/api/v1/surgivision/media": {
+      "get": {
+        "description": "List verified source modes without exposing local paths or implying continuous video.",
+        "operationId": "surgivision_media_api_v1_surgivision_media_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SurgicalMediaRecord"
+                  },
+                  "title": "Response Surgivision Media Api V1 Surgivision Media Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Surgivision Media"
+      }
+    },
+    "/api/v1/surgivision/media/{media_id}": {
+      "get": {
+        "operationId": "surgivision_media_detail_api_v1_surgivision_media__media_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "media_id",
+            "required": true,
+            "schema": {
+              "title": "Media Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SurgicalMediaRecord"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Surgivision Media Detail"
       }
     },
     "/healthz": {

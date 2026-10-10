@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { MouseEvent as ReactMouseEvent, PointerEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AlertCircle, Check, Download, FlaskConical, Image, LoaderCircle, Move, Save, ZoomIn, ZoomOut } from 'lucide-react'
-import { api, type CvsCoverage, type CvsInferenceRunRecord, type EvidenceReport, type ModelValidation, type StudentReferenceEvidence, type StudentSurgiViewerEvidence, type StudentViewerEvidence, type SurgicalAnnotation, type SurgicalFrameRecord } from '../lib/api'
+import { api, type CvsCoverage, type CvsInferenceRunRecord, type EvidenceReport, type ModelValidation, type StudentReferenceEvidence, type StudentSurgiViewerEvidence, type StudentViewerEvidence, type SurgicalAnnotation, type SurgicalFrameRecord, type SurgicalMediaRecord } from '../lib/api'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -53,6 +53,8 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
   const [activeFrameId,setActiveFrameId]=useState(frameId)
   const [frameSearch,setFrameSearch]=useState('')
   const [frame,setFrame]=useState<SurgicalFrameRecord|null>(null)
+  const [sourceMedia,setSourceMedia]=useState<SurgicalMediaRecord|null>(null)
+  const [sourceMediaError,setSourceMediaError]=useState('')
   const [imageUrl,setImageUrl]=useState('')
   const [imageError,setImageError]=useState('')
   const [error,setError]=useState('')
@@ -99,6 +101,14 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
   },[activeFrameId,guided])
   useEffect(()=>{let live=true;const saved=guided?null:readSurgicalViewPreferences(activeFrameId);setLoading(true);setFrame(null);setSelected(saved?.selected_annotation_id??null);setShowBoxes(saved?.show_boxes??true);setScale(saved?.zoom??1);setPan({x:0,y:0});api.surgicalFrame(activeFrameId).then(value=>{if(live){setFrame(value);setError('')}}).catch(e=>{if(live)setError(e instanceof Error?e.message:'Unable to load local frame')}).finally(()=>{if(live)setLoading(false)});return()=>{live=false}},[activeFrameId,guided])
   useEffect(()=>{let live=true;let objectUrl='';setImageUrl('');setImageError('');api.surgicalImage(activeFrameId).then(url=>{objectUrl=url;if(live)setImageUrl(url);else URL.revokeObjectURL(url)}).catch(e=>{if(live)setImageError(e instanceof Error?e.message:'Unable to load the assigned source image')});return()=>{live=false;if(objectUrl)URL.revokeObjectURL(objectUrl)}},[activeFrameId])
+  useEffect(()=>{
+    if(guided||!frame)return
+    let live=true
+    setSourceMedia(null);setSourceMediaError('')
+    const mediaId=`endoscapes-bbox201:${frame.split}:video-${frame.video_id}`
+    api.surgicalMediaRecord(mediaId).then(record=>{if(live)setSourceMedia(record)}).catch(error=>{if(live)setSourceMediaError(error instanceof Error?error.message:'Source media capability could not be verified')})
+    return()=>{live=false}
+  },[guided,frame])
   const referenceIsReleased=Boolean(frame && releasedReference?.case_id===frame.id)
   const displayedAnnotations=useMemo(()=>referenceIsReleased ? releasedReference!.annotations : frame?.annotations ?? [],[referenceIsReleased,releasedReference,frame])
   const displayedCvs=useMemo(()=>referenceIsReleased ? releasedReference!.cvs_criteria : frame?.cvs_criteria ?? [],[referenceIsReleased,releasedReference,frame])
@@ -216,6 +226,14 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
       </div>
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><Badge variant="outline">{frame.split}</Badge><Badge variant="outline">Video {frame.video_id} · frame {frame.frame_number}</Badge><Badge variant="outline">{frame.width} × {frame.height} px</Badge>{guided&&!referenceIsReleased?<Badge variant="outline">Reference labels withheld</Badge>:<><Badge variant="outline">{displayedAnnotations.length} annotations</Badge><Badge variant="outline">{displayedAnnotations.filter(annotation=>annotation.segmentation&&!Array.isArray(annotation.segmentation)).length} RLE masks</Badge>{!guided&&<span className="text-[11px]">{availableFrameIds.length.toLocaleString()} verified frames</span>}</>}</div>
     </div>
+    {!guided&&<section className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 gap-y-2 rounded-lg border border-border bg-card px-3 py-2.5 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center" aria-label="Source media mode">
+      <Badge variant="outline" className="shrink-0 border-primary/25 bg-primary/5 text-primary">{sourceMedia?.media_kind==='annotated_stills'?'Annotated stills':sourceMedia?'Media available':sourceMediaError?'Media status unavailable':'Checking media mode'}</Badge>
+      <div className="min-w-0 flex-1">
+        <p className="m-0 text-sm font-semibold">{sourceMedia?.media_kind==='annotated_stills'?'Continuous recording is not installed':'Surgical source availability'}</p>
+        <p className="m-0 text-xs leading-5 text-muted-foreground">{sourceMedia?.limitations[0]??(sourceMediaError?'Verified frame inspection remains available; the source media registry could not be checked.':'Checking the verified media manifest. Playback and time-based tracks appear only for an installed, authorized recording.')}</p>
+      </div>
+      {sourceMedia&&<span className="col-start-2 min-w-0 break-words text-xs tabular-nums text-muted-foreground sm:col-start-3 sm:whitespace-nowrap">{sourceMedia.annotated_frame_count.toLocaleString()} verified stills · {sourceMedia.split} · video {sourceMedia.source_video_id}</span>}
+    </section>}
     <div className="grid min-w-0 items-start gap-3 xl:grid-cols-[minmax(0,3fr)_minmax(17rem,1fr)]">
       <Card className="min-w-0 overflow-hidden">
         <CardHeader className="flex-row items-center justify-between gap-3 px-3 py-3">

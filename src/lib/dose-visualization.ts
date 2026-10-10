@@ -9,6 +9,9 @@ export type DoseSliceLayers = {
   showDose: boolean
   showRoi: boolean
   opacity: number
+  doseMaxGy?: number
+  ctRange?: [number, number] | null
+  roiLayers?: { values: ArrayLike<number>; color: [number, number, number] }[]
 }
 
 export function clampDoseIndex(value: number): number {
@@ -73,38 +76,57 @@ export function renderDoseSlicePixels(
 
   const ct = Array.from(ctValues)
   const sortedCt = [...ct].sort((a, b) => a - b)
-  const low = sortedCt[Math.floor(sortedCt.length * 0.02)] ?? 0
-  const high = sortedCt[Math.floor(sortedCt.length * 0.98)] ?? 1
+  const low = layers.ctRange?.[0] ?? sortedCt[Math.floor(sortedCt.length * 0.02)] ?? 0
+  const high = layers.ctRange?.[1] ?? sortedCt[Math.floor(sortedCt.length * 0.98)] ?? 1
   const ctSpan = Math.max(1e-8, high - low)
-  const positiveDose = Array.from(doseValues).filter(value => value > 0).sort((a, b) => a - b)
-  const maxDose = positiveDose[Math.floor(positiveDose.length * 0.98)] ?? 1
+  const maxDose = Number.isFinite(layers.doseMaxGy) && (layers.doseMaxGy ?? 0) > 0 ? layers.doseMaxGy! : 0
   const opacity = Math.min(1, Math.max(0, Number.isFinite(layers.opacity) ? layers.opacity : 0))
+  const roiLayers = layers.roiLayers?.length
+    ? layers.roiLayers
+    : [{ values: roiValues, color: [127, 245, 219] as [number, number, number] }]
+  if (roiLayers.some(layer => layer.values.length !== pixelCount)) throw new RangeError(`Expected each ROI plane to contain ${pixelCount} voxels`)
   const pixels = new Uint8ClampedArray(pixelCount * 4)
+
+  const doseColor = (fraction: number): [number, number, number] => {
+    const stops: [number, [number, number, number]][] = [
+      [0, [58, 77, 207]],
+      [0.38, [32, 157, 190]],
+      [0.72, [239, 139, 91]],
+      [1, [255, 222, 134]],
+    ]
+    const position = Math.max(0, Math.min(1, fraction))
+    const upperIndex = Math.max(1, stops.findIndex(([point]) => point >= position))
+    const [fromPoint, fromColor] = stops[upperIndex - 1]
+    const [toPoint, toColor] = stops[upperIndex]
+    const blend = (position - fromPoint) / Math.max(1e-8, toPoint - fromPoint)
+    return [0, 1, 2].map(channel => Math.round(fromColor[channel] * (1 - blend) + toColor[channel] * blend)) as [number, number, number]
+  }
 
   for (let y = 0; y < DOSE_GRID_SIZE; y++) {
     for (let x = 0; x < DOSE_GRID_SIZE; x++) {
       const index = y * DOSE_GRID_SIZE + x
       const gray = Math.round(Math.max(0, Math.min(1, (ct[index] - low) / ctSpan)) * 205)
-      const doseFraction = Math.max(0, Math.min(1, doseValues[index] / maxDose))
+      const doseFraction = maxDose > 0 ? Math.max(0, Math.min(1, doseValues[index] / maxDose)) : 0
       let red = gray
       let green = gray
       let blue = gray
 
-      if (layers.showDose && doseValues[index] > 0) {
-        const blend = opacity * Math.min(0.94, 0.34 + doseFraction * 0.56)
-        red = Math.round(red * (1 - blend) + (23 + 218 * doseFraction) * blend)
-        green = Math.round(green * (1 - blend) + (105 + 140 * doseFraction) * blend)
-        blue = Math.round(blue * (1 - blend) + (137 - 86 * doseFraction) * blend)
+      if (layers.showDose && maxDose > 0 && doseValues[index] > 0) {
+        const blend = opacity
+        const [doseRed, doseGreen, doseBlue] = doseColor(doseFraction)
+        red = Math.round(red * (1 - blend) + doseRed * blend)
+        green = Math.round(green * (1 - blend) + doseGreen * blend)
+        blue = Math.round(blue * (1 - blend) + doseBlue * blend)
       }
 
-      if (layers.showRoi && roiValues[index] > 0.5) {
-        const edge = x === 0 || y === 0 || x === DOSE_GRID_SIZE - 1 || y === DOSE_GRID_SIZE - 1
-          || roiValues[index - 1] < 0.5 || roiValues[index + 1] < 0.5
-          || roiValues[index - DOSE_GRID_SIZE] < 0.5 || roiValues[index + DOSE_GRID_SIZE] < 0.5
-        if (edge) {
-          red = 127
-          green = 245
-          blue = 219
+      if (layers.showRoi) {
+        for (const layer of roiLayers) {
+          const mask = layer.values
+          if (mask[index] <= 0.5) continue
+          const edge = x === 0 || y === 0 || x === DOSE_GRID_SIZE - 1 || y === DOSE_GRID_SIZE - 1
+            || mask[index - 1] < 0.5 || mask[index + 1] < 0.5
+            || mask[index - DOSE_GRID_SIZE] < 0.5 || mask[index + DOSE_GRID_SIZE] < 0.5
+          if (edge) [red, green, blue] = layer.color
         }
       }
 

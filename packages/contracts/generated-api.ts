@@ -844,6 +844,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/surgivision/media": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Surgivision Media
+         * @description List verified source modes without exposing local paths or implying continuous video.
+         */
+        get: operations["surgivision_media_api_v1_surgivision_media_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/surgivision/media/{media_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Surgivision Media Detail */
+        get: operations["surgivision_media_detail_api_v1_surgivision_media__media_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/healthz": {
         parameters: {
             query?: never;
@@ -954,6 +991,27 @@ export interface components {
             /** Mean Zero Frames */
             mean_zero_frames: number;
         };
+        /** DvhMetrics */
+        DvhMetrics: {
+            /** D0 1Cc Gy Openkbp */
+            d0_1cc_gy_openkbp: number | null;
+            /** D1 Gy Openkbp */
+            d1_gy_openkbp: number | null;
+            /** D95 Gy Interpolated */
+            d95_gy_interpolated: number | null;
+            /** D99 Gy Openkbp */
+            d99_gy_openkbp: number | null;
+            /** Dmax Voxel Gy */
+            dmax_voxel_gy: number | null;
+            /** Dmean Gy */
+            dmean_gy: number | null;
+            /** Note */
+            note: string;
+            /** V20Gy Percent */
+            v20gy_percent: number | null;
+            /** Volume Cc */
+            volume_cc: number | null;
+        };
         /** DvhPoint */
         DvhPoint: {
             /** Dose Gy */
@@ -965,14 +1023,24 @@ export interface components {
         DvhSummary: {
             /** Case Id */
             case_id: string;
+            /** Ct Display Note */
+            ct_display_note: string;
+            /** Ct Display Range */
+            ct_display_range: [
+                number,
+                number
+            ];
             /** Curve */
             curve: components["schemas"]["DvhPoint"][];
+            /** Dose Display Max Gy */
+            dose_display_max_gy: number;
             /** Dose Sha256 */
             dose_sha256: string;
             /** Mean Dose Gy */
             mean_dose_gy: number | null;
             /** Method */
             method: string;
+            official_metrics: components["schemas"]["DvhMetrics"];
             /**
              * Origin
              * @enum {string}
@@ -989,6 +1057,12 @@ export interface components {
             source_kind: "benchmark" | "research" | "synthetic-test";
             /** Source Revision */
             source_revision: string;
+            /** Spacing Mm */
+            spacing_mm: [
+                number,
+                number,
+                number
+            ];
             /** Voxel Count */
             voxel_count: number;
         };
@@ -2156,12 +2230,65 @@ export interface components {
             /** Show Annotations */
             show_annotations: boolean;
         };
+        /**
+         * SurgicalMediaRecord
+         * @description Verified video-source inventory. Annotated stills never imply playable footage.
+         */
+        SurgicalMediaRecord: {
+            /** Allowed Use */
+            allowed_use: string;
+            /** Annotated Frame Count */
+            annotated_frame_count: number;
+            /** Asset Uri */
+            asset_uri?: string | null;
+            /** Capabilities */
+            capabilities: "browse_annotated_frames"[];
+            /**
+             * Dataset Id
+             * @default Endoscapes-BBox201
+             * @constant
+             */
+            dataset_id: "Endoscapes-BBox201";
+            /** Duration Sec */
+            duration_sec?: number | null;
+            /** First Frame Id */
+            first_frame_id: string;
+            /** Last Frame Id */
+            last_frame_id: string;
+            /** License Label */
+            license_label: string;
+            /** Limitations */
+            limitations: string[];
+            /** Media Id */
+            media_id: string;
+            /**
+             * Media Kind
+             * @enum {string}
+             */
+            media_kind: "native_video" | "sampled_sequence" | "annotated_stills";
+            /**
+             * Metadata Validation Status
+             * @enum {string}
+             */
+            metadata_validation_status: "validated" | "unverified";
+            /** Native Fps */
+            native_fps?: number | null;
+            /** Sampling Fps */
+            sampling_fps?: number | null;
+            /** Source Revision */
+            source_revision: string;
+            /** Source Url */
+            source_url: string;
+            /** Source Video Id */
+            source_video_id: number;
+            /**
+             * Split
+             * @enum {string}
+             */
+            split: "train" | "val" | "test";
+        };
         /** ValidationError */
         ValidationError: {
-            /** Context */
-            ctx?: Record<string, never>;
-            /** Input */
-            input?: unknown;
             /** Location */
             loc: (string | number)[];
             /** Message */
@@ -4148,6 +4275,57 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    surgivision_media_api_v1_surgivision_media_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SurgicalMediaRecord"][];
+                };
+            };
+        };
+    };
+    surgivision_media_detail_api_v1_surgivision_media__media_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                media_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SurgicalMediaRecord"];
                 };
             };
             /** @description Validation Error */

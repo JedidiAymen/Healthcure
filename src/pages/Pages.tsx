@@ -115,6 +115,10 @@ const specialtyData = {
       "Continuous video and unlabeled intermediate frames are not installed",
       "CVS-AdaptNet remains gated on independent checkpoint hash and terms",
     ],
+    unavailableMethods: [
+      { task: "Continuous recording playback and synchronized timeline", reason: "Authorized native or sampled video media and time-aligned tracks are not installed." },
+      { task: "Single-frame model inference", reason: "Checkpoint identity and checkpoint-specific terms remain unverified." },
+    ],
   },
   dosetwin: {
     name: "DoseTwin",
@@ -132,6 +136,10 @@ const specialtyData = {
     blockers: [
       "No prediction checkpoint is installed",
       "Clinical-treatment workflows remain disabled",
+    ],
+    unavailableMethods: [
+      { task: "Dose prediction inference", reason: "No verified checkpoint, runtime or prediction output is installed." },
+      { task: "Reference-versus-prediction comparison", reason: "No authentic compatible second array is installed; local import and validation have not been implemented." },
     ],
   },
   fistulaguard: {
@@ -151,6 +159,9 @@ const specialtyData = {
       "All 59 source recordings are installed; this view shows one at a time",
       "Physical sensor units are unspecified",
       "No stenosis classifier or patient-disjoint validation is implemented",
+    ],
+    unavailableMethods: [
+      { task: "Stenosis classification", reason: "Supported outcome labels and patient-disjoint validation are not available." },
     ],
   },
 } as const;
@@ -993,25 +1004,27 @@ export function DomainWorkspace({ module }: { module: ModuleId }) {
         <Card>
           <CardHeader className="border-b border-border/70">
             <CardTitle className="text-base">Research methods in this workspace</CardTitle>
-            <CardDescription>Availability follows the selected source record.</CardDescription>
+          <CardDescription>Each row names a viewer operation or a specific unmet execution gate.</CardDescription>
           </CardHeader>
           <CardContent className="pt-2">
             <Table className="table-fixed">
               <TableHeader><TableRow className="hover:bg-transparent"><TableHead className="w-full whitespace-normal">Method or view</TableHead><TableHead className="w-28 text-right">Availability</TableHead></TableRow></TableHeader>
-              <TableBody>
+            <TableBody>
             {m.tasks.map((task, i) => {
-              const available =
-                Boolean(record) &&
-                (module === "dosetwin" ||
-                  module === "surgivision" ||
-                  module === "fistulaguard");
+              const available = Boolean(record && record.status === "ready");
               return (
                 <TableRow key={task}>
                   <TableCell className="whitespace-normal"><span className="mr-2 inline-block font-mono text-xs text-muted-foreground">{String(i + 1).padStart(2, "0")}</span>{task}</TableCell>
-                  <TableCell className="text-right"><Badge variant={available ? "secondary" : "outline"}>{available ? "Available" : "Awaiting source"}</Badge></TableCell>
+                  <TableCell className="text-right"><Badge variant={available ? "secondary" : "outline"}>{available ? "Source-backed" : "Awaiting source"}</Badge></TableCell>
                 </TableRow>
               );
             })}
+            {m.unavailableMethods.map(({ task, reason }) => (
+              <TableRow key={task}>
+                <TableCell className="whitespace-normal"><span className="mr-2 inline-block font-mono text-xs text-muted-foreground">—</span>{task}<p className="mb-0 mt-1 text-xs leading-5 text-muted-foreground">{reason}</p></TableCell>
+                <TableCell className="text-right"><Badge variant="outline">Blocked</Badge></TableCell>
+              </TableRow>
+            ))}
               </TableBody>
             </Table>
           </CardContent>

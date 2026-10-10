@@ -68,6 +68,7 @@ export type ViewerEvidenceState = {
 };
 export type SurgicalAnnotation = ApiSchemas['SurgicalAnnotation'];
 export type SurgicalFrameRecord = ApiSchemas['SurgicalFrameRecord'];
+export type SurgicalMediaRecord = ApiSchemas['SurgicalMediaRecord'];
 export type CvsCoverage = ApiSchemas['CvsCoverage'];
 export type SignalRecord = ApiSchemas['SignalRecord'];
 export type SignalWindow = ApiSchemas['SignalWindow'];
@@ -397,6 +398,8 @@ export const api = {
     request<SurgicalFrameRecord>(
       `/api/v1/surgivision/frames/${encodeURIComponent(frameId)}`,
     ),
+  surgicalMedia: () => request<SurgicalMediaRecord[]>("/api/v1/surgivision/media"),
+  surgicalMediaRecord: (mediaId: string) => request<SurgicalMediaRecord>(`/api/v1/surgivision/media/${encodeURIComponent(mediaId)}`),
   surgicalCoverage: () => request<CvsCoverage>("/api/v1/surgivision/cvs-coverage"),
   surgicalImage: async (frameId: string) => {
     const headers: Record<string, string> = {};

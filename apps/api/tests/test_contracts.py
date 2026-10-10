@@ -598,7 +598,11 @@ def test_dvh_endpoint_calculates_fixture_curve_and_provenance(client):
     assert result['voxel_count']==2
     assert result['mean_dose_gy']==17
     assert result['curve'][0]['volume_percent']==100
-    assert result['curve'][-1]['volume_percent']==50
+    assert result['curve'][-1]['volume_percent']==0
+    assert result['dose_display_max_gy']==40
+    assert result['curve'][-1]['dose_gy']==result['dose_display_max_gy']
+    assert result['official_metrics']['d95_gy_interpolated']==12.5
+    assert result['official_metrics']['dmean_gy']==17.0
     assert result['origin']=='computed-from-synthetic-test-fixture'
     assert result['source_kind']=='synthetic-test'
 

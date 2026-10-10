@@ -89,6 +89,34 @@ def test_cvs_coverage_summarizes_verified_splits_and_three_annotator_means(cover
     assert first_criterion["mean_one_frames"] == 1
 
 
+def test_surgivision_media_manifest_exposes_annotated_stills_without_video_capabilities(coverage_client):
+    client, _ = coverage_client
+    response = client.get("/api/v1/surgivision/media")
+    assert response.status_code == 200
+    sources = {item["media_id"]: item for item in response.json()}
+    train = sources["endoscapes-bbox201:train:video-120"]
+    assert train["media_kind"] == "annotated_stills"
+    assert train["annotated_frame_count"] == 2
+    assert train["first_frame_id"] == "endoscapes:train:120_12001"
+    assert train["last_frame_id"] == "endoscapes:train:120_12031"
+    assert train["capabilities"] == ["browse_annotated_frames"]
+    assert train["asset_uri"] is None
+    assert train["native_fps"] is None
+    assert train["sampling_fps"] is None
+    assert train["duration_sec"] is None
+    assert any("Continuous video" in item for item in train["limitations"])
+    detail = client.get("/api/v1/surgivision/media/endoscapes-bbox201:train:video-120")
+    assert detail.status_code == 200
+    assert detail.json()["source_revision"] == train["source_revision"]
+    assert client.get("/api/v1/surgivision/media/../../etc/passwd").status_code == 404
+
+
+def test_surgivision_media_manifest_is_empty_when_no_verified_source_is_installed(coverage_client, monkeypatch):
+    client, _ = coverage_client
+    monkeypatch.setenv("MEDFORGE_ENDOSCAPES_ROOT", str(Path("/nonexistent/verified-endoscapes")))
+    assert client.get("/api/v1/surgivision/media").json() == []
+
+
 def test_student_cannot_read_aggregate_cvs_reference_labels(coverage_client):
     client, _ = coverage_client
     salt, digest = password_record("local-test-password-123")

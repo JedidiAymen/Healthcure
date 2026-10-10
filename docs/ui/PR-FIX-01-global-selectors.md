@@ -1,6 +1,6 @@
 # FIX-01 — Global selectors, autocomplete and popover repair
 
-**Status: Implemented; local checks passed except the contract drift check described below.** This is a shared UI correction for the approved Cobalt / Porcelain system. It preserves the medical viewers, source identities, permissions and scientific calculations.
+**Status: Implemented; current contract check is green.** This is a shared UI correction for the approved Cobalt / Porcelain system. It preserves the medical viewers, source identities, permissions and scientific calculations.
 
 ## What changed
 
@@ -28,11 +28,11 @@ No package was installed for this fix.
 - `npm run test:e2e -- --workers=1` — passed, 5 Playwright tests. The Educator case-picker route checks actual popup computed white background, viewport containment and bounded height at 1440×900, 768×1024 and 390×844; screenshots use the actual application route with isolated fixture records.
 - `npm run build` — passed.
 - `python3 -m pytest -q apps/api/tests` — passed, 30 tests.
-- `npm run contracts:check` — **not clean in this environment**. Its OpenAPI export removed `ValidationError.ctx` and `ValidationError.input` compared with the checked-in schema, so the generated contract check reports drift. Those unrelated generated changes were discarded; no API schema or generated types were changed for this UI fix.
+- `npm run contracts:check` — passed after the later API-workspace milestone regenerated `contracts/openapi-implemented.json` and the TypeScript API types for the current Python/Pydantic toolchain. The first check before that regeneration found `ValidationError.ctx` / `ValidationError.input` drift from the checked-in schema; no selector fix caused that difference.
 - Existing source-based manual Chromium check: 1,933-frame SurgiVision picker returned 12 of 1,212 matches for `tr`; popup computed to white (`rgb(255,255,255)`) with a 320px max-height. Searching `test 162` / `frame 6575` selected the verified `endoscapes:test:162_6575` source and kept its actual image and overlays. FiSaV `pat011`, DoseTwin ROI selection and the global search dialog were also checked against the running local app; keyboard Escape and focus restoration are covered in Playwright.
 
 Screenshots from the running application are in the private, ignored `.local-review/FIX-01/` directory: `surgi-tr-1440x900.png` (verified source frame) and `educator-picker-{1440x900,768x1024,390x844}.png` (real route with test fixtures). They are local review evidence and are not part of the public source tree.
 
 ## Scope still requiring follow-up
 
-The 200% browser-zoom sweep, popup inside a selector-bearing modal, and fully interactive keyboard-only frame selection were not separately captured in this fix. No new dialog selector was introduced. Contract generation must be made deterministic for the repository's pinned Python/Pydantic toolchain before claiming the contract check is green.
+The 200% browser-zoom sweep, popup inside a selector-bearing modal, and fully interactive keyboard-only frame selection were not separately captured in this fix. No new dialog selector was introduced. The contract generator now matches the checked-in schema in this working tree; the repository's Python/Pydantic dependency pinning still determines reproducibility across other machines.
