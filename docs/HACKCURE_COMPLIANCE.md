@@ -2,7 +2,7 @@
 
 **Evidence basis and limits:** this audit uses the user-provided `MEDFORGE_HackCure_Platform_Enhancement_Proposal (1).md`, which explicitly labels its additions as proposed unless marked existing, and `MEDFORGE_HackCure_Cahier_des_Charges_Gap_Assessment (1).docx`, an editorial assessment of an earlier repository snapshot. The assessment quotes and summarizes sections of the organizers' *Cahier des Charges HackCure Participant*, but that primary-source PDF is not present in this checkout. Its scores, priorities, Track recommendation and proposed features are not organizer decisions or automatic implementation approvals. The matrix below follows the requirement descriptions transcribed in the supplied assessment and is checked against the current repository; it is not a primary-source legal/compliance determination.
 
-- **Current checkout:** `feat/experiments-run-workspace`, reviewed at commit `7a754d8` (2026-10-10). The branch-by-branch reconciliation later in this file is a historical snapshot, not current status.
+- **Readiness snapshot:** `feat/experiments-run-workspace` at commit `8283e17` (2026-10-10), before the UX-53 UI-only changes. The branch-by-branch reconciliation later in this file is a historical snapshot, not current status.
 - **Current product decision:** DoseTwin is the flagship for a local research-review demonstration using OpenKBP-Opt `pt_241` and its matching archived `set_1` prediction. This is not MEDFORGE inference, treatment approval, or a clinical workflow. See [`FLAGSHIP_DECISION.md`](FLAGSHIP_DECISION.md), [`DEMO_ASSETS.md`](DEMO_ASSETS.md), and [`STATUS.md`](STATUS.md).
 - **Deployment and data boundary:** local demo machine only. OpenKBP data and the archived prediction remain local; do not push, host, or redistribute them. The review is for further expert assessment, never patient treatment.
 - **Role boundary:** an operator may provision a local `clinical_reviewer` account for DoseTwin review records. This does not verify medical qualification. Educator/admin accounts prepare general research records; student access is limited to assigned learning cases. See [`LOCAL_ACCESS_AND_PROFILES.md`](LOCAL_ACCESS_AND_PROFILES.md).
@@ -146,6 +146,12 @@ The current release cutline is **local-only**. Do not publish the installed Open
 - **Not a current deliverable:** hosted real-data URL, MEDFORGE dose inference, FiSaV risk probability, clinical triage, credential verification, or live hospital integration.
 
 For exact local setup, routes, source import, account provisioning, and profile boundaries, follow [`LOCAL_ACCESS_AND_PROFILES.md`](LOCAL_ACCESS_AND_PROFILES.md) and [`RUN_LOCAL.md`](../RUN_LOCAL.md). Do not put credentials in this document.
+
+### Current machine rehearsal gate
+
+At commit `8283e17`, `npm run doctor -- --hackcure-preflight` was run against this checkout's default `data/local.sqlite3` on 2026-10-10. It verified the manifest-hashed `pt_241` source/archive, the matching imported prediction, its saved comparison report, and loopback-only app configuration. The required reviewer-profile check **failed** because no credentialed local `clinical_reviewer`/admin grant exists in that database. The optional Academy check also **failed** because no published lesson is assigned to a credentialed student. The command exited nonzero for the missing reviewer gate.
+
+This is a local readiness snapshot, not a full rehearsal, hosted-CI result, independent-machine check, organizer acceptance, clinical authorization, or legal/data-rights clearance. The reviewer must be provisioned privately in the same database used for the demo; the optional Academy path needs a lesson published and assigned before it is shown. Rerun the preflight after preparation and rehearse the actual screens on the selected event machine; see [`RUN_LOCAL.md`](../RUN_LOCAL.md) for the check's read-only behavior and limits.
 
 ---
 
