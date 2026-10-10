@@ -1,4 +1,6 @@
 import { expect, test } from '@playwright/test'
+import { createHash } from 'node:crypto'
+import { readFile } from 'node:fs/promises'
 
 type DoseArtifact = {
   id: string
@@ -23,6 +25,27 @@ test('authentic pt_241 comparison report reopens with ROI evidence and source ha
   const errors: string[] = []
   page.on('pageerror', error => errors.push(error.message))
 
+  const prediction = await readFile('data/openkbp-opt/pt_241/prediction-set_1.csv')
+  const predictionSha256 = createHash('sha256').update(prediction).digest('hex')
+  expect(predictionSha256).toBe('d9fc8da169b2a7e12c1dd417f60b8364888ab28e233db19e87ee3ea93c40a583')
+  const importResponse = await page.request.put('/api/v1/cases/openkbp%3Apt_241/dose-artifacts?file_name=prediction-set_1.csv', {
+    data: prediction,
+    headers: {
+      'Content-Type': 'text/csv',
+      'X-Dose-Origin': 'archived_model_prediction',
+      'X-Dose-Model-Revision': 'OpenKBP-Opt archived set_1',
+      'X-Dose-Source-Case': 'openkbp:pt_241',
+      'X-Dose-Source-Revision': '16fbe0dbc64c94ed4b7e8378a090b47c6596bbd7',
+      'X-Dose-Rights-Basis': 'Local research inspection authorized by the project owner; not a legal review.',
+      'X-Dose-Rights-Confirmed': 'true',
+      'X-Dose-Unit': 'Gy',
+      'X-Dose-Index-Convention': 'x-major-y-middle-z-fastest',
+      'X-Dose-Array-Shape': '128,128,128',
+      'X-Dose-Spacing-MM': '3.906,3.906,2.5',
+      'X-Dose-File-SHA256': predictionSha256,
+    },
+  })
+  expect(importResponse.ok(), 'the authentic pt_241 prediction must import into the isolated local test database').toBeTruthy()
   const artifactsResponse = await page.request.get('/api/v1/cases/openkbp%3Apt_241/dose-artifacts')
   expect(artifactsResponse.ok(), 'the local pt_241 API profile must be running').toBeTruthy()
   const artifacts = await artifactsResponse.json() as DoseArtifact[]
