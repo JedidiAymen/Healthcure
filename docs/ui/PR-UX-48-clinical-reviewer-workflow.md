@@ -29,16 +29,37 @@ These captures are local review artifacts under an ignored QA folder and are not
 
 ## Files changed
 
+- `README.md`
+- `RUN_LOCAL.md`
+- `apps/api/app/audit.py`
+- `apps/api/app/auth.py`
+- `apps/api/app/main.py`
+- `apps/api/app/research_review.py`
+- `apps/api/app/schemas.py`
+- `apps/api/tests/test_research_review.py`
+- `apps/api/tests/test_role_grants_migration.py`
+- `apps/api/tests/test_write_auth.py`
+- `contracts/openapi-implemented.json`
 - `db/migrations/0104_clinical_reviewer_role.sql`
-- `apps/api/app/{audit.py,auth.py,main.py,research_review.py,schemas.py}`
-- `apps/api/tests/{test_research_review.py,test_role_grants_migration.py,test_write_auth.py}`
+- `docs/DECISIONS.md`
+- `docs/HACKCURE_COMPLIANCE.md`
+- `docs/LOCAL_ACCESS_AND_PROFILES.md`
+- `docs/MVP_SCOPE.md`
+- `docs/PROGRESS.md`
+- `docs/SHARE_CHECKPOINT.md`
+- `docs/STATUS.md`
+- `docs/ui/PR-UX-47-review-route-authorization.md` (marked superseded)
+- `docs/ui/PR-UX-48-clinical-reviewer-workflow.md`
+- `packages/contracts/generated-api.ts`
 - `scripts/create_local_learning_user.py`
-- `src/lib/{research-write-auth.ts,research-write-auth.test.ts,session.tsx}`
-- `src/features/dosetwin/{DoseTwinComparisonPanel.tsx,ResearchReviewPanel.tsx}`
-- `tests/e2e/{dosetwin-comparison-report.spec.ts,research-sign-in.ts,workspace-shell.spec.ts}`
-- `contracts/openapi-implemented.json`, `packages/contracts/generated-api.ts`
-- `README.md`, `RUN_LOCAL.md`, `docs/{DECISIONS.md,HACKCURE_COMPLIANCE.md,LOCAL_ACCESS_AND_PROFILES.md,MVP_SCOPE.md,PROGRESS.md,SHARE_CHECKPOINT.md,STATUS.md}`
-- `docs/ui/PR-UX-47-review-route-authorization.md` (marked superseded) and this document.
+- `src/features/dosetwin/DoseTwinComparisonPanel.tsx`
+- `src/features/dosetwin/ResearchReviewPanel.tsx`
+- `src/lib/research-write-auth.test.ts`
+- `src/lib/research-write-auth.ts`
+- `src/lib/session.tsx`
+- `tests/e2e/dosetwin-comparison-report.spec.ts`
+- `tests/e2e/research-sign-in.ts`
+- `tests/e2e/workspace-shell.spec.ts`
 
 ## Verification
 
