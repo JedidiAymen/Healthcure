@@ -101,6 +101,26 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
     video.addEventListener('loadedmetadata',seekToEvent,{once:true})
     return()=>video.removeEventListener('loadedmetadata',seekToEvent)
   },[pendingClipSeek,showPublicClip,publicClipAnnotation])
+  useEffect(()=>{
+    if(!showPublicClip)return
+    const video=publicVideoRef.current
+    if(!video)return
+    const updateTime=(second:number)=>setPublicClipCurrentSecond(current=>Math.abs(current-second)<0.001?current:second)
+    if(typeof video.requestVideoFrameCallback==='function'){
+      let callbackId=0
+      let active=true
+      const onFrame:VideoFrameRequestCallback=(_now,metadata)=>{
+        if(!active)return
+        updateTime(metadata.mediaTime)
+        callbackId=video.requestVideoFrameCallback(onFrame)
+      }
+      callbackId=video.requestVideoFrameCallback(onFrame)
+      return()=>{active=false;video.cancelVideoFrameCallback(callbackId)}
+    }
+    const onTimeUpdate=()=>updateTime(video.currentTime)
+    video.addEventListener('timeupdate',onTimeUpdate)
+    return()=>video.removeEventListener('timeupdate',onTimeUpdate)
+  },[showPublicClip,publicClip?.clip_id])
   const [imageUrl,setImageUrl]=useState('')
   const [imageError,setImageError]=useState('')
   const [imageSize,setImageSize]=useState<{width:number;height:number}|null>(null)
@@ -278,7 +298,7 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
       <CardContent className="grid gap-4">
         <div className="grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(0,2.55fr)_minmax(17rem,1fr)]">
         <div className="grid min-w-0 content-start gap-3">
-        {showPublicClip?<VideoPlayer key={publicClip.clip_id}><div ref={publicVideoRegionRef} className="relative scroll-mt-20"><NeutralVideoSkin className="w-full overflow-hidden rounded-lg bg-[#101624]" style={{aspectRatio:'16 / 9'}}><Video ref={publicVideoRef} onTimeUpdate={event=>{const second=event.currentTarget.currentTime;setPublicClipCurrentSecond(current=>Math.abs(current-second)<0.02?current:second)}} className="size-full" src={api.surgicalClipVideoUrl(publicClip.clip_id)} playsInline preload="metadata" aria-label={`${publicClip.dataset_id} ${publicClip.procedure_label} source video`}/></NeutralVideoSkin>{sourcePhaseTrack.length>0&&sourcePhase?<div role="group" aria-live="off" aria-label="Publisher phase annotation for the current video frame" className="pointer-events-none absolute left-3 top-3 max-w-[min(90%,34rem)] rounded-md border border-primary-foreground/25 bg-background/95 p-2.5 text-foreground shadow-lg"><Badge variant="outline" className="mb-1">Publisher phase · frame {sourcePhaseFrame.toLocaleString()}</Badge><p className="m-0 text-sm font-semibold">{formatPhaseLabel(sourcePhase.phase)}</p><p className="m-0 text-xs text-muted-foreground">Cholec80 phase label for the current frame · 25 fps source track · not model output</p></div>:sourceEventVisible&&publicClipAnnotation?<div role="status" className="pointer-events-none absolute left-3 top-3 max-w-[min(90%,34rem)] rounded-md border border-primary-foreground/25 bg-background/95 p-2.5 text-foreground shadow-lg"><Badge variant="outline" className="mb-1">Publisher source annotation · {formatClipTimeExact(publicClipAnnotation.timestamp_seconds)}</Badge><p className="m-0 text-sm font-semibold">{publicClipAnnotation.event_label}</p><p className="m-0 text-xs text-muted-foreground">Final laparoscopic grade: {publicClipAnnotation.final_laparoscopic_grade} · Gomes scale</p></div>:null}</div></VideoPlayer>:<Button variant="outline" className="w-fit" onClick={()=>setShowPublicClip(true)}>Load source video</Button>}
+        {showPublicClip?<VideoPlayer key={publicClip.clip_id}><div ref={publicVideoRegionRef} className="relative scroll-mt-20"><NeutralVideoSkin className="w-full overflow-hidden rounded-lg bg-[#101624]" style={{aspectRatio:'16 / 9'}}><Video ref={publicVideoRef} className="size-full" src={api.surgicalClipVideoUrl(publicClip.clip_id)} playsInline preload="metadata" aria-label={`${publicClip.dataset_id} ${publicClip.procedure_label} source video`}/></NeutralVideoSkin>{sourcePhaseTrack.length>0&&sourcePhase?<div role="group" aria-live="off" aria-label="Publisher phase annotation for the current video frame" className="pointer-events-none absolute left-3 top-3 z-10 max-w-[min(90%,34rem)] rounded-md border border-primary-foreground/25 bg-background/95 p-2.5 text-foreground shadow-lg"><Badge variant="outline" className="mb-1">Publisher phase · frame {sourcePhaseFrame.toLocaleString()}</Badge><p className="m-0 text-sm font-semibold">{formatPhaseLabel(sourcePhase.phase)}</p><p className="m-0 text-xs text-muted-foreground">Cholec80 phase label for the current frame · 25 fps source track · not model output</p></div>:sourceEventVisible&&publicClipAnnotation?<div role="status" className="pointer-events-none absolute left-3 top-3 z-10 max-w-[min(90%,34rem)] rounded-md border border-primary-foreground/25 bg-background/95 p-2.5 text-foreground shadow-lg"><Badge variant="outline" className="mb-1">Publisher source annotation · {formatClipTimeExact(publicClipAnnotation.timestamp_seconds)}</Badge><p className="m-0 text-sm font-semibold">{publicClipAnnotation.event_label}</p><p className="m-0 text-xs text-muted-foreground">Final laparoscopic grade: {publicClipAnnotation.final_laparoscopic_grade} · Gomes scale</p></div>:null}</div></VideoPlayer>:<Button variant="outline" className="w-fit" onClick={()=>setShowPublicClip(true)}>Load source video</Button>}
         {publicClipAnnotation&&<div className="flex flex-col gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3 sm:flex-row sm:items-center sm:justify-between" aria-label="Publisher source annotation for this video">
           <div className="min-w-0"><div className="mb-1 flex flex-wrap items-center gap-2"><Badge variant="outline">Source annotation</Badge><span className="text-xs tabular-nums text-muted-foreground">{formatClipTimeExact(publicClipAnnotation.timestamp_seconds)}</span></div><p className="m-0 text-sm font-semibold">{publicClipAnnotation.event_label}</p><p className="m-0 text-xs leading-5 text-muted-foreground">Final laparoscopic grade {publicClipAnnotation.final_laparoscopic_grade} · Gomes scale. This is the dataset label, not an AI prediction.</p></div>
           <Button variant="outline" className="shrink-0" onClick={()=>{setShowPublicClip(true);setPendingClipSeek(true)}}>Jump to source event</Button>
