@@ -506,7 +506,7 @@ export function LessonEditorPage() {
         <span aria-hidden="true">/</span>
         <b className="font-medium text-foreground">Lesson draft</b>
       </div>
-      <div className="mb-4 flex items-center justify-between gap-4 border-b border-border pb-4 max-[767px]:items-start max-[767px]:flex-col">
+      <div className="sticky top-0 z-30 -mx-4 mb-4 flex items-center justify-between gap-4 border-b border-border bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/85 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 max-[767px]:items-start max-[767px]:flex-col">
         <div className="min-w-0">
           <div className="eyebrow text-xs font-semibold tracking-wide text-primary">Server-owned lesson draft</div>
           <h1 className="mb-1 mt-1 text-[clamp(1.65rem,2.1vw,1.95rem)] font-semibold leading-tight tracking-tight text-foreground max-[1150px]:text-[1.7rem]">Compose an evidence lesson</h1>
