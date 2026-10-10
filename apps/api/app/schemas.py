@@ -597,6 +597,22 @@ class VoxelSlice(StrictModel):
     origin: Literal['benchmark-reference','computed-from-benchmark-array','synthetic-test-fixture']
     coordinate_frame: Literal['openkbp-processed-voxel-grid']
 
+class RoiMaskVolume(StrictModel):
+    """Sparse occupancy for a source-backed OpenKBP ROI surface reconstruction."""
+    case_id: str
+    source_revision: str
+    source_file: str
+    source_sha256: str
+    shape: tuple[int, int, int]
+    spacing_mm: tuple[float, float, float]
+    voxel_count: int = Field(ge=1)
+    # Source CSV flattened in C order: x-major, then y, then z (z changes fastest).
+    voxel_indices_c_order: list[int]
+    source_kind: Literal['benchmark','research','synthetic-test']
+    origin: Literal['computed-from-benchmark-array','computed-from-synthetic-test-fixture']
+    coordinate_frame: Literal['openkbp-processed-voxel-grid']
+    index_convention: Literal['x-major-y-middle-z-fastest']
+
 class DvhPoint(StrictModel):
     dose_gy: float
     volume_percent: float

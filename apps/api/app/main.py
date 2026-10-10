@@ -29,7 +29,7 @@ from pydantic import ValidationError
 import numpy as np
 from .schemas import (
     ApiError, Case, Health, ModuleStatus, ModelRecord, ModelValidationRequest,
-    DvhPoint, DvhMetrics, DvhSummary, ModelValidationResponse, RunCreateRequest, RunRecord, ViewerManifest, VoxelSlice, VoxelVolumeArtifact,
+    DvhPoint, DvhMetrics, DvhSummary, ModelValidationResponse, RunCreateRequest, RunRecord, ViewerManifest, VoxelSlice, RoiMaskVolume, VoxelVolumeArtifact,
     SurgicalFrameArtifact, SurgicalFrameRecord, SurgicalMediaRecord, CvsCoverage, SignalArtifact, SignalRecord, SignalWindow, SignalSpectrum, SignalSpectrogram, SignalFeatures
 )
 from .schemas import ReportCreateRequest, ReportRecord, SurgicalFrameReportCreateRequest
@@ -655,6 +655,29 @@ def create_app() -> FastAPI:
         return VoxelSlice(case_id=case.id,source_revision=_source_revision(),source_file=file_name,source_sha256=sha256(path),axis=axis,index=index,
             shape=shape,values=values,unit={'ct':'benchmark-value','dose':'Gy','roi':'binary-mask'}[layer],source_kind=_source_kind(),
             origin='synthetic-test-fixture' if _source_kind()=='synthetic-test' else ('benchmark-reference' if layer=='dose' else 'computed-from-benchmark-array'),coordinate_frame='openkbp-processed-voxel-grid')
+
+    @app.get('/api/v1/cases/{case_id}/viewer/roi-volume',response_model=RoiMaskVolume)
+    def viewer_roi_volume(case_id:str,roi:str=Query('Brainstem',pattern='^(Brainstem|SpinalCord|RightParotid|LeftParotid|Esophagus|Larynx|Mandible|PTV56|PTV63|PTV70)$')):
+        """Return a sparse, source-indexed ROI mask for the optional vtk.js surface viewer."""
+        case=_expect_case(case_id)
+        path=_case_root()/f'{roi}.csv'
+        if not path.is_file():
+            raise HTTPException(404,detail={'code':'ASSET_NOT_INSTALLED','message':f'Required source mask {roi}.csv is missing','action':'Install the complete permitted OpenKBP case'})
+        spacing_path=_case_root()/'voxel_dimensions.csv'
+        try:
+            spacing=np.loadtxt(spacing_path,dtype=np.float64).reshape(-1)
+            if spacing.shape!=(3,) or not np.all(np.isfinite(spacing)) or not np.all(spacing>0):
+                raise ValueError('Voxel spacing requires 3 positive finite mm values')
+            mask=_read_cached_volume(str(_case_root()),path.name,path.stat().st_size,path.stat().st_mtime_ns).astype(bool,copy=False)
+            indices=np.flatnonzero(mask).astype(np.uint32,copy=False)
+            if not indices.size:
+                raise ValueError(f'{roi} contains no voxels in this case')
+        except (ValueError,OSError) as e:
+            raise HTTPException(422,detail={'code':'INVALID_RESEARCH_DATA','message':str(e)}) from e
+        return RoiMaskVolume(case_id=case.id,source_revision=_source_revision(),source_file=path.name,source_sha256=sha256(path),
+            shape=(128,128,128),spacing_mm=tuple(float(value) for value in spacing),voxel_count=int(indices.size),voxel_indices_c_order=indices.tolist(),
+            source_kind=_source_kind(),origin='computed-from-synthetic-test-fixture' if _source_kind()=='synthetic-test' else 'computed-from-benchmark-array',
+            coordinate_frame='openkbp-processed-voxel-grid',index_convention='x-major-y-middle-z-fastest')
 
     @app.get('/api/v1/cases/{case_id}/viewer/dvh',response_model=DvhSummary)
     def viewer_dvh(case_id:str,roi:str=Query('Brainstem',pattern='^(Brainstem|SpinalCord|RightParotid|LeftParotid|Esophagus|Larynx|Mandible|PTV56|PTV63|PTV70)$')):

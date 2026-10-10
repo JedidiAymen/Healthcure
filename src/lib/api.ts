@@ -11,6 +11,7 @@ export type Capability = {
 export type CaseRecord = ApiSchemas['Case'];
 export type ModelRecord = ApiSchemas['ModelRecord'];
 export type VoxelSlice = ApiSchemas['VoxelSlice'];
+export type RoiMaskVolume = ApiSchemas['RoiMaskVolume'];
 export type DvhSummary = ApiSchemas['DvhSummary'];
 export type CaseSummary = {
   case: string;
@@ -496,5 +497,9 @@ export const api = {
   dvh: (caseId: string, roi: string) =>
     request<DvhSummary>(
       `/api/v1/cases/${encodeURIComponent(caseId)}/viewer/dvh?roi=${encodeURIComponent(roi)}`,
+    ),
+  roiVolume: (caseId: string, roi: string) =>
+    request<RoiMaskVolume>(
+      `/api/v1/cases/${encodeURIComponent(caseId)}/viewer/roi-volume?roi=${encodeURIComponent(roi)}`,
     ),
 };
