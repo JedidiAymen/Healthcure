@@ -201,6 +201,63 @@ test('educator teaching desk shows real work and opens the selected assignment r
   await expect(page.getByText('Learner One')).toBeVisible()
 })
 
+test('embedded FiSaV evidence controls wrap inside the educator review column', async ({ page }) => {
+  const assignmentId = 'assignment-fisav-preview'
+  const digest = 'a'.repeat(64)
+  await page.route('**/api/v1/auth/local-login', (route) => route.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify({ access_token: 'e2e-educator-session', user: { id: 'e2e-educator', display_name: 'Review educator', role: 'educator' } }),
+  }))
+  await page.route('**/api/v1/educator/assignments', (route) => route.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify([{ id: assignmentId, lesson_version_id: 'version-001', lesson_title: 'Review FiSaV trace', cohort_id: 'cohort-001', due_at: null, student_count: 1 }]),
+  }))
+  await page.route(`**/api/v1/educator/assignments/${assignmentId}/attempts`, (route) => route.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify([{
+      attempt_id: 'attempt-fisav-preview', student_id: 'student-001', student_name: 'Learner One',
+      state: 'review_required', submitted_at: '2026-10-10T08:30:00Z', score: null,
+      observations: [], rubric_criteria: [{ id: 'evidence', title: 'Source evidence', description: 'Use the assigned measured trace.', max_points: 100 }],
+      criterion_scores: [], assigned_case: { module: 'fistulaguard', case_id: 'fisav:pat001', case_label: 'FiSaV · pat001' },
+      viewer_evidence: { kind: 'fistulaguard', case_id: 'fisav:pat001', record_id: 'pat001', channel: 'raw PZT2', start_sec: 2.5, duration_sec: 5 },
+    }]),
+  }))
+  await page.route('**/api/v1/fistulaguard/records/pat001', (route) => route.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify({ id: 'pat001', dataset_id: 'FiSaV', source_case_id: 'pat001', case_id: 'fisav:pat001', file_name: 'pat001.csv', source_sha256: digest, source_url: 'https://osf.io/hypfr/', sample_rate_hz: 10000, duration_sec: 30, channel_units: { 'raw PZT2': 'source-value' }, channels: ['raw PZT2'], sample_count: 300000, origin: 'measured-research-recording', limitations: [] }),
+  }))
+  await page.route('**/api/v1/fistulaguard/records/pat001/waveform**', (route) => route.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify({ case_id: 'fisav:pat001', channel: 'raw PZT2', channel_unit: 'source-value', source_sha256: digest, source_sample_rate_hz: 10000, start_sec: 2.5, duration_sec: 4.9969, original_sample_count: 50000, samples: [{ time_sec: 2.5, value: 0.1 }, { time_sec: 7.4969, value: 0.2 }], method: 'Source-aligned measured samples.' }),
+  }))
+  await page.route('**/api/v1/fistulaguard/records/pat001/spectrum**', (route) => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ detail: 'Not needed for control geometry.' }) }))
+  await page.route('**/api/v1/fistulaguard/records/pat001/features**', (route) => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ detail: 'Not needed for control geometry.' }) }))
+
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/educator/submissions?assignmentId=assignment-fisav-preview')
+  await page.getByLabel('Username').fill('educator')
+  await page.getByLabel('Password').fill('test-only-password')
+  await page.getByRole('button', { name: 'Sign in as educator' }).click()
+  await expect(page.getByRole('heading', { name: 'AVF multichannel signal review' })).toBeVisible()
+  const desktop = await page.locator('.fistula-control-strip [data-slot="card-content"]').evaluate((element) => {
+    const channel = element.querySelector('[aria-label="Signal channel"]')
+    return { width: element.clientWidth, scrollWidth: element.scrollWidth, channelWidth: channel?.clientWidth ?? 0, channelScrollWidth: channel?.scrollWidth ?? 0 }
+  })
+  expect(desktop.width).toBeLessThan(700)
+  expect(desktop.scrollWidth).toBeLessThanOrEqual(desktop.width + 1)
+  expect(desktop.channelScrollWidth).toBeLessThanOrEqual(desktop.channelWidth + 1)
+  await expect(page.getByText('PZT1', { exact: true })).toBeVisible()
+  await expect(page.getByText('PZT2', { exact: true })).toBeVisible()
+  await expect(page.getByText('PZT3', { exact: true })).toBeVisible()
+  await expect(page.getByText('PZT4', { exact: true })).toBeVisible()
+  await expect(page.getByText('Published rubric · 100 points')).toBeVisible()
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  const phone = await page.locator('.fistula-control-strip [data-slot="card-content"]').evaluate((element) => ({ width: element.clientWidth, scrollWidth: element.scrollWidth }))
+  expect(phone.scrollWidth).toBeLessThanOrEqual(phone.width + 1)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
+})
+
 test('SurgiVision frame picker stays readable beside the professional sidebar at tablet width', async ({ page }) => {
   const playerFixture = await readFile('tests/e2e/fixtures/surgical-player-smoke.mp4')
   await page.setViewportSize({ width: 768, height: 1024 })
