@@ -38,6 +38,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/academy/attempts/{attempt_id}/cvs-self-check/{block_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Cvs Self Check Get */
+        get: operations["cvs_self_check_get_api_v1_academy_attempts__attempt_id__cvs_self_check__block_id__get"];
+        put?: never;
+        /** Cvs Self Check Commit */
+        post: operations["cvs_self_check_commit_api_v1_academy_attempts__attempt_id__cvs_self_check__block_id__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/academy/attempts/{attempt_id}/debrief": {
         parameters: {
             query?: never;
@@ -645,6 +663,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/fistulaguard/annotations/{annotation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Fistulaguard Annotation Delete */
+        delete: operations["fistulaguard_annotation_delete_api_v1_fistulaguard_annotations__annotation_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/fistulaguard/records/{record_id}": {
         parameters: {
             query?: never;
@@ -662,6 +697,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/fistulaguard/records/{record_id}/annotations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fistulaguard Annotations */
+        get: operations["fistulaguard_annotations_api_v1_fistulaguard_records__record_id__annotations_get"];
+        put?: never;
+        /** Fistulaguard Annotation Create */
+        post: operations["fistulaguard_annotation_create_api_v1_fistulaguard_records__record_id__annotations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fistulaguard/records/{record_id}/beats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fistulaguard Beats */
+        get: operations["fistulaguard_beats_api_v1_fistulaguard_records__record_id__beats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/fistulaguard/records/{record_id}/features": {
         parameters: {
             query?: never;
@@ -671,6 +741,23 @@ export interface paths {
         };
         /** Fistulaguard Features */
         get: operations["fistulaguard_features_api_v1_fistulaguard_records__record_id__features_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fistulaguard/records/{record_id}/filtered": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fistulaguard Filtered */
+        get: operations["fistulaguard_filtered_api_v1_fistulaguard_records__record_id__filtered_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1007,6 +1094,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/surgivision/frames": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Surgical Frame Browse */
+        get: operations["surgical_frame_browse_api_v1_surgivision_frames_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/surgivision/frames/{frame_id}": {
         parameters: {
             query?: never;
@@ -1124,6 +1228,43 @@ export interface components {
             code: string;
             /** Message */
             message: string;
+        };
+        /** BeatAnalysis */
+        BeatAnalysis: {
+            /** Beats */
+            beats: components["schemas"]["BeatMeasurement"][];
+            /** Channel */
+            channel: string;
+            /** Duration Sec */
+            duration_sec: number;
+            ensemble: components["schemas"]["EnsembleAverage"];
+            heart_rate_bpm: components["schemas"]["HeartRateSummary"];
+            /** Limitations */
+            limitations: string[];
+            /** Method */
+            method: string;
+            occlusion_test: components["schemas"]["OcclusionTestMarker"];
+            /** R Peaks Sec */
+            r_peaks_sec: number[];
+            /** Record Id */
+            record_id: string;
+            /** Source Sha256 */
+            source_sha256: string;
+            /** Start Sec */
+            start_sec: number;
+        };
+        /** BeatMeasurement */
+        BeatMeasurement: {
+            /** Index */
+            index: number;
+            /** Peak To Peak */
+            peak_to_peak: number | null;
+            /** R Peak Sec */
+            r_peak_sec: number;
+            /** Rms */
+            rms: number | null;
+            /** Rr Sec */
+            rr_sec: number | null;
         };
         /** Case */
         Case: {
@@ -1297,6 +1438,62 @@ export interface components {
             mean_one_frames: number;
             /** Mean Zero Frames */
             mean_zero_frames: number;
+        };
+        /**
+         * CvsSelfCheckCommit
+         * @description A learner's own judgement of the three CVS criteria: 1 achieved, 0 not achieved.
+         */
+        CvsSelfCheckCommit: {
+            /** Judgements */
+            judgements: [
+                0 | 1,
+                0 | 1,
+                0 | 1
+            ];
+        };
+        /** CvsSelfCheckCriterion */
+        CvsSelfCheckCriterion: {
+            /** Annotator Mean */
+            annotator_mean: number;
+            /** Annotators Disagreed */
+            annotators_disagreed: boolean;
+            /**
+             * Criterion Id
+             * @enum {string}
+             */
+            criterion_id: "two_structures" | "hepatocystic_triangle" | "cystic_plate";
+            /**
+             * Judgement
+             * @enum {integer}
+             */
+            judgement: 0 | 1;
+            /** Label */
+            label: string;
+            /** Matches Majority */
+            matches_majority: boolean;
+        };
+        /** CvsSelfCheckResult */
+        CvsSelfCheckResult: {
+            /** Block Id */
+            block_id: string;
+            /** Committed At */
+            committed_at: string;
+            /** Criteria */
+            criteria: components["schemas"]["CvsSelfCheckCriterion"][];
+            /** Frame Id */
+            frame_id: string;
+            /** Judgements */
+            judgements: [
+                0 | 1,
+                0 | 1,
+                0 | 1
+            ];
+            /** Limitations */
+            limitations: string[];
+            /** Matches */
+            matches: number;
+            /** Source */
+            source: string;
         };
         /** DoseArtifact */
         DoseArtifact: {
@@ -1562,6 +1759,8 @@ export interface components {
             attempt_id: string;
             /** Criterion Scores */
             criterion_scores?: components["schemas"]["GradedRubricCriterion"][];
+            /** Cvs Self Checks */
+            cvs_self_checks?: components["schemas"]["CvsSelfCheckResult"][];
             /** Observations */
             observations: components["schemas"]["StudentObservationInput"][];
             /** Rubric Criteria */
@@ -1708,7 +1907,7 @@ export interface components {
              * Type
              * @enum {string}
              */
-            type: "Instruction" | "Evidence view" | "Observation" | "Measurement" | "Question" | "Reveal";
+            type: "Instruction" | "Evidence view" | "Observation" | "Measurement" | "Question" | "Reveal" | "CVS self-check";
         };
         /** EducatorPublishRequest */
         EducatorPublishRequest: {
@@ -1735,6 +1934,17 @@ export interface components {
             display_name: string;
             /** Id */
             id: string;
+        };
+        /** EnsembleAverage */
+        EnsembleAverage: {
+            /** Beats Used */
+            beats_used: number;
+            /** Mean */
+            mean: number[];
+            /** Sd */
+            sd: number[];
+            /** Time Sec */
+            time_sec: number[];
         };
         /** GradedRubricCriterion */
         GradedRubricCriterion: {
@@ -1777,6 +1987,15 @@ export interface components {
              * @constant
              */
             status: "ok";
+        };
+        /** HeartRateSummary */
+        HeartRateSummary: {
+            /** Max */
+            max: number | null;
+            /** Mean */
+            mean: number | null;
+            /** Min */
+            min: number | null;
         };
         /** LocalLoginRequest */
         LocalLoginRequest: {
@@ -1868,6 +2087,15 @@ export interface components {
              * @enum {string}
              */
             id: "surgivision" | "dosetwin" | "fistulaguard";
+        };
+        /** OcclusionTestMarker */
+        OcclusionTestMarker: {
+            /** Intervals */
+            intervals: number[][];
+            /** Meaning */
+            meaning: string;
+            /** Overlaps Window */
+            overlaps_window: boolean;
         };
         /** PublishedLessonVersion */
         PublishedLessonVersion: {
@@ -2028,6 +2256,46 @@ export interface components {
              */
             status: "queued" | "running" | "completed" | "failed" | "cancelled";
         };
+        /** SignalAnnotation */
+        SignalAnnotation: {
+            /** Channel */
+            channel: string;
+            /** Created At */
+            created_at: string;
+            /** End Sec */
+            end_sec: number;
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+            /** Record Id */
+            record_id: string;
+            /** Source Sha256 */
+            source_sha256: string;
+            /** Start Sec */
+            start_sec: number;
+        };
+        /** SignalAnnotationCreate */
+        SignalAnnotationCreate: {
+            /** Channel */
+            channel: string;
+            /** End Sec */
+            end_sec: number;
+            /** Label */
+            label: string;
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+            /** Start Sec */
+            start_sec: number;
+        };
         /** SignalArtifact */
         SignalArtifact: {
             /** Asset Key */
@@ -2108,6 +2376,46 @@ export interface components {
             unit: string;
             /** Zero Fraction */
             zero_fraction: number;
+        };
+        /** SignalFilterParameters */
+        SignalFilterParameters: {
+            /** High Hz */
+            high_hz: number | null;
+            /** Low Hz */
+            low_hz: number | null;
+            /** Method */
+            method: string;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "bandpass" | "notch";
+            /** Notch Hz */
+            notch_hz: number | null;
+            /** Order */
+            order: number;
+            /** Q */
+            q: number | null;
+        };
+        /** SignalFilterResult */
+        SignalFilterResult: {
+            /** Channel */
+            channel: string;
+            /** Duration Sec */
+            duration_sec: number;
+            filter: components["schemas"]["SignalFilterParameters"];
+            filtered: components["schemas"]["SignalTrace"];
+            /** Limitations */
+            limitations: string[];
+            raw: components["schemas"]["SignalTrace"];
+            /** Record Id */
+            record_id: string;
+            /** Sample Rate Hz */
+            sample_rate_hz: number;
+            /** Source Sha256 */
+            source_sha256: string;
+            /** Start Sec */
+            start_sec: number;
         };
         /** SignalRecord */
         SignalRecord: {
@@ -2206,6 +2514,13 @@ export interface components {
             unit: string;
             /** Window Samples */
             window_samples: number;
+        };
+        /** SignalTrace */
+        SignalTrace: {
+            /** Time Sec */
+            time_sec: number[];
+            /** Values */
+            values: number[];
         };
         /** SignalWindow */
         SignalWindow: {
@@ -2738,6 +3053,29 @@ export interface components {
              */
             kind: "image-sequence";
         };
+        /** SurgicalFrameBrowse */
+        SurgicalFrameBrowse: {
+            facets: components["schemas"]["SurgicalFrameFacets"];
+            /** Frames */
+            frames: components["schemas"]["SurgicalFrameSummary"][];
+            /** Limit */
+            limit: number;
+            /** Limitations */
+            limitations: string[];
+            /** Offset */
+            offset: number;
+            /** Total */
+            total: number;
+        };
+        /** SurgicalFrameFacets */
+        SurgicalFrameFacets: {
+            /** Categories */
+            categories: string[];
+            /** Splits */
+            splits: {
+                [key: string]: number;
+            };
+        };
         /** SurgicalFrameRecord */
         SurgicalFrameRecord: {
             /** Annotation Sha256 */
@@ -2779,6 +3117,33 @@ export interface components {
             selected_annotation_id?: number | null;
             /** Show Annotations */
             show_annotations: boolean;
+        };
+        /** SurgicalFrameSummary */
+        SurgicalFrameSummary: {
+            /**
+             * Agreement
+             * @enum {string}
+             */
+            agreement: "unanimous" | "disputed" | "unlabelled";
+            /** Annotation Count */
+            annotation_count: number;
+            /** Categories */
+            categories: string[];
+            /** Cvs Criteria */
+            cvs_criteria: number[];
+            /** Disputed Criteria */
+            disputed_criteria: number;
+            /** Frame Number */
+            frame_number: number;
+            /** Id */
+            id: string;
+            /**
+             * Split
+             * @enum {string}
+             */
+            split: "train" | "val" | "test";
+            /** Video Id */
+            video_id: number;
         };
         /**
          * SurgicalMediaRecord
@@ -2869,6 +3234,10 @@ export interface components {
         };
         /** ValidationError */
         ValidationError: {
+            /** Context */
+            ctx?: Record<string, never>;
+            /** Input */
+            input?: unknown;
             /** Location */
             loc: (string | number)[];
             /** Message */
@@ -3071,6 +3440,78 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StudentAttemptManifest"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cvs_self_check_get_api_v1_academy_attempts__attempt_id__cvs_self_check__block_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                attempt_id: string;
+                block_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CvsSelfCheckResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cvs_self_check_commit_api_v1_academy_attempts__attempt_id__cvs_self_check__block_id__post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                attempt_id: string;
+                block_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CvsSelfCheckCommit"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CvsSelfCheckResult"];
                 };
             };
             /** @description Validation Error */
@@ -3579,7 +4020,9 @@ export interface operations {
             query: {
                 file_name: string;
             };
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path: {
                 case_id: string;
             };
@@ -3883,7 +4326,9 @@ export interface operations {
     create_signal_comparison_api_v1_comparisons_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -4501,6 +4946,37 @@ export interface operations {
             };
         };
     };
+    fistulaguard_annotation_delete_api_v1_fistulaguard_annotations__annotation_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                annotation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     fistulaguard_record_api_v1_fistulaguard_records__record_id__get: {
         parameters: {
             query?: never;
@@ -4519,6 +4995,111 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SignalRecord"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    fistulaguard_annotations_api_v1_fistulaguard_records__record_id__annotations_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignalAnnotation"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    fistulaguard_annotation_create_api_v1_fistulaguard_records__record_id__annotations_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SignalAnnotationCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignalAnnotation"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    fistulaguard_beats_api_v1_fistulaguard_records__record_id__beats_get: {
+        parameters: {
+            query?: {
+                channel?: string;
+                start_sec?: number;
+                duration_sec?: number;
+            };
+            header?: never;
+            path: {
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BeatAnalysis"];
                 };
             };
             /** @description Validation Error */
@@ -4554,6 +5135,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SignalFeatures"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    fistulaguard_filtered_api_v1_fistulaguard_records__record_id__filtered_get: {
+        parameters: {
+            query?: {
+                channel?: string;
+                start_sec?: number;
+                duration_sec?: number;
+                mode?: "bandpass" | "notch";
+                low_hz?: number | null;
+                high_hz?: number | null;
+                notch_hz?: number | null;
+                q?: number;
+            };
+            header?: never;
+            path: {
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignalFilterResult"];
                 };
             };
             /** @description Validation Error */
@@ -4695,7 +5316,9 @@ export interface operations {
     validate_model_api_v1_models__model_id__validate_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path: {
                 model_id: string;
             };
@@ -4770,7 +5393,9 @@ export interface operations {
     create_report_api_v1_reports_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -4812,7 +5437,9 @@ export interface operations {
     create_dose_comparison_report_api_v1_reports_dosetwin_comparison_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -4854,7 +5481,9 @@ export interface operations {
     create_surgical_frame_report_api_v1_reports_surgivision_frame_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -4956,7 +5585,9 @@ export interface operations {
     create_run_api_v1_runs_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -5212,6 +5843,44 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CvsCoverage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    surgical_frame_browse_api_v1_surgivision_frames_get: {
+        parameters: {
+            query?: {
+                split?: ("train" | "val" | "test") | null;
+                category?: string | null;
+                criterion?: ("two_structures" | "hepatocystic_triangle" | "cystic_plate") | null;
+                min_value?: number | null;
+                max_value?: number | null;
+                agreement?: ("unanimous" | "disputed") | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SurgicalFrameBrowse"];
                 };
             };
             /** @description Validation Error */

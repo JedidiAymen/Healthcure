@@ -37,8 +37,10 @@ from .schemas import (LocalLoginRequest, LocalSession, LocalUser, EducatorEviden
     StudentChallengeSummary, EducatorDraftCreate, EducatorDraftUpdate, EducatorDraft,
     EducatorDraftSummary, SignalWindowComparisonCreate, SignalWindowComparison,
     SignalFeatureDifference)
-from .auth import password_digest, issue_session, verify_password, current_user as _current_user, require_role
+from .auth import password_digest, issue_session, verify_password, current_user as _current_user, require_role, require_any_role
 from .learning import register_learning_routes
+from .surgivision_review import register_surgivision_review_routes, self_check_block_ids
+from .fistulaguard_tools import register_fistulaguard_tool_routes
 from .openkbp import dose_statistics, sha256, validate_case
 from .dose_artifacts import (INDEX_CONVENTION, MAX_UPLOAD_BYTES, SHAPE as DOSE_SHAPE,
     comparison_for_roi, file_name as validate_dose_file_name, parse_spacing,
@@ -56,6 +58,9 @@ CVS_MODEL_REVISION = 'bb21ffbd781b6f943be0daaeeccf1567c21e691d'
 CVS_MODEL_ID = 'cvs-adaptnet'
 ENDOSCAPES_SOURCE_REVISION = 'a8bd4f9b783308f783cca5943c31ff95317b8256'
 
+def _venv_python(venv:Path)->Path:
+    return venv/'Scripts'/'python.exe' if os.name=='nt' else venv/'bin'/'python'
+
 @lru_cache(maxsize=4)
 def _cached_file_sha256(path_string:str,size:int,modified_ns:int)->str:
     del size,modified_ns
@@ -64,7 +69,7 @@ def _cached_file_sha256(path_string:str,size:int,modified_ns:int)->str:
 def _cvs_worker_gate()->tuple[list[str],str|None]:
     checkpoint=ROOT/'data/models/cvs-adaptnet/CVSAdaptNet.pth'
     manifest_path=checkpoint.parent/'medforge-checkpoint-manifest.json'
-    worker=ROOT/'workers/.venvs/cvs-adaptnet/bin/python'
+    worker=_venv_python(ROOT/'workers/.venvs/cvs-adaptnet')
     blockers=[]
     checkpoint_hash=None
     if not worker.is_file():
@@ -370,11 +375,14 @@ def _reject_student_dose_prediction_access(authorization:str|None) -> None:
     if user and user['role']=='student':
         raise HTTPException(status_code=403,detail={'code':'DOSE_PREDICTION_RESEARCH_ONLY','message':'Imported dose predictions and comparisons are not available in student viewer sessions'})
 
+# Research writes need an educator or admin token; research reads stay open on loopback.
+require_research_writer=require_any_role('educator')
+
 def create_app() -> FastAPI:
     app=FastAPI(title='MEDFORGE local research API',version='0.1.0',
         description='Loopback-only research and education API. Local educator/student access tokens are not production identity or public RBAC.')
     app.add_middleware(CORSMiddleware,allow_origin_regex=r'^https?://(127\.0\.0\.1|localhost)(:\d+)?$',
-        allow_credentials=False,allow_methods=['GET','POST','PATCH','PUT'],allow_headers=['Content-Type','Authorization','Idempotency-Key','X-Dose-Array-Shape','X-Dose-Checkpoint-SHA256','X-Dose-File-SHA256','X-Dose-Index-Convention','X-Dose-Model-Revision','X-Dose-Origin','X-Dose-Rights-Basis','X-Dose-Rights-Confirmed','X-Dose-Source-Case','X-Dose-Source-Revision','X-Dose-Spacing-MM','X-Dose-Unit'])
+        allow_credentials=False,allow_methods=['GET','POST','PATCH','PUT','DELETE'],allow_headers=['Content-Type','Authorization','Idempotency-Key','X-Dose-Array-Shape','X-Dose-Checkpoint-SHA256','X-Dose-File-SHA256','X-Dose-Index-Convention','X-Dose-Model-Revision','X-Dose-Origin','X-Dose-Rights-Basis','X-Dose-Rights-Confirmed','X-Dose-Source-Case','X-Dose-Source-Revision','X-Dose-Spacing-MM','X-Dose-Unit'])
     init_db()
 
     def _student_has_assigned_case(user_id:str,case_id:str)->bool:
@@ -490,6 +498,8 @@ def create_app() -> FastAPI:
         case=next((item for item in list_cases() if item.id==request.case_id),None)
         if case is None or case.status!='ready':
             raise HTTPException(422,detail={'code':'CASE_NOT_AVAILABLE','message':'Choose a source case that is installed and ready'})
+        if case.module!='surgivision' and self_check_block_ids([block.model_dump() for block in request.content.blocks]):
+            raise HTTPException(422,detail={'code':'CVS_SELF_CHECK_MODULE','message':'CVS self-check blocks need an Endoscapes SurgiVision frame'})
         draft_id=str(uuid.uuid4())
         content_json=json.dumps(request.content.model_dump(),ensure_ascii=False,separators=(',',':'),sort_keys=True)
         with _db() as c:
@@ -517,6 +527,8 @@ def create_app() -> FastAPI:
         case=next((item for item in list_cases() if item.id==request.case_id),None)
         if case is None or case.status!='ready':
             raise HTTPException(422,detail={'code':'CASE_NOT_AVAILABLE','message':'Choose a source case that is installed and ready'})
+        if case.module!='surgivision' and self_check_block_ids([block.model_dump() for block in request.content.blocks]):
+            raise HTTPException(422,detail={'code':'CVS_SELF_CHECK_MODULE','message':'CVS self-check blocks need an Endoscapes SurgiVision frame'})
         content_json=json.dumps(request.content.model_dump(),ensure_ascii=False,separators=(',',':'),sort_keys=True)
         with _db() as c:
             c.execute('BEGIN IMMEDIATE')
@@ -832,7 +844,7 @@ def create_app() -> FastAPI:
 
     @app.post('/api/v1/comparisons',response_model=SignalWindowComparison,
               responses={404:{'model':ApiError},422:{'model':ApiError}})
-    def create_signal_comparison(request:SignalWindowComparisonCreate):
+    def create_signal_comparison(request:SignalWindowComparisonCreate,_writer:dict=Depends(require_research_writer)):
         case=get_case(request.case_id)
         if case.module!='fistulaguard':
             raise HTTPException(status_code=422,detail={'code':'INCOMPATIBLE_INPUT','message':'This comparison accepts only one checksum-verified FiSaV recording and channel.'})
@@ -976,7 +988,7 @@ def create_app() -> FastAPI:
 
     @app.put('/api/v1/cases/{case_id}/dose-artifacts',response_model=DoseArtifact,
               responses={404:{'model':ApiError},413:{'model':ApiError},422:{'model':ApiError}})
-    async def import_dose_artifact(case_id:str,request:Request,file_name:str=Query(...,min_length=1,max_length=200)):
+    async def import_dose_artifact(case_id:str,request:Request,file_name:str=Query(...,min_length=1,max_length=200),_writer:dict=Depends(require_research_writer)):
         """Install a user-supplied, same-grid prediction CSV for local research comparison."""
         _reject_student_dose_prediction_access(request.headers.get('authorization'))
         case,case_root=_expect_enabled_case(case_id)
@@ -1137,7 +1149,7 @@ def create_app() -> FastAPI:
        ModelRecord(id='fistula-baseline',module='fistulaguard',name='Research signal-analysis utilities',operation_ids=['acoustic.features','acoustic.classification'],upstream_url='https://www.nature.com/articles/s41597-026-08242-8',source_revision='Not a model checkpoint; MEDFORGE signal methods are local',source_license='FiSaV source data: CC BY 4.0; no classifier weights',readiness='unverified',details='The complete 59-recording CSV cohort supports measured waveform and PSD review; no stenosis classifier or patient-disjoint validation is implemented.')]
 
     @app.post('/api/v1/models/{model_id}/validate',response_model=ModelValidationResponse)
-    def validate_model(model_id:str,request:ModelValidationRequest):
+    def validate_model(model_id:str,request:ModelValidationRequest,_writer:dict=Depends(require_research_writer)):
         ids={m.id for m in models()}
         if model_id not in ids:raise HTTPException(404,detail={'code':'MODEL_UNKNOWN','message':'Model not registered'})
         if model_id=='cvs-adaptnet':
@@ -1151,7 +1163,7 @@ def create_app() -> FastAPI:
             blockers=['No installed and tested model adapter/checkpoint for this operation in reference harness'])
 
     @app.post('/api/v1/runs',response_model=RunRecord,responses={404:{'model':ApiError},422:{'model':ApiError}})
-    def create_run(request:RunCreateRequest):
+    def create_run(request:RunCreateRequest,_writer:dict=Depends(require_research_writer)):
         if request.operation_id=='cvs.inference':
             frame=_endoscapes_frame(request.case_id)
             if frame is None:
@@ -1160,7 +1172,7 @@ def create_app() -> FastAPI:
             if blockers:
                 raise HTTPException(status_code=409,detail={'code':'MODEL_EXECUTION_BLOCKED','message':'CVS-AdaptNet is not cleared for execution.','blockers':blockers})
             case=_endoscapes_case_record(frame)
-            worker=ROOT/'workers/.venvs/cvs-adaptnet/bin/python'
+            worker=_venv_python(ROOT/'workers/.venvs/cvs-adaptnet')
             evaluator=ROOT/'workers/cvs-adaptnet/evaluate_endoscapes.py'
             prompt_path=ROOT/'references/upstream/CVS-AdaptNet/class_prompts/class_prompt_endoscapes_manual.txt'
             prompt_hash=sha256(prompt_path)
@@ -1306,7 +1318,7 @@ def create_app() -> FastAPI:
         return [_report(row) for row in rows]
 
     @app.post('/api/v1/reports',response_model=ReportRecord,responses={404:{'model':ApiError},422:{'model':ApiError}})
-    def create_report(request:ReportCreateRequest):
+    def create_report(request:ReportCreateRequest,_writer:dict=Depends(require_research_writer)):
         with _db() as c:
             existing_reports=c.execute('SELECT id,run_id,case_id,status,created_at,provenance_json FROM reports WHERE run_id=? AND status=? ORDER BY created_at DESC',(request.run_id,'generated')).fetchall()
             row=c.execute('SELECT r.id,r.case_id,r.operation_id,r.status,r.result_json,r.output_provenance_json,r.failure_code,c.reference_kind FROM analysis_runs AS r JOIN cases AS c ON c.id=r.case_id WHERE r.id=?',(request.run_id,)).fetchone()
@@ -1345,7 +1357,7 @@ def create_app() -> FastAPI:
 
     @app.post('/api/v1/reports/dosetwin-comparison',response_model=ReportRecord,
               responses={404:{'model':ApiError},422:{'model':ApiError}})
-    def create_dose_comparison_report(request:DoseTwinComparisonReportCreateRequest):
+    def create_dose_comparison_report(request:DoseTwinComparisonReportCreateRequest,_writer:dict=Depends(require_research_writer)):
         case,case_root=_expect_enabled_case(request.case_id)
         row=_stored_dose_artifact(request.artifact_id)
         if row is None or row[1]!=case.id:
@@ -1381,7 +1393,7 @@ def create_app() -> FastAPI:
             return ReportRecord(id=report_id,run_id=None,case_id=case.id,status='generated',created_at=created,document=document)
 
     @app.post('/api/v1/reports/surgivision-frame',response_model=ReportRecord,responses={404:{'model':ApiError},422:{'model':ApiError}})
-    def create_surgical_frame_report(request:SurgicalFrameReportCreateRequest):
+    def create_surgical_frame_report(request:SurgicalFrameReportCreateRequest,_writer:dict=Depends(require_research_writer)):
         frame=_endoscapes_frame(request.frame_id)
         if frame is None:
             raise HTTPException(status_code=404,detail={'code':'SURGICAL_FRAME_NOT_INSTALLED','message':'No source-verified Endoscapes frame matches this ID'})
@@ -1434,6 +1446,8 @@ def create_app() -> FastAPI:
         return _report(row)
 
     register_learning_routes(app, _db, list_cases)
+    register_surgivision_review_routes(app, _db)
+    register_fistulaguard_tool_routes(app, _db)
     return app
 
 app=create_app()

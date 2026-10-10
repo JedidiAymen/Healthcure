@@ -1,0 +1,27 @@
+{
+  "id": "surgivision-annotator-disagreement",
+  "title": "DRAFT: When experts disagree about CVS",
+  "module": "surgivision",
+  "preferred_case_id": null,
+  "prefer_disputed_frame": true,
+  "review_status": "DRAFT pending review by a domain expert",
+  "learning_objectives": [
+    "Interpret a CVS value as the mean of three annotators.",
+    "Recognise disagreement (values of 1/3 or 2/3) and suggest reasons for it.",
+    "Explain why disagreement matters when reference labels are used to evaluate models."
+  ],
+  "rubric": "DRAFT rubric pending review by a domain expert. Reward careful reasoning about uncertainty in the reference labels.",
+  "rubric_criteria": [
+    {"id": "interpretation", "title": "Interpreting the values", "description": "Correctly reads a mean of three annotators and identifies disagreement.", "max_points": 40},
+    {"id": "reasons", "title": "Reasons for disagreement", "description": "Offers plausible, frame-based reasons why annotators might differ.", "max_points": 40},
+    {"id": "evaluation", "title": "Consequences", "description": "Explains how disagreement limits using these labels as ground truth.", "max_points": 20}
+  ],
+  "blocks": [
+    {"id": "objectives", "type": "Instruction", "title": "Learning objectives", "content": "Interpret CVS values as a mean of three annotators, recognise disagreement, and explain why it matters for evaluating models."},
+    {"id": "values", "type": "Instruction", "title": "How the reference values work", "content": "Each CVS value in Endoscapes is the mean of three annotators: 0 means none marked the criterion achieved, 1 means all did, and 1/3 or 2/3 means they disagreed."},
+    {"id": "evidence", "type": "Evidence view", "title": "Open the frame", "content": "This frame was chosen because the annotators disagreed on at least one criterion."},
+    {"id": "cvs", "type": "CVS self-check", "title": "Make your own judgement first", "content": "Judge each criterion before you see the annotator values."},
+    {"id": "reasons", "type": "Question", "title": "Why might experts disagree?", "content": "After the reveal, suggest two reasons visible in this frame why annotators might have disagreed."},
+    {"id": "models", "type": "Question", "title": "Labels and models", "content": "If a model is scored against these labels, what does annotator disagreement mean for how you read its accuracy?"}
+  ]
+}
