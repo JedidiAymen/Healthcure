@@ -2097,7 +2097,7 @@ export function Educator() {
       <Header
         eyebrow="Educator studio"
         title="Build evidence lessons"
-        description="Compose source-grounded learning activities. Drafts are saved under your local educator account; publication remains gated until rights review and immutable learner-safe versions are enforced."
+        description="Compose source-grounded learning activities. Drafts are saved under your local educator account. Publishing requires a source-rights review and creates an immutable learner-safe version."
         action={
           <Button render={<Link to="/educator/cases/new/edit" />} nativeButton={false}>
             <Microscope data-icon="inline-start" />
@@ -2110,14 +2110,14 @@ export function Educator() {
           <ShieldCheck size={22} />
         </div>
         <div>
-          <strong>Server-owned drafts, controlled learner access</strong>
-          <p>
+            <strong>Server-owned drafts, controlled learner access</strong>
+            <p>
             Lesson prompts and rubrics stay in educator-only records.
-            Assignments and answer reveal require immutable versions and
-            reviewed source permissions.
-          </p>
-        </div>
-        <SourceBadge kind="blocked">Publishing gated</SourceBadge>
+            Learners receive only published, cohort-assigned versions; private
+            answers appear after an educator reviews a submission.
+            </p>
+          </div>
+        <SourceBadge kind="ready">Source review at publish</SourceBadge>
       </div>
       <div className="academy-columns">
         <Card className="learning-panel">
@@ -2205,9 +2205,9 @@ export function Educator() {
               <h3>Keep educator answers protected.</h3>
             </CardTitle>
             <CardDescription>
-              Drafts are editable only by their owner. Students receive
-              published assignment summaries only; the attempt and reveal
-              services are not yet enabled.
+              Drafts are editable only by their owner. Students see published
+              assignment summaries and submit source-bound work; rubric scores
+              and answer reveals stay private until an authorized review.
             </CardDescription>
           </CardHeader>
         </Card>
