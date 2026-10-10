@@ -34,7 +34,7 @@ type SavedComparison = {
 const closeTo = (actual: number, expected: number, tolerance: number) =>
   expect(Math.abs(actual - expected)).toBeLessThanOrEqual(tolerance)
 
-test('authentic FiSaV switches records, bounds windows, and reopens saved comparison identity', async ({ page }) => {
+test('authentic FiSaV switches records, bounds windows, and reopens saved comparison identity @source', async ({ page }) => {
   test.setTimeout(120_000)
   const errors: string[] = []
   page.on('pageerror', error => errors.push(error.message))
@@ -59,14 +59,18 @@ test('authentic FiSaV switches records, bounds windows, and reopens saved compar
 
   const sourcePicker = page.getByRole('combobox', { name: 'Search installed FiSaV recordings' })
   await sourcePicker.fill('pat011')
-  await page.getByRole('option', { name: 'pat011', exact: true }).click()
+  await expect(page.getByRole('option', { name: 'pat011', exact: true })).toBeVisible()
+  await sourcePicker.press('ArrowDown')
+  await sourcePicker.press('Enter')
   await expect(page).toHaveURL(/fisav%3Apat011/i)
   await expect(page.getByRole('heading', { name: 'FiSaV · pat011 · source signal' })).toBeVisible()
   await expect(page.getByText(second.source_sha256, { exact: true })).toBeVisible()
   await expect(page.getByText(first.source_sha256, { exact: true })).toHaveCount(0)
 
   await sourcePicker.fill('pat001')
-  await page.getByRole('option', { name: 'pat001', exact: true }).click()
+  await expect(page.getByRole('option', { name: 'pat001', exact: true })).toBeVisible()
+  await sourcePicker.press('ArrowDown')
+  await sourcePicker.press('Enter')
   await expect(page).toHaveURL(/fisav%3Apat001/i)
   await expect(page.getByRole('heading', { name: 'FiSaV · pat001 · source signal' })).toBeVisible()
   await expect(signalChart).toBeVisible()

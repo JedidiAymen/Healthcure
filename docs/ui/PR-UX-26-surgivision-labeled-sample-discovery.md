@@ -8,9 +8,10 @@ The message identifies the procedures and says the labels belong to separate spa
 
 ## Verification
 
-- With the local source API active, `MEDFORGE_API_PORT=18098 npx playwright test tests/e2e/cholect50-sampled-review.spec.ts --workers=1` passed (1 test). It follows the new button to the CholecT50 player, verifies the exact-source boxes, plays/pause samples, and checks desktop, tablet and phone layout.
+- Clean-CI fixture mode: `npx playwright test tests/e2e/cholect50-sampled-review.spec.ts --workers=1` passed (1 test) without a running API or installed research datasets.
+- Real installed-source mode: `MEDFORGE_API_PORT=18098 MEDFORGE_E2E_SOURCE_API=1 npx playwright test tests/e2e/cholect50-sampled-review.spec.ts --workers=1` passed (1 test) against the local source API. It follows the new action to the CholecT50 player, verifies the exact-source boxes, plays/pauses real samples, and captures desktop, tablet and phone layouts.
 - `npm run lint`, `npm run typecheck`, and `npm run build` passed.
-- Running-app captures with real installed source media are in `.local-review/SURGIVISION-MEDIA-MODES/`: `native-video-1440x900.png`, `native-video-768x1024.png`, and `native-video-390x844.png`; sampled replay captures are adjacent.
+- Running-app captures with real installed source media are in `.local-review/SURGIVISION-MEDIA-MODES/`: `native-video-1440x900.png`, `native-video-768x1024.png`, and `native-video-390x844.png`; sampled replay captures are adjacent. Default fixture tests do not write screenshots into this directory.
 - Existing generated components: `src/components/ui/tabs.tsx` and `src/components/ui/button.tsx`, backed by `@base-ui/react` 1.8.0 (MIT). No component source or version changed.
 
 ## Source boundary

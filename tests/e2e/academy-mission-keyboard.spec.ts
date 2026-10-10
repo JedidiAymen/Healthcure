@@ -5,7 +5,7 @@ const learner = { id: 'student-mission-keyboard-qa', display_name: 'Academy QA',
 const assignmentId = 'assignment-keyboard-review-fixture'
 const attemptId = 'attempt-keyboard-review-fixture'
 
-test('learner can complete the source-backed investigation flow from the keyboard', async ({ page }) => {
+test('learner can complete the source-backed investigation flow from the keyboard @source', async ({ page }) => {
   test.setTimeout(120_000)
   const errors: string[] = []
   page.on('pageerror', error => errors.push(error.message))

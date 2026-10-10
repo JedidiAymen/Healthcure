@@ -41,7 +41,7 @@ jobs:
       - name: Frontend unit tests
         run: npm run test
       - name: Browser shell tests
-        run: npm run test:e2e
+        run: npm run test:e2e:ci
       - name: API contract tests
         run: python -m pytest -q apps/api/tests
       - name: OpenAPI contract check
