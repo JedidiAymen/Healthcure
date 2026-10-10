@@ -740,9 +740,11 @@ export function Studio() {
 
 export function Cases() {
   const { data, loading, error } = useApi(queryKeys.cases, api.cases, [] as CaseRecord[]);
+  const recentRuns = useApi(queryKeys.runs, api.runs, [] as RunRecord[]);
   const [filter, setFilter] = useState("all");
   const [searchParams, setSearchParams] = useSearchParams();
   const searchText = searchParams.get("q") ?? "";
+  const requestedSelection = searchParams.get("selected");
   const normalizedSearch = searchText.trim().toLocaleLowerCase();
   const rows = useMemo(
     () => data.filter((c) => {
@@ -758,6 +760,13 @@ export function Cases() {
   const requestedPage = Number(searchParams.get("page") ?? 1);
   const page = Math.min(pageCount, Math.max(1, Number.isInteger(requestedPage) ? requestedPage : 1));
   const visibleRows = rows.slice((page - 1) * pageSize, page * pageSize);
+  const selectedCase = visibleRows.find((record) => record.id === requestedSelection) ?? visibleRows[0];
+  useEffect(() => {
+    if (!visibleRows.length || selectedCase?.id === requestedSelection) return;
+    const params = new URLSearchParams(searchParams);
+    params.set("selected", selectedCase.id);
+    setSearchParams(params, { replace: true });
+  }, [requestedSelection, searchParams, selectedCase?.id, setSearchParams, visibleRows.length]);
   const pageHref = (nextPage: number) => {
     const params = new URLSearchParams(searchParams);
     if (nextPage <= 1) params.delete("page");
@@ -777,6 +786,7 @@ export function Cases() {
     if (value) params.set("q", value);
     else params.delete("q");
     params.delete("page");
+    params.delete("selected");
     setSearchParams(params, { replace: true });
   };
   const clearFilters = () => {
@@ -791,6 +801,20 @@ export function Cases() {
       ? [{ kind: "ellipsis" as const, key: `ellipsis-${previous}` }, { kind: "page" as const, number }]
       : [{ kind: "page" as const, number }];
   });
+  const selectionHref = (caseId: string) => {
+    const params = new URLSearchParams(searchParams);
+    params.set("selected", caseId);
+    const query = params.toString();
+    return query ? `?${query}` : "?";
+  };
+  const sourceKind = (record: CaseRecord) => record.module === "surgivision"
+    ? "Frame"
+    : record.module === "dosetwin" ? "Case" : "Recording";
+  const moduleLabel = (record: CaseRecord) => specialtyData[record.module].name;
+  const lastAction = (record: CaseRecord) => recentRuns.data.find((run) => run.case_id === record.id);
+  const actionLabel = (run: RunRecord | undefined) => !run
+    ? "No saved action"
+    : `${run.operation_id === "openkbp.case_summary" ? "Dose summary" : "CVS model run"} · ${run.status}`;
   return (
     <>
       <Header
@@ -864,30 +888,76 @@ export function Cases() {
         </Alert>
       ) : rows.length ? (
         <>
-          <div className="border-t border-border">
-          {visibleRows.map((c) => (
-            <Link
-              className="flex min-h-[62px] items-center gap-3 border-b border-border px-3 hover:bg-accent/50 max-sm:gap-2 max-sm:px-1"
-              key={c.id}
-              to={`/studio/${c.module}/cases/${encodeURIComponent(c.id)}`}
-            >
-              <span className="grid size-8 shrink-0 place-items-center rounded-md bg-muted text-primary">
-                <Database size={17} />
-              </span>
-              <span className="grid min-w-0 flex-1 gap-1">
-                <b className="truncate text-sm font-medium">{c.label}</b>
-                <small className="truncate text-xs text-muted-foreground">
-                  {c.dataset_id} · source case {c.source_case_id}
-                </small>
-              </span>
-              <Badge variant="outline" className="hidden shrink-0 gap-1.5 text-xs text-muted-foreground md:inline-flex">
-                <span className="size-1.5 rounded-full bg-primary" aria-hidden="true" />
-                {c.reference_kind}
-              </Badge>
-              <span className="max-w-[120px] truncate font-mono text-[11px] text-muted-foreground max-sm:max-w-[70px]">{c.id}</span>
-              <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
-            </Link>
-          ))}
+          <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(300px,360px)] xl:items-start">
+            <div className="order-2 min-w-0 overflow-hidden rounded-lg border border-border bg-card xl:order-1">
+              <Table className="table-fixed">
+                <TableHeader className="sticky top-0 z-10 bg-muted/95 backdrop-blur">
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="w-[60%] sm:w-[38%]">Research source</TableHead>
+                    <TableHead className="w-[18%] sm:w-[14%]">Type</TableHead>
+                    <TableHead className="w-[22%] sm:w-[16%]">Availability</TableHead>
+                    <TableHead className="hidden sm:table-cell sm:w-[32%]">Last analysis action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {visibleRows.map((c) => {
+                    const selected = selectedCase?.id === c.id;
+                    return <TableRow key={c.id} data-state={selected ? "selected" : undefined} className={selected ? "bg-primary/5" : undefined}>
+                      <TableCell className="max-w-0 overflow-hidden">
+                        <Link
+                          className="group grid min-w-0 gap-1 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          to={selectionHref(c.id)}
+                          aria-current={selected ? "page" : undefined}
+                          aria-label={`Inspect ${c.label}, ${sourceKind(c)} ${c.source_case_id}`}
+                        >
+                          <span className="truncate font-medium text-foreground group-hover:text-primary">{c.label}</span>
+                          <span className="truncate text-xs text-muted-foreground">{c.dataset_id} · source {c.source_case_id}</span>
+                          <small className="truncate text-xs text-muted-foreground sm:hidden">Last analysis: {actionLabel(lastAction(c))}</small>
+                        </Link>
+                      </TableCell>
+                      <TableCell className="overflow-hidden"><Badge variant="outline" className="max-w-full rounded-sm font-normal">{sourceKind(c)}</Badge></TableCell>
+                      <TableCell className="overflow-hidden"><Badge variant={c.status === "ready" ? "secondary" : "outline"} className="max-w-full font-normal">{c.status === "ready" ? "Ready" : "Blocked"}</Badge></TableCell>
+                      <TableCell className="hidden max-w-0 overflow-hidden text-xs sm:table-cell">
+                        <span className="block truncate text-muted-foreground" title={actionLabel(lastAction(c))}>{actionLabel(lastAction(c))}</span>
+                      </TableCell>
+                    </TableRow>;
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+            {selectedCase && <aside aria-label="Selected research source" className="order-1 min-w-0 xl:sticky xl:top-4 xl:order-2">
+              <Card className="overflow-hidden">
+                <div className="relative h-48 overflow-hidden border-b border-border bg-[#101624] sm:h-56">
+                  {selectedCase.module === "surgivision" && <SurgicalAtlasView frameId={selectedCase.id} />}
+                  {selectedCase.module === "dosetwin" && <DoseAtlasView caseId={selectedCase.id} />}
+                  {selectedCase.module === "fistulaguard" && <SignalAtlasView recordId={selectedCase.source_case_id} />}
+                </div>
+                <CardHeader className="gap-2 pb-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <Badge variant="outline" className="rounded-sm font-normal">{moduleLabel(selectedCase)}</Badge>
+                    <Badge variant={selectedCase.status === "ready" ? "secondary" : "outline"} className="font-normal">{selectedCase.status === "ready" ? "Ready to inspect" : "Viewer only"}</Badge>
+                  </div>
+                  <CardTitle className="text-lg leading-snug">{selectedCase.label}</CardTitle>
+                  <CardDescription>{selectedCase.dataset_id} · {selectedCase.reference_kind}</CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-3 pt-0">
+                  <dl className="grid gap-2 border-y border-border py-3 text-sm sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+                    <div className="min-w-0"><dt className="text-xs text-muted-foreground">Source {sourceKind(selectedCase).toLowerCase()} ID</dt><dd className="truncate font-mono text-xs">{selectedCase.source_case_id}</dd></div>
+                    <div className="min-w-0"><dt className="text-xs text-muted-foreground">Registry ID</dt><dd className="truncate font-mono text-xs">{selectedCase.id}</dd></div>
+                    <div className="min-w-0"><dt className="text-xs text-muted-foreground">Last analysis action</dt><dd className="truncate text-xs text-muted-foreground">{actionLabel(lastAction(selectedCase))}</dd></div>
+                  </dl>
+                  {selectedCase.status === "blocked" && <p className="text-xs leading-relaxed text-muted-foreground">This source is registered, but its analysis operation is not available in the current setup.</p>}
+                  <Button
+                    render={<Link to={`/studio/${selectedCase.module}/cases/${encodeURIComponent(selectedCase.id)}`} />}
+                    nativeButton={false}
+                    className="w-full justify-between"
+                    disabled={selectedCase.status === "blocked"}
+                  >
+                    Open analysis<ArrowRight data-icon="inline-end" />
+                  </Button>
+                </CardContent>
+              </Card>
+            </aside>}
           </div>
           {pageCount > 1 && <Pagination className="mt-4">
             <PaginationContent>

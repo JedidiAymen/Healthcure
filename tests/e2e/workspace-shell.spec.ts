@@ -108,6 +108,45 @@ test('case registry explains an empty local source set without inventing cases',
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
 })
 
+test('case registry keeps a source-selected inspection preview across screen sizes', async ({ page }) => {
+  await page.route('**/api/v1/cases**', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify([
+      { id: 'openkbp:pt_201', module: 'dosetwin', dataset_id: 'OpenKBP', source_case_id: 'pt_201', reference_kind: 'benchmark', status: 'ready', label: 'OpenKBP pt_201' },
+      { id: 'endoscapes:test:162_6575', module: 'surgivision', dataset_id: 'Endoscapes-BBox201', source_case_id: 'video-162:frame-6575', reference_kind: 'research', status: 'ready', label: 'Endoscapes test · video 162 · frame 6575' },
+      { id: 'fisav:pat011', module: 'fistulaguard', dataset_id: 'FiSaV', source_case_id: 'pat011', reference_kind: 'research', status: 'ready', label: 'FiSaV · pat011 · source signal' },
+    ]),
+  }))
+  await page.route('**/api/v1/runs**', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify([{ id: 'run-fixture', case_id: 'openkbp:pt_201', operation_id: 'openkbp.case_summary', source_kind: 'benchmark', status: 'completed', results: {}, provenance: {} }]),
+  }))
+  await page.route('**/api/v1/surgivision/frames/**/image', route => route.fulfill({ status: 404, contentType: 'application/json', body: '{"detail":"Fixture has no source image."}' }))
+  await page.route('**/api/v1/fistulaguard/records/**/waveform**', route => route.fulfill({ status: 404, contentType: 'application/json', body: '{"detail":"Fixture has no source waveform."}' }))
+
+  for (const viewport of [{ width: 1440, height: 900 }, { width: 1280, height: 800 }, { width: 768, height: 1024 }, { width: 390, height: 844 }]) {
+    await page.setViewportSize(viewport)
+    await page.goto('/studio/cases?selected=endoscapes%3Atest%3A162_6575')
+    const preview = page.getByRole('complementary', { name: 'Selected research source' })
+    await expect(preview).toBeVisible()
+    await expect(preview.getByText('Endoscapes test · video 162 · frame 6575', { exact: true })).toBeVisible()
+    await expect(page.getByText('Frame', { exact: true }).first()).toBeVisible()
+    const doseRow = page.getByRole('row').filter({ hasText: 'OpenKBP pt_201' })
+    const mobileAction = doseRow.locator('small', {}).getByText(/Last analysis: Dose summary · completed/)
+    const desktopAction = doseRow.getByRole('cell').last().getByText('Dose summary · completed', { exact: true })
+    await expect(viewport.width < 640 ? mobileAction : desktopAction).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(viewport.width)
+  }
+
+  await page.getByRole('link', { name: /Inspect FiSaV · pat011/ }).click()
+  await expect(page).toHaveURL(/selected=fisav%3Apat011/)
+  await expect(page.getByRole('complementary', { name: 'Selected research source' }).getByText('FiSaV · pat011 · source signal', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Open analysis' }).click()
+  await expect(page).toHaveURL(/\/studio\/fistulaguard\/cases\/fisav%3Apat011$/)
+})
+
 test('educator lesson editor loads as a real route and switches its phone panes', async ({ page }) => {
   const errors: string[] = []
   page.on('pageerror', (error) => errors.push(error.message))
