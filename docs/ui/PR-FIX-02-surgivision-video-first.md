@@ -14,13 +14,13 @@
 
 - API tests verify `annotated_stills`, null media path/FPS/duration, the single browsing capability, valid details, invalid IDs and the empty-source case.
 - Running-app smoke used the installed Endoscapes `test / video 162 / frame 6575` source. The media card visibly reports that continuous recording and intermediate frames are not installed; the frame image and six original reference boxes remain inspectable.
-- No new dependency was installed. Existing React 19, shadcn Base UI, Tailwind 4 and Lucide components are used.
-- Actual running-app screenshots at 1440×900, 768×1024 and 390×844 are in the ignored local review folder `.local-review/FIX-02/`. They show the real local source. None has horizontal document overflow or browser page errors.
+- Existing React 19, shadcn Base UI, Tailwind 4 and Lucide components remain in use. The installed `@videojs/react` 10.0.1 package is Apache-2.0; the actual player integration is now source-verified.
+- Rechecked the actual app at 1440×900, 1280×800, 768×1024 and 390×844. The served checksum-verified clip reports 38.1384 seconds / 1920×1080, played past 0.5 seconds, and the local API served a 1,024-byte HTTP 206 Range response. All four layouts had zero horizontal overflow and no page/console errors; canceled media ranges were browser aborts after playback/viewport changes. Captures and measurements are in ignored `.local-review/VIDEO-FIRST-REVIEW/`.
 
 ## Still blocked
 
-The Appendix300 clip supports native play/pause/seek only. It is not time-aligned with Endoscapes and has no synchronized phase/tool tracks, source annotations, or temporal inference. The Endoscapes stills cannot support those features. Cholec80 access, CholecT50 sampled media, cross-dataset ID mapping, and temporal-model weights remain separate acquisition/validation work.
+The Appendix300 clip supports play/pause and seeking through the installed Video.js React player. It is not time-aligned with Endoscapes and has no synchronized phase/tool tracks, source annotations, or temporal inference. The Endoscapes stills cannot support those features. Cholec80 access, CholecT50 sampled media, cross-dataset ID mapping, and temporal-model weights remain separate acquisition/validation work.
 
 ## Verification
 
-`python3 -m pytest -q apps/api/tests` — 32 passed. `npm run contracts:check` — passed. `npm run lint`, `npm run typecheck`, `npm run test`, `npm run test:e2e -- --workers=1`, and `npm run build` — passed; the route was also opened against the running local app and the three requested real-source viewport screenshots were captured.
+`python3 -m pytest -q apps/api/tests` — 32 passed. `npm run contracts:check` — passed. `npm run lint`, `npm run typecheck`, `npm run test`, `npm run test:e2e -- --workers=1`, and `npm run build` — passed at integration. This follow-up directly checked video metadata, playback, Range delivery, and four actual viewport sizes.
