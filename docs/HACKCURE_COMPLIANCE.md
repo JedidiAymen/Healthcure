@@ -171,6 +171,8 @@ This is a local readiness snapshot, not a full rehearsal, hosted-CI result, inde
      --role clinical_reviewer
    ```
 
+   In the HackCure overlay this command writes to its dedicated **unencrypted SQLite** database at `/var/lib/medforge/hackcure/medforge.sqlite3`; it is not the default SQLCipher demo database. Keep that file on a permission-restricted, encrypted host disk, and use the same overlay database for the import, saved report, reviewer account and preflight.
+
    Enter a private password at the prompt and keep it out of the deck, repository and this document. A fresh database has no reviewer credentials. This local role does not verify medical qualifications.
 4. Open <http://127.0.0.1:5173/studio/dosetwin/cases/current> in the local development profile, or the local Docker URL from the README. If using Docker, rehearse with the Docker database and its prepared reviewer profile; do not assume credentials from the development database carry over.
 5. Do one complete rehearsal and confirm the screens render at the demo resolution. If `pt_241`, its archived artifact, or the prepared account is missing, use the clearly labelled fallback at the end; do not invent a result.
