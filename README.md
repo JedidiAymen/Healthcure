@@ -104,7 +104,7 @@ CI (`.github/workflows/ui-and-api.yml`) runs these on Ubuntu with Python 3.13 an
 
 - **In transit:** TLS 1.3 only, at the proxy. The API and broker are never published to the host.
 - **At rest:** the app database is AES-256 encrypted with SQLCipher inside Docker. Research datasets, the key file and the local CA are **not** covered by this; use OS disk encryption on the demo PC.
-- **Access:** local accounts use PBKDF2 password hashes and hashed, expiring session tokens. Research writes require an educator or admin account. Students only see their assigned cases.
+- **Access:** local accounts use PBKDF2 password hashes and hashed, expiring session tokens. General research writes require an educator or admin; DoseTwin review routes require a separately provisioned Clinical Reviewer or admin. This local designation does not verify a medical credential or qualification. Students only see assigned learning cases.
 - **Non-repudiation:** a hash-chained, append-only audit log; `/api/v1/audit/verify` checks the chain.
 - **Privacy by design:** datasets carry pseudonymous source IDs only, and derived labels keep the minimum fields.
 - **No legal compliance claim:** GDPR and INPDP obligations are documented, not claimed solved.

@@ -101,7 +101,7 @@ class AuditVerification(BaseModel):
 
 
 def register_audit_routes(app: FastAPI, db: Callable) -> None:
-    staff = require_any_role('educator')
+    staff = require_any_role('educator', 'clinical_reviewer')
 
     @app.get('/api/v1/audit/mine', response_model=list[AuditEntry])
     def audit_mine(limit: int = Query(100, ge=1, le=500), user: dict = Depends(staff)):

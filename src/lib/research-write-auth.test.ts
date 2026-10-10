@@ -40,6 +40,16 @@ describe("withResearchSignIn", () => {
     expect(send).toHaveBeenCalledTimes(1);
   });
 
+  it("requests the dedicated reviewer session when a review route denies the current role", async () => {
+    const send = vi.fn().mockResolvedValueOnce(json(403, { detail: { code: "ROLE_REQUIRED", message: "Use a reviewer account" } })).mockResolvedValueOnce(json(200, { ok: true }));
+    const prompt = vi.fn().mockResolvedValue(true);
+    setResearchSignInPrompt(prompt);
+    const response = await withResearchSignIn("/api/v1/research-reviews", send);
+    expect(response.status).toBe(200);
+    expect(prompt).toHaveBeenCalledWith("dose_review");
+    expect(send).toHaveBeenCalledTimes(2);
+  });
+
   it("never prompts for non-research paths, other errors, or without a registered prompt", async () => {
     const prompt = vi.fn().mockResolvedValue(true);
     setResearchSignInPrompt(prompt);

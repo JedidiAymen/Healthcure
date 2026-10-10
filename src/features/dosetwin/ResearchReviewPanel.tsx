@@ -33,7 +33,8 @@ function voxelFor(axis: 0 | 1 | 2, index: number, a: number, b: number): [number
 }
 
 export function ResearchReviewPanel({ caseId, artifactId, roi, axis, index }: Props) {
-  const { user } = useSession()
+  const { user, requestResearchSignIn } = useSession()
+  const canReview = user?.role === "clinical_reviewer" || user?.role === "admin"
   const queryClient = useQueryClient()
   const [a, setA] = useState(64), [b, setB] = useState(64)
   const [voxel, setVoxel] = useState<VoxelDifference | null>(null)
@@ -43,7 +44,7 @@ export function ResearchReviewPanel({ caseId, artifactId, roi, axis, index }: Pr
   const [saved, setSaved] = useState<ResearchReview | null>(null)
   const [error, setError] = useState("")
   const [busy, setBusy] = useState(false)
-  const history = useQuery({ queryKey: ["researchReviews", caseId, artifactId, user?.id ?? "anonymous"], queryFn: () => api.researchReviews(caseId, artifactId), enabled: Boolean(user), retry: false })
+  const history = useQuery({ queryKey: ["researchReviews", caseId, artifactId, user?.id ?? "anonymous"], queryFn: () => api.researchReviews(caseId, artifactId), enabled: canReview, retry: false })
   const ready = decision !== null && rationale.trim().length >= 10 && !busy
 
   const inspect = async () => {
@@ -70,12 +71,13 @@ export function ResearchReviewPanel({ caseId, artifactId, roi, axis, index }: Pr
   return (
     <Card className="border-border bg-card shadow-none">
       <CardHeader className="gap-2">
-        <CardDescription>Research review · reviewer account (educator or admin)</CardDescription>
+        <CardDescription>Research review · operator-designated reviewer (qualification not verified)</CardDescription>
         <CardTitle role="heading" aria-level={3} className="flex items-center gap-2"><ClipboardCheck aria-hidden />Review this archived prediction</CardTitle>
         <ProvenanceBadge kind="ARCHIVED_PREDICTION" />
         <Alert><ShieldAlert /><AlertTitle>{BOUNDARY}</AlertTitle><AlertDescription>A research decision on a benchmark comparison is not approval to deliver radiotherapy.</AlertDescription></Alert>
       </CardHeader>
       <CardContent className="grid gap-4">
+        {!canReview ? <div className="grid gap-3"><Alert><ShieldAlert /><AlertTitle>Dedicated review access required</AlertTitle><AlertDescription>Only a locally designated Clinical Reviewer or admin account can inspect and record this research decision. This designation does not verify medical credentials or authorize patient care.</AlertDescription></Alert><Button type="button" variant="outline" className="w-fit" onClick={() => void requestResearchSignIn("dose_review")}>Sign in to review</Button></div> : <>
         <section className="grid gap-2" aria-label="Difference inspector">
           <h4 className="m-0 flex items-center gap-2 text-sm font-semibold"><Crosshair aria-hidden className="size-4" />Difference inspector</h4>
           <div className="flex flex-wrap items-end gap-2">
@@ -109,7 +111,6 @@ export function ResearchReviewPanel({ caseId, artifactId, roi, axis, index }: Pr
 
         <section className="grid gap-2" aria-label="Review history">
           <h4 className="m-0 flex items-center gap-2 text-sm font-semibold"><History aria-hidden className="size-4" />Review history</h4>
-          {!user && <p className="m-0 text-sm text-muted-foreground">Sign in with a reviewer account to see recorded reviews. Recording a decision asks you to sign in.</p>}
           {history.error && <p className="m-0 text-sm text-muted-foreground">{history.error.message}</p>}
           {history.data?.length === 0 && <p className="m-0 text-sm text-muted-foreground">No research review has been recorded for this prediction yet.</p>}
           <ul className="m-0 grid list-none gap-2 p-0">
@@ -125,6 +126,7 @@ export function ResearchReviewPanel({ caseId, artifactId, roi, axis, index }: Pr
             </li>)}
           </ul>
         </section>
+        </>}
       </CardContent>
     </Card>
   )

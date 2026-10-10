@@ -1,6 +1,6 @@
 """DoseTwin research review: a frozen, human research assessment of a reference vs archived prediction.
 
-The reviewer (an educator or admin account) inspects a same-case reference dose and an imported
+The operator-designated local clinical reviewer (or admin) inspects a same-case reference dose and an imported
 archived prediction, then records one of three research decisions with a required rationale.
 The server recomputes the selected ROI comparison and freezes it with every source hash, so the
 saved review reopens exactly. This is a research assessment for further expert review, never a
@@ -167,7 +167,7 @@ def _review_from_row(conn, row) -> ResearchReview:
 
 
 def register_research_review_routes(app: FastAPI, db: Callable) -> None:
-    reviewer = require_any_role('educator')
+    reviewer = require_any_role('clinical_reviewer')
 
     @app.get('/api/v1/cases/{case_id}/dose-artifacts/{artifact_id}/voxel', response_model=VoxelDifference)
     def dose_voxel_difference(case_id: str, artifact_id: str, x: int = Query(ge=0, lt=128), y: int = Query(ge=0, lt=128),
@@ -251,7 +251,7 @@ def register_research_review_routes(app: FastAPI, db: Callable) -> None:
 
 def register_research_review_fhir_route(app: FastAPI, db: Callable) -> None:
     from .fhir_export import review_bundle
-    reviewer = require_any_role('educator')
+    reviewer = require_any_role('clinical_reviewer')
 
     @app.get('/api/v1/research-reviews/{review_id}/fhir')
     def research_review_fhir(review_id: str, user: dict = Depends(reviewer)):

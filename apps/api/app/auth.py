@@ -1,4 +1,4 @@
-"""Local-only educator/student session helpers.
+"""Local-only educator/student/research-review session helpers.
 
 Passwords and bearer tokens are never stored in plaintext. Accounts and grants
 are provisioned by an operator, not by an unauthenticated HTTP request.
@@ -58,7 +58,9 @@ def current_user(conn: sqlite3.Connection, authorization: str | None) -> dict | 
         """SELECT u.id,u.display_name,g.role,s.expires_at
            FROM local_sessions s JOIN users u ON u.id=s.user_id
            JOIN role_grants g ON g.user_id=u.id AND g.scope='platform'
-           WHERE s.token_hash=? AND s.revoked_at IS NULL""",
+           WHERE s.token_hash=? AND s.revoked_at IS NULL
+           ORDER BY CASE g.role WHEN 'admin' THEN 0 WHEN 'educator' THEN 1
+             WHEN 'student' THEN 2 WHEN 'clinical_reviewer' THEN 3 ELSE 4 END""",
         (hashlib.sha256(token.encode()).hexdigest(),),
     ).fetchone()
     if row is None or row[3] <= datetime.now(timezone.utc).isoformat():

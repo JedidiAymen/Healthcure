@@ -2,17 +2,17 @@
 
 ## Status
 
-Implemented on `feat/experiments-run-workspace`. This is a test and handoff update; it does not change runtime authorization behavior.
+Implemented and pushed before the proposal-aligned role update. Its educator/admin authorization matrix is retained as historical evidence; UX-48 supersedes that policy with a dedicated local Clinical Reviewer role.
 
 ## Behavior verified
 
-The DoseTwin research-review routes follow the existing local policy:
+At the time of this milestone, the DoseTwin research-review routes followed the prior local policy:
 
 - Anonymous requests receive HTTP 401.
 - Educator and admin accounts can inspect voxels, create reviews, and read review history/details/exports.
 - Student and researcher accounts receive HTTP 403.
 
-The matrix covers voxel inspection, review creation, history, detail, JSON export and FHIR export. It preserves the existing decision that review access uses educator/admin accounts and does not imply clinical credentials or authority.
+The matrix covered voxel inspection, review creation, history, detail, JSON export and FHIR export. It did not imply clinical credentials or authority. The current role policy is documented in [`PR-UX-48`](PR-UX-48-clinical-reviewer-workflow.md).
 
 ## Files changed
 

@@ -1,7 +1,7 @@
-import { createContext, useContext, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { LockKeyhole, LogOut } from 'lucide-react'
 import { api, setApiSessionToken } from './api'
-import { setResearchSignInPrompt } from './research-write-auth'
+import { setResearchSignInPrompt, type ResearchSignInPurpose } from './research-write-auth'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -9,9 +9,9 @@ import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
 
-type Role='student'|'educator'|'researcher'|'admin'
+type Role='student'|'educator'|'researcher'|'clinical_reviewer'|'admin'
 type User={id:string;display_name:string;role:Role}
-type SessionContextValue={user:User|null;login:(username:string,password:string)=>Promise<void>;logout:()=>Promise<void>}
+type SessionContextValue={user:User|null;login:(username:string,password:string)=>Promise<void>;logout:()=>Promise<void>;requestResearchSignIn:(purpose:ResearchSignInPurpose)=>Promise<boolean>}
 const SessionContext=createContext<SessionContextValue|null>(null)
 
 export function SessionProvider({children}:{children:ReactNode}){
@@ -24,19 +24,21 @@ export function SessionProvider({children}:{children:ReactNode}){
   const logout=async()=>{
     try{await api.localLogout()}finally{setApiSessionToken(null);setUser(null)}
   }
-  const [pendingSignIn,setPendingSignIn]=useState<((signedIn:boolean)=>void)|null>(null)
+  const [pendingSignIn,setPendingSignIn]=useState<{purpose:ResearchSignInPurpose;resolve:(signedIn:boolean)=>void}|null>(null)
+  const requestResearchSignIn=useCallback((purpose:ResearchSignInPurpose)=>new Promise<boolean>(resolve=>setPendingSignIn({purpose,resolve})),[])
   useEffect(()=>{
-    setResearchSignInPrompt(()=>new Promise<boolean>(resolve=>setPendingSignIn(()=>resolve)))
+    setResearchSignInPrompt(requestResearchSignIn)
     return ()=>setResearchSignInPrompt(null)
-  },[])
-  const finishSignIn=(signedIn:boolean)=>{pendingSignIn?.(signedIn);setPendingSignIn(null)}
-  const value=useMemo(()=>({user,login,logout}),[user])
-  return <SessionContext.Provider value={value}>{children}{pendingSignIn&&<ResearchSignInDialog login={login} onDone={finishSignIn}/>}</SessionContext.Provider>
+  },[requestResearchSignIn])
+  const finishSignIn=(signedIn:boolean)=>{pendingSignIn?.resolve(signedIn);setPendingSignIn(null)}
+  const value=useMemo(()=>({user,login,logout,requestResearchSignIn}),[user,requestResearchSignIn])
+  return <SessionContext.Provider value={value}>{children}{pendingSignIn&&<ResearchSignInDialog purpose={pendingSignIn.purpose} login={login} onDone={finishSignIn}/>}</SessionContext.Provider>
 }
 
-function ResearchSignInDialog({login,onDone}:{login:SessionContextValue['login'];onDone:(signedIn:boolean)=>void}){
+function ResearchSignInDialog({purpose,login,onDone}:{purpose:ResearchSignInPurpose;login:SessionContextValue['login'];onDone:(signedIn:boolean)=>void}){
   const [username,setUsername]=useState(''),[password,setPassword]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false)
-  return <Dialog open onOpenChange={open=>{if(!open)onDone(false)}}><DialogContent><DialogHeader><DialogTitle>Sign in to save research evidence</DialogTitle><DialogDescription>Browsing stays open on this computer. Saving reports, comparisons, runs and dose imports needs a locally provisioned educator or admin account.</DialogDescription></DialogHeader><form className="role-gate-form" onSubmit={async(event:FormEvent<HTMLFormElement>)=>{event.preventDefault();setBusy(true);setError('');try{await login(username,password);onDone(true)}catch(e){setError(e instanceof Error?e.message:'Sign in failed')}finally{setBusy(false)}}}><FieldGroup><Field><FieldLabel htmlFor="research-username">Username</FieldLabel><Input id="research-username" autoComplete="username" value={username} onChange={event=>setUsername(event.target.value)} required/></Field><Field><FieldLabel htmlFor="research-password">Password</FieldLabel><Input id="research-password" type="password" autoComplete="current-password" value={password} onChange={event=>setPassword(event.target.value)} required/></Field>{error&&<Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}</FieldGroup><DialogFooter><Button type="button" variant="outline" onClick={()=>onDone(false)}>Cancel</Button><Button type="submit" disabled={busy}>{busy?'Signing in...':'Sign in and save'}</Button></DialogFooter></form></DialogContent></Dialog>
+  const isReview=purpose==='dose_review'
+  return <Dialog open onOpenChange={open=>{if(!open)onDone(false)}}><DialogContent><DialogHeader><DialogTitle>{isReview?'Sign in to review research evidence':'Sign in to save research evidence'}</DialogTitle><DialogDescription>{isReview?'Use an operator-designated local Clinical Reviewer account or admin account. This role does not verify medical credentials or qualifications.':'Browsing stays open on this computer. Saving reports, comparisons, runs and dose imports needs a locally provisioned educator or admin account.'}</DialogDescription></DialogHeader><form className="role-gate-form" onSubmit={async(event:FormEvent<HTMLFormElement>)=>{event.preventDefault();setBusy(true);setError('');try{await login(username,password);onDone(true)}catch(e){setError(e instanceof Error?e.message:'Sign in failed')}finally{setBusy(false)}}}><FieldGroup><Field><FieldLabel htmlFor="research-username">Username</FieldLabel><Input id="research-username" autoComplete="username" value={username} onChange={event=>setUsername(event.target.value)} required/></Field><Field><FieldLabel htmlFor="research-password">Password</FieldLabel><Input id="research-password" type="password" autoComplete="current-password" value={password} onChange={event=>setPassword(event.target.value)} required/></Field>{error&&<Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}</FieldGroup><DialogFooter><Button type="button" variant="outline" onClick={()=>onDone(false)}>Cancel</Button><Button type="submit" disabled={busy}>{busy?'Signing in…':isReview?'Sign in to review':'Sign in and save'}</Button></DialogFooter></form></DialogContent></Dialog>
 }
 
 export function useSession(){

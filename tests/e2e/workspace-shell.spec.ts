@@ -219,8 +219,9 @@ test('educator lesson editor loads as a real route and switches its phone panes'
     await expect(page.getByRole('option')).toHaveCount(1)
     await page.screenshot({ path: `.local-review/FIX-01/educator-picker-${viewport.width}x${viewport.height}.png` })
   }
-  // Emulate the 720×450 CSS viewport produced by 1440×900 at 200% zoom. Keep
-  // DPR at 2 so popup geometry and text wrapping are checked at that scale.
+  // Constrain the viewport and keep DPR at 2 to approximate a 200% zoom layout.
+  // Chromium's visualViewport may differ from its CSS/layout viewport in CDP
+  // emulation; popup max-height uses vh/dvh, so assert against innerHeight.
   await page.keyboard.press('Escape')
   const zoomCdp = await page.context().newCDPSession(page)
   await zoomCdp.send('Emulation.setDeviceMetricsOverride', { width: 720, height: 450, deviceScaleFactor: 2, mobile: false })
@@ -232,7 +233,7 @@ test('educator lesson editor loads as a real route and switches its phone panes'
   const zoomedGeometry = await zoomedPopup.evaluate((element) => {
     const rect = element.getBoundingClientRect()
     const style = getComputedStyle(element)
-    return { left: rect.left, right: rect.right, bottom: rect.bottom, maxHeight: Number.parseFloat(style.maxHeight), background: style.backgroundColor, width: innerWidth, viewportHeight: visualViewport?.height ?? innerHeight }
+    return { left: rect.left, right: rect.right, bottom: rect.bottom, maxHeight: Number.parseFloat(style.maxHeight), background: style.backgroundColor, width: innerWidth, viewportHeight: innerHeight, visualViewportHeight: visualViewport?.height }
   })
   expect(zoomedGeometry.background).toBe('rgb(255, 255, 255)')
   expect(zoomedGeometry.left).toBeGreaterThanOrEqual(0)
@@ -643,7 +644,9 @@ test('DoseTwin keeps one Gy scale, linked ROI overlays and voxel mapping under z
   await expect(dock.getByRole('tab', { name: 'Source evidence' })).toBeVisible()
   await dock.getByRole('tab', { name: 'Comparison' }).click()
   await expect(page.getByText('No compatible second array is installed.')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Validate and add prediction' })).toBeDisabled()
+  await expect(page.getByText('Preparation access required')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Sign in as educator or admin' })).toBeVisible()
+  await expect(page.getByLabel('Choose an authentic dose prediction CSV')).toHaveCount(0)
   await expect(page.getByText('The feature never creates a placeholder result.')).toBeVisible()
   await dock.getByRole('tab', { name: 'Measurements' }).click()
   await dock.getByRole('tab', { name: 'Source evidence' }).click()
@@ -846,7 +849,9 @@ test('DoseTwin case picker opens a separately enabled case and its case-bound co
   await page.getByRole('tab', { name: 'Comparison' }).click()
   await expect(page.getByText('Compare a real dose prediction', { exact: true })).toBeVisible()
   await expect(page.getByText('No compatible second array is installed.', { exact: true })).toBeVisible()
-  await expect(page.getByLabel('Choose an authentic dose prediction CSV')).toBeVisible()
+  await expect(page.getByText('Preparation access required')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Sign in as educator or admin' })).toBeVisible()
+  await expect(page.getByLabel('Choose an authentic dose prediction CSV')).toHaveCount(0)
   expect(artifactRequests.some((url) => url.includes('/openkbp%3Apt_241/dose-artifacts'))).toBe(true)
   await expect(primaryRoi).toContainText('Brainstem')
 

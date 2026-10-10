@@ -2293,7 +2293,7 @@ export interface components {
              * Role
              * @enum {string}
              */
-            role: "student" | "educator" | "researcher" | "admin";
+            role: "student" | "educator" | "researcher" | "clinical_reviewer" | "admin";
         };
         /** ModelRecord */
         ModelRecord: {

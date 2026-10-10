@@ -387,7 +387,7 @@ require_research_writer=require_any_role('educator')
 
 def create_app() -> FastAPI:
     app=FastAPI(title='MEDFORGE local research API',version='0.1.0',
-        description='Loopback-only research and education API. Local educator/student access tokens are not production identity or public RBAC.')
+        description='Loopback-only research and education API. Local educator, student and Clinical Reviewer tokens are not production identity or verified medical credentials.')
     app.add_middleware(CORSMiddleware,allow_origin_regex=r'^https?://(127\.0\.0\.1|localhost)(:\d+)?$',
         allow_credentials=False,allow_methods=['GET','POST','PATCH','PUT','DELETE'],allow_headers=['Content-Type','Authorization','Idempotency-Key','X-Dose-Array-Shape','X-Dose-Checkpoint-SHA256','X-Dose-File-SHA256','X-Dose-Index-Convention','X-Dose-Model-Revision','X-Dose-Origin','X-Dose-Rights-Basis','X-Dose-Rights-Confirmed','X-Dose-Source-Case','X-Dose-Source-Revision','X-Dose-Spacing-MM','X-Dose-Unit'])
     init_db()
@@ -448,7 +448,7 @@ def create_app() -> FastAPI:
                 audit.append(c,action='auth.login_failed',target_kind='username',target_id=request.username[:120])
             raise HTTPException(401,detail={'code':'INVALID_CREDENTIALS','message':'The username or password is incorrect'})
         with _db() as c:
-            role=c.execute("SELECT role FROM role_grants WHERE user_id=? AND scope='platform' ORDER BY CASE role WHEN 'educator' THEN 1 WHEN 'student' THEN 2 ELSE 3 END LIMIT 1",(row[0],)).fetchone()
+            role=c.execute("SELECT role FROM role_grants WHERE user_id=? AND scope='platform' ORDER BY CASE role WHEN 'admin' THEN 0 WHEN 'educator' THEN 1 WHEN 'student' THEN 2 WHEN 'clinical_reviewer' THEN 3 ELSE 4 END LIMIT 1",(row[0],)).fetchone()
             if role is None:
                 raise HTTPException(403,detail={'code':'ROLE_NOT_CONFIGURED','message':'This account has no local platform role'})
             token,expires_at=issue_session(c,row[0])

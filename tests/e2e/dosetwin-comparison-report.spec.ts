@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { createHash } from 'node:crypto'
 import { mkdir } from 'node:fs/promises'
 import { readFile } from 'node:fs/promises'
-import { completeResearchSignInIfPrompted } from './research-sign-in'
+import { completeClinicalReviewSignIn, completeResearchSignInIfPrompted } from './research-sign-in'
 
 type DoseArtifact = {
   id: string
@@ -55,14 +55,10 @@ test('authentic pt_241 comparison report reopens with ROI evidence and source ha
   expect(loginResponse.ok()).toBeTruthy()
   const session = await loginResponse.json() as LocalSession
   expect(session.user.role).toBe('educator')
-  await page.getByRole('combobox', { name: 'Switch workspace' }).click()
-  await page.getByRole('option', { name: 'Professional Studio' }).click()
-  await page.getByRole('link', { name: /DoseTwin/ }).click()
-  const casePicker = page.getByLabel('DoseTwin source case')
-  await expect(casePicker).toBeVisible()
-  await casePicker.click()
-  await page.getByRole('option', { name: /pt_241/ }).click()
 
+  // Install the authentic source artifact before mounting DoseTwin. The panel's
+  // query cache is intentionally fresh for 15 seconds, so importing through the
+  // API after mount would leave the test looking at its earlier empty result.
   const prediction = await readFile('data/openkbp-opt/pt_241/prediction-set_1.csv')
   const predictionSha256 = createHash('sha256').update(prediction).digest('hex')
   expect(predictionSha256).toBe('d9fc8da169b2a7e12c1dd417f60b8364888ab28e233db19e87ee3ea93c40a583')
@@ -93,6 +89,14 @@ test('authentic pt_241 comparison report reopens with ROI evidence and source ha
   const artifact = artifacts.find(item => item.source_file_name === 'prediction-set_1.csv')
   expect(artifact, 'the authentic archived prediction must be imported for its matching case').toBeTruthy()
   expect(artifact!.source_file_sha256).toBe('d9fc8da169b2a7e12c1dd417f60b8364888ab28e233db19e87ee3ea93c40a583')
+
+  await page.getByRole('combobox', { name: 'Switch workspace' }).click()
+  await page.getByRole('option', { name: 'Professional Studio' }).click()
+  await page.getByRole('link', { name: /DoseTwin/ }).click()
+  const casePicker = page.getByLabel('DoseTwin source case')
+  await expect(casePicker).toBeVisible()
+  await casePicker.click()
+  await page.getByRole('option', { name: /pt_241/ }).click()
 
   await expect(page.getByRole('heading', { name: 'OpenKBP pt_241' })).toBeVisible()
   await page.getByRole('tab', { name: 'Comparison' }).click()
@@ -139,10 +143,20 @@ test('authentic pt_241 comparison report reopens with ROI evidence and source ha
   const review = page.getByRole('heading', { name: 'Review this archived prediction' }).locator('xpath=ancestor::*[@data-slot="card"][1]')
   await expect(review).toBeVisible()
   await expect(review.getByText('For further expert review, not for patient treatment.')).toBeVisible()
+  await review.getByRole('button', { name: 'Sign in to review' }).click()
+  const reviewerLoginPromise = page.waitForResponse(response =>
+    response.request().method() === 'POST' && new URL(response.url()).pathname === '/api/v1/auth/local-login',
+  )
+  await completeClinicalReviewSignIn(page)
+  const reviewerLogin = await reviewerLoginPromise
+  expect(reviewerLogin.ok()).toBeTruthy()
+  expect((await reviewerLogin.json() as LocalSession).user.role).toBe('clinical_reviewer')
+  await expect(review.getByRole('button', { name: 'Inspect voxel' })).toBeVisible()
   const reviewViewportDir = '.local-review/DOSETWIN-RESEARCH-REVIEW'
   await mkdir(reviewViewportDir, { recursive: true })
   for (const viewport of [
     { width: 1440, height: 900, name: 'desktop' },
+    { width: 1280, height: 800, name: 'laptop' },
     { width: 768, height: 1024, name: 'tablet' },
     { width: 390, height: 844, name: 'phone' },
   ]) {

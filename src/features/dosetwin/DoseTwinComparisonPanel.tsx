@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { dosePlaneAspectRatio } from './comparison-geometry'
 import type { DoseAxis } from '@/lib/dose-visualization'
+import { useSession } from '@/lib/session'
 
 const formatGy=(value:number|undefined)=>typeof value==='number'&&Number.isFinite(value)?`${value.toFixed(2)} Gy`:'—'
 const dvhChartConfig={reference:{label:'Reference',color:'var(--chart-1)'},prediction:{label:'Prediction',color:'var(--chart-2)'}} satisfies ChartConfig
@@ -47,6 +48,8 @@ function DosePlane({title,values,maximum,aspectRatio,delta=false}:{title:string;
 }
 
 export function DoseTwinComparisonPanel({caseId,roi,axis,index,spacingMm}:{caseId:string;roi:string;axis:DoseAxis;index:number;spacingMm:[number,number,number]}){
+ const {user,requestResearchSignIn}=useSession()
+ const canManageComparison=user?.role==='educator'||user?.role==='admin'
  const [artifactId,setArtifactId]=useState('')
  const [file,setFile]=useState<File|null>(null)
  const [modelRevision,setModelRevision]=useState('')
@@ -99,7 +102,7 @@ export function DoseTwinComparisonPanel({caseId,roi,axis,index,spacingMm}:{caseI
    <Alert className="min-w-0"><ShieldCheck/><AlertTitle>Source and rights stay visible</AlertTitle><AlertDescription className="min-w-0 break-words">The uploaded file is stored in the local MEDFORGE data folder. Its model/source revisions and rights basis are recorded; a checkpoint hash is recorded only when its source publishes one. The app checks the file hash and grid but does not independently verify model identity or usage rights.</AlertDescription></Alert>
    {error&&<Alert variant="destructive"><AlertCircle/><AlertTitle>Prediction not imported</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
    <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(220px,0.7fr)_minmax(0,1.3fr)]">
-    <form onSubmit={event=>void importPrediction(event)} className="grid min-w-0 content-start gap-3 rounded-lg border border-border bg-muted/20 p-3">
+    {canManageComparison?<form onSubmit={event=>void importPrediction(event)} className="grid min-w-0 content-start gap-3 rounded-lg border border-border bg-muted/20 p-3">
      <div><h3 className="m-0 text-sm font-semibold">Add compatible artifact</h3><p className="mb-0 mt-1 text-xs leading-5 text-muted-foreground">Accepted format: OpenKBP sparse CSV with a `,data` header and C-order voxel indices. Maximum 64 MiB.</p></div>
      <FieldGroup>
       <Field><FieldLabel htmlFor="dose-model-csv">Prediction CSV</FieldLabel><Input id="dose-model-csv" type="file" accept=".csv,text/csv" onChange={event=>setFile(event.target.files?.[0]??null)} aria-label="Choose an authentic dose prediction CSV"/></Field>
@@ -110,7 +113,7 @@ export function DoseTwinComparisonPanel({caseId,roi,axis,index,spacingMm}:{caseI
       <Field orientation="horizontal" className="items-start"><Checkbox id="dose-rights-confirmed" checked={rightsConfirmed} onCheckedChange={value=>setRightsConfirmed(value===true)}/><FieldLabel htmlFor="dose-rights-confirmed" className="text-xs leading-5">I have a rights basis for this local research comparison.</FieldLabel></Field>
      </FieldGroup>
      <Button type="submit" disabled={saving||!file||!rightsConfirmed} className="w-full">{saving?<LoaderCircle className="animate-spin" data-icon="inline-start"/>:<FileUp data-icon="inline-start"/>}{saving?'Validating source grid…':'Validate and add prediction'}</Button>
-    </form>
+    </form>:<div className="grid content-start gap-3"><Alert><ShieldCheck/><AlertTitle>Preparation access required</AlertTitle><AlertDescription>Adding archived predictions and saving comparison reports require an educator or admin account. A Clinical Reviewer can inspect an installed comparison and record a separate research review.</AlertDescription></Alert><Button type="button" variant="outline" className="w-fit" onClick={()=>void requestResearchSignIn('research_write')}>Sign in as educator or admin</Button></div>}
     <div className="grid min-w-0 content-start gap-3">
      <Field><FieldLabel htmlFor="dose-artifact-choice">Installed predictions for this case</FieldLabel><Select items={artifactOptions} value={chosenId} onValueChange={value=>setArtifactId(value??'')}><SelectTrigger id="dose-artifact-choice" aria-label="Select imported dose prediction"><SelectValue placeholder="No prediction imported"/></SelectTrigger><SelectContent><SelectGroup>{artifacts.data?.map(item=><SelectItem key={item.id} value={item.id}>{item.source_file_name} · {item.model_revision}</SelectItem>)}</SelectGroup></SelectContent></Select></Field>
      {artifacts.isLoading&&<p role="status" className="text-sm text-muted-foreground">Loading local prediction records…</p>}
@@ -120,7 +123,7 @@ export function DoseTwinComparisonPanel({caseId,roi,axis,index,spacingMm}:{caseI
      {comparison.error&&<Alert variant="destructive"><AlertCircle/><AlertTitle>Comparison unavailable</AlertTitle><AlertDescription>{comparison.error.message}</AlertDescription></Alert>}
      {comparison.data&&sliceData&&<>
       <div className="grid gap-3 rounded-lg border border-border p-3">
-       <div className="flex flex-wrap items-center justify-between gap-2"><div><h3 className="m-0 text-sm font-semibold">Same-slice dose and Δ-dose</h3><p className="mb-0 mt-1 text-xs text-muted-foreground">{['X','Y','Z'][axis]} index {index} · {roi} · processed grid · Gy</p></div><div className="flex flex-wrap items-center gap-2"><ProvenanceBadge kind="ARCHIVED_PREDICTION"/><Badge variant="secondary">shared reference / prediction scale</Badge><Button type="button" variant="outline" size="sm" onClick={()=>void saveComparisonReport()}><Save data-icon="inline-start"/>Save comparison report</Button></div></div>
+       <div className="flex flex-wrap items-center justify-between gap-2"><div><h3 className="m-0 text-sm font-semibold">Same-slice dose and Δ-dose</h3><p className="mb-0 mt-1 text-xs text-muted-foreground">{['X','Y','Z'][axis]} index {index} · {roi} · processed grid · Gy</p></div><div className="flex flex-wrap items-center gap-2"><ProvenanceBadge kind="ARCHIVED_PREDICTION"/><Badge variant="secondary">shared reference / prediction scale</Badge>{canManageComparison&&<Button type="button" variant="outline" size="sm" onClick={()=>void saveComparisonReport()}><Save data-icon="inline-start"/>Save comparison report</Button>}</div></div>
        <div className="grid grid-cols-2 gap-3 xl:grid-cols-3"><DosePlane title="Reference" values={sliceData.reference_gy} maximum={sharedMaximum} aspectRatio={planeAspectRatio}/><DosePlane title="Prediction" values={sliceData.prediction_gy} maximum={sharedMaximum} aspectRatio={planeAspectRatio}/><div className="col-span-2 xl:col-span-1"><DosePlane title="Signed Δ · prediction − reference" values={sliceData.delta_gy} maximum={deltaMaximum||1} aspectRatio={planeAspectRatio} delta/></div></div>
        <p className="m-0 text-[11px] leading-5 text-muted-foreground">Δ legend is symmetric around 0 Gy; positive differences are coral and negative differences are blue. Plane labels identify processed-array indices only; patient orientation is unknown.</p>
       </div>

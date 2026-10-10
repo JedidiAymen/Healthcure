@@ -1,6 +1,8 @@
-// Research writes need an educator or admin token. Browsing stays open, so a
-// write that returns AUTH_REQUIRED opens one sign-in prompt and retries once.
-export type ResearchSignInPrompt = () => Promise<boolean>
+// General research writes need an educator or admin token; DoseTwin reviews use
+// a separately designated reviewer token. Browsing stays open, so protected
+// actions can prompt once and retry without storing credentials in the UI.
+export type ResearchSignInPurpose = 'research_write' | 'dose_review'
+export type ResearchSignInPrompt = (purpose: ResearchSignInPurpose) => Promise<boolean>
 
 let prompt: ResearchSignInPrompt | null = null
 
@@ -16,8 +18,11 @@ export function isResearchWritePath(path: string) {
 
 export async function withResearchSignIn(path: string, send: () => Promise<Response>): Promise<Response> {
   const response = await send()
-  if (response.status !== 401 || !prompt || !isResearchWritePath(path)) return response
+  const isDoseReview = /^\/api\/v1\/(cases\/[^/]+\/dose-artifacts\/[^/]+\/voxel|research-reviews(?:\/|\?|$))/.test(path)
+  const purpose = isDoseReview ? 'dose_review' : 'research_write'
+  if (!prompt || (purpose === 'research_write' && response.status !== 401) || (purpose === 'dose_review' && ![401, 403].includes(response.status)) || !isResearchWritePath(path) && !isDoseReview) return response
   const detail = await response.clone().json().catch(() => null)
-  if (detail?.detail?.code !== 'AUTH_REQUIRED') return response
-  return (await prompt()) ? send() : response
+  if (response.status === 401 && detail?.detail?.code !== 'AUTH_REQUIRED') return response
+  if (response.status === 403 && detail?.detail?.code !== 'ROLE_REQUIRED') return response
+  return (await prompt(purpose)) ? send() : response
 }

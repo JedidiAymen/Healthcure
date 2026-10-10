@@ -21,7 +21,7 @@ class LocalLoginRequest(StrictModel):
 class LocalUser(StrictModel):
     id: str
     display_name: str
-    role: Literal['student','educator','researcher','admin']
+    role: Literal['student','educator','researcher','clinical_reviewer','admin']
 
 class LocalSession(StrictModel):
     access_token: str
