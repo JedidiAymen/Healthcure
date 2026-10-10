@@ -1,7 +1,7 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { OfflineBanner } from '@/components/OfflineBanner'
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { Activity, AudioLines, BookOpenCheck, Boxes, ClipboardCheck, FileText, FlaskConical, GraduationCap, Layers3, Microscope, Radio, ScanLine, Search, ShieldCheck, Stethoscope, Trophy } from 'lucide-react'
+import { Activity, AudioLines, BookOpenCheck, Boxes, ClipboardCheck, FileText, FlaskConical, GraduationCap, Layers3, LogOut, Microscope, Radio, ScanLine, Search, ShieldCheck, Stethoscope, Trophy } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton'
 import { api, type CaseRecord } from '@/lib/api'
 import { queryKeys } from '@/lib/query-client'
+import { useSession } from '@/lib/session'
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider,
@@ -17,25 +18,16 @@ import {
 } from '@/components/ui/sidebar'
 
 const navigation = [
-  { label: 'Research workbench', to: '/studio', icon: Layers3, end: true },
-  { label: 'Case registry', to: '/studio/cases', icon: Boxes },
-  { label: 'Model lab', to: '/studio/models', icon: Microscope },
+  { label: 'Cases', to: '/studio/cases', icon: Boxes },
+  { label: 'Analysis', to: '/studio', icon: Layers3, end: true },
+  { label: 'Models', to: '/studio/models', icon: Microscope },
   { label: 'Experiments', to: '/studio/experiments', icon: FlaskConical },
-  { label: 'Evidence reports', to: '/studio/reports', icon: FileText },
+  { label: 'Reports', to: '/studio/reports', icon: FileText },
 ]
 const specialties = [
   { label: 'SurgiVision', audience: 'Surgical teams', module: 'surgivision', to: '/studio/surgivision/cases/current', icon: ScanLine },
   { label: 'DoseTwin', audience: 'Radiation oncology', module: 'dosetwin', to: '/studio/dosetwin/cases/current', icon: Activity },
   { label: 'FistulaGuard', audience: 'Nephrology & access care', module: 'fistulaguard', to: '/studio/fistulaguard/cases/current', icon: AudioLines },
-]
-const workspaceLinks = [
-  { label: 'Research workbench', to: '/studio', icon: Layers3 },
-  { label: 'Case registry', to: '/studio/cases', icon: Boxes },
-  { label: 'Model lab', to: '/studio/models', icon: Microscope },
-  { label: 'Experiments', to: '/studio/experiments', icon: FlaskConical },
-  { label: 'Evidence reports', to: '/studio/reports', icon: FileText },
-  { label: 'Student Academy', to: '/academy', icon: GraduationCap },
-  { label: 'Educator studio', to: '/educator', icon: BookOpenCheck },
 ]
 const workspaceOptions = [
   { value: 'professional', label: 'Professional Studio', shortLabel: 'Professional', to: '/studio' },
@@ -56,6 +48,7 @@ function MedforgeMark() {
 export function Shell() {
   const location = useLocation()
   const navigate = useNavigate()
+  const { user, logout } = useSession()
   const workspace = location.pathname.startsWith('/academy') ? 'academy' : location.pathname.startsWith('/educator') ? 'educator' : 'professional'
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchText, setSearchText] = useState('')
@@ -70,10 +63,50 @@ export function Shell() {
     queryFn: api.cases,
     enabled: searchOpen,
   })
-  const title = location.pathname === '/' ? 'Clinical research workbench' : location.pathname.startsWith('/academy') ? 'Student Academy' : location.pathname.startsWith('/educator') ? 'Educator studio' : specialties.find((s) => location.pathname.includes(s.label.toLowerCase()))?.label ?? navigation.find((n) => location.pathname === n.to)?.label ?? 'Professional studio'
+  const title = location.pathname === '/'
+    ? 'Clinical research workbench'
+    : location.pathname.startsWith('/academy/progress')
+      ? 'Progress & awards'
+      : location.pathname.startsWith('/academy/missions/')
+        ? 'Investigation'
+        : location.pathname.startsWith('/academy/paths/')
+          ? 'Learning path'
+          : location.pathname.startsWith('/academy')
+            ? 'Student Academy'
+            : location.pathname.startsWith('/educator/cases/')
+              ? 'Lesson builder'
+              : location.pathname.startsWith('/educator/assignments')
+                ? 'Assignments'
+                : location.pathname.startsWith('/educator/submissions')
+                  ? 'Submissions'
+                  : location.pathname.startsWith('/educator')
+                    ? 'Educator studio'
+                    : specialties.find((s) => location.pathname.includes(s.label.toLowerCase()))?.label ?? navigation.find((n) => location.pathname === n.to)?.label ?? 'Professional studio'
+  // The shell mirrors the route gates for convenience only. Server and route
+  // authorization remain authoritative; deep links still reach their guards.
+  const workspaceAvailable = (value: typeof workspaceOptions[number]['value']) => {
+    if (!user) return true
+    if (value === 'academy') return user.role === 'student'
+    if (value === 'educator') return user.role === 'educator'
+    return true
+  }
+  const visibleWorkspaceOptions = workspaceOptions.filter((item) => workspaceAvailable(item.value) || item.value === workspace)
+  const workspaceLinks = workspaceOptions.filter((item) => workspaceAvailable(item.value)).map((item) => ({
+    label: item.label,
+    to: item.to,
+    icon: item.value === 'professional' ? Layers3 : item.value === 'academy' ? GraduationCap : BookOpenCheck,
+  }))
   const learning = workspace === 'academy'
-    ? [{ label: 'Learning paths', to: '/academy', icon: GraduationCap }, { label: 'Progress & awards', to: '/academy/progress', icon: Trophy }]
-    : [{ label: 'Lesson library', to: '/educator', icon: BookOpenCheck }, { label: 'Assignments', to: '/educator/assignments', icon: ClipboardCheck }, { label: 'Submissions', to: '/educator/submissions', icon: FileText }]
+    ? [
+      { label: 'Continue learning', to: '/academy', icon: GraduationCap, active: location.pathname === '/academy' && location.hash !== '#academy-pathways' || location.pathname.startsWith('/academy/missions/') },
+      { label: 'Learning paths', to: '/academy#academy-pathways', icon: BookOpenCheck, active: location.pathname.startsWith('/academy/paths') || location.hash === '#academy-pathways' },
+      { label: 'Progress & awards', to: '/academy/progress', icon: Trophy, active: location.pathname === '/academy/progress' },
+    ]
+    : [
+      { label: 'Lessons', to: '/educator', icon: BookOpenCheck, active: location.pathname === '/educator' || location.pathname.startsWith('/educator/cases/') },
+      { label: 'Assignments & learners', to: '/educator/assignments', icon: ClipboardCheck, active: location.pathname === '/educator/assignments' },
+      { label: 'Submissions', to: '/educator/submissions', icon: FileText, active: location.pathname === '/educator/submissions' },
+    ]
   const normalizedSearch = searchText.trim().toLocaleLowerCase()
   const matchingCases = useMemo(() => {
     if (normalizedSearch.length < 2) return []
@@ -85,7 +118,7 @@ export function Shell() {
   }, [normalizedSearch, sourceCases.data])
   const shownCaseCount = specialties.reduce((total, item) => total + Math.min(8, matchingCases.filter((record) => record.module === item.module).length), 0)
   const matchingWorkspaces = workspaceLinks.filter((item) => !normalizedSearch || item.label.toLocaleLowerCase().includes(normalizedSearch))
-  const matchingSpecialties = specialties.filter((item) => !normalizedSearch || `${item.label} ${item.audience}`.toLocaleLowerCase().includes(normalizedSearch))
+  const matchingSpecialties = (workspaceAvailable('professional') ? specialties : []).filter((item) => !normalizedSearch || `${item.label} ${item.audience}`.toLocaleLowerCase().includes(normalizedSearch))
   const openDestination = (destination: string) => {
     setSearchOpen(false)
     setSearchText('')
@@ -113,7 +146,7 @@ export function Shell() {
       <SidebarContent>
         {workspace === 'professional' && <SidebarGroup>
           <SidebarGroupLabel>Professional Studio</SidebarGroupLabel>
-          <SidebarGroupContent><SidebarMenu>{navigation.map(({ label, to, icon: Icon, end }) => <SidebarMenuItem key={to}><SidebarMenuButton render={<NavLink to={to} end={end} />} isActive={location.pathname === to || (!end && location.pathname.startsWith(`${to}/`))} tooltip={label}><Icon/><span>{label}</span></SidebarMenuButton></SidebarMenuItem>)}</SidebarMenu></SidebarGroupContent>
+          <SidebarGroupContent><SidebarMenu>{navigation.map(({ label, to, icon: Icon, end }) => <SidebarMenuItem key={to}><SidebarMenuButton className="border-l-2 border-transparent data-[active=true]:border-primary data-[active=true]:font-semibold" render={<NavLink to={to} end={end} />} isActive={location.pathname === to || (!end && location.pathname.startsWith(`${to}/`))} tooltip={label}><Icon/><span>{label}</span></SidebarMenuButton></SidebarMenuItem>)}</SidebarMenu></SidebarGroupContent>
         </SidebarGroup>}
         {workspace === 'professional' && <SidebarGroup>
           <SidebarGroupLabel>Clinical specialties</SidebarGroupLabel>
@@ -122,30 +155,35 @@ export function Shell() {
         {workspace === 'professional' && <SidebarSeparator />}
         {workspace !== 'professional' && <SidebarGroup>
           <SidebarGroupLabel>{workspace === 'academy' ? 'Your learning' : 'Teaching'}</SidebarGroupLabel>
-          <SidebarGroupContent><SidebarMenu>{learning.map(({ label, to, icon: Icon }) => <SidebarMenuItem key={to}><SidebarMenuButton render={<NavLink to={to} />} isActive={location.pathname === to || location.pathname.startsWith(`${to}/`)} tooltip={label}><Icon/><span>{label}</span></SidebarMenuButton></SidebarMenuItem>)}</SidebarMenu></SidebarGroupContent>
-        </SidebarGroup>}
-        {workspace !== 'professional' && <SidebarGroup>
-          <SidebarGroupLabel>Switch workspace</SidebarGroupLabel>
-          <SidebarGroupContent><SidebarMenu><SidebarMenuItem><SidebarMenuButton render={<NavLink to="/studio" />} tooltip="Professional Studio"><Microscope/><span>Professional Studio</span></SidebarMenuButton></SidebarMenuItem>{workspace === 'academy' ? <SidebarMenuItem><SidebarMenuButton render={<NavLink to="/educator" />} tooltip="Educator Studio"><BookOpenCheck/><span>Educator Studio</span></SidebarMenuButton></SidebarMenuItem> : <SidebarMenuItem><SidebarMenuButton render={<NavLink to="/academy" />} tooltip="Student Academy"><GraduationCap/><span>Student Academy</span></SidebarMenuButton></SidebarMenuItem>}</SidebarMenu></SidebarGroupContent>
+          <SidebarGroupContent><SidebarMenu>{learning.map(({ label, to, icon: Icon, active }) => <SidebarMenuItem key={to}><SidebarMenuButton className="border-l-2 border-transparent data-[active=true]:border-primary data-[active=true]:font-semibold" render={<NavLink to={to} />} isActive={active} tooltip={label}><Icon/><span>{label}</span></SidebarMenuButton></SidebarMenuItem>)}</SidebarMenu></SidebarGroupContent>
         </SidebarGroup>}
       </SidebarContent>
-      <SidebarFooter className="p-2"><SidebarMenu><SidebarMenuItem><SidebarMenuButton size="sm" tooltip="Research & education only" className="text-muted-foreground"><ShieldCheck/><span>Research &amp; education</span></SidebarMenuButton></SidebarMenuItem></SidebarMenu></SidebarFooter>
+      <SidebarFooter className="p-2">
+        {user && <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 px-2 py-2 group-data-[collapsible=icon]:hidden">
+          <span className="truncate text-[13px] font-semibold" title={user.display_name}>{user.display_name}</span>
+          <Badge variant="outline" className="max-w-24 truncate capitalize">{user.role.replace('_', ' ')}</Badge>
+          <Button variant="ghost" size="sm" className="col-span-2 justify-start" onClick={() => void logout()}><LogOut data-icon="inline-start"/>Sign out</Button>
+        </div>}
+        <SidebarMenu><SidebarMenuItem><SidebarMenuButton size="sm" tooltip="Research & education only" className="text-muted-foreground"><ShieldCheck/><span>Research &amp; education</span></SidebarMenuButton></SidebarMenuItem></SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
     <SidebarInset className="flex min-h-svh min-w-0 flex-col bg-background">
       <header className="medforge-toolbar flex h-[60px] shrink-0 items-center justify-between gap-3 border-b border-border bg-card px-3 sm:px-6 lg:px-8">
-        <div className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground sm:gap-3"><SidebarTrigger aria-label="Toggle navigation"/><span className="hidden sm:inline">MEDFORGE</span><span aria-hidden="true" className="hidden text-border sm:inline">/</span><b className="truncate font-medium text-foreground">{title}</b></div>
+        <div className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground sm:gap-3"><SidebarTrigger aria-label="Toggle navigation"/><span className="hidden sm:inline font-semibold tracking-wide text-foreground">MEDFORGE</span><span aria-hidden="true" className="hidden text-border sm:inline">/</span><b className="truncate font-medium text-foreground">{title}</b></div>
         <div className="flex shrink-0 items-center gap-2">
-          <Select items={workspaceOptions} value={workspace} onValueChange={(value) => {
+          <span id="workspace-switch-help" className="sr-only">Switching changes the workspace view. Protected learning workspaces still require a matching local account.</span>
+          <Select items={visibleWorkspaceOptions} value={workspace} onValueChange={(value) => {
             const option = workspaceOptions.find((item) => item.value === value)
             if (option && option.value !== workspace) navigate(option.to)
           }}>
-            <SelectTrigger aria-label="Switch workspace" size="sm" className="max-w-[152px] sm:max-w-48">
+            <SelectTrigger aria-label="Switch workspace" aria-describedby="workspace-switch-help" size="sm" className="max-w-[152px] sm:max-w-48">
               <SelectValue>{(value) => workspaceOptions.find((item) => item.value === value)?.shortLabel ?? 'Workspace'}</SelectValue>
             </SelectTrigger>
             <SelectContent align="end">
-              {workspaceOptions.map(({ value, label }) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
+              {visibleWorkspaceOptions.map(({ value, label }) => <SelectItem key={value} value={value} disabled={!workspaceAvailable(value)}><span>{label}</span>{!user && value !== 'professional' && <span className="ml-auto text-xs text-muted-foreground">Sign-in required</span>}</SelectItem>)}
             </SelectContent>
           </Select>
+          {user && <Badge variant="outline" aria-label={`Signed in as ${user.display_name}, ${user.role.replace('_', ' ')}`} className="hidden max-w-44 truncate bg-transparent font-normal text-muted-foreground lg:inline-flex">{user.display_name} · {user.role.replace('_', ' ')}</Badge>}
           <Button ref={searchTriggerRef} variant="outline" size="sm" className="w-8 px-0 sm:w-auto sm:justify-start sm:px-2.5" aria-label="Find a research case or workspace" onClick={() => { setSearchText(''); setSearchOpen(true) }}>
             <Search data-icon="inline-start" />
             <span className="hidden sm:inline">Find case or workspace</span>
