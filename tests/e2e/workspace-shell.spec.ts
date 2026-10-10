@@ -145,6 +145,7 @@ test('educator lesson editor loads as a real route and switches its phone panes'
 test('educator teaching desk shows real work and opens the selected assignment review', async ({ page }) => {
   const assignmentId = 'assignment-review-001'
   const lessonTitle = 'Inspect a measured source window'
+  let includeSecondAssignment = false
   await page.route('**/api/v1/auth/local-login', (route) => route.fulfill({
     status: 200,
     contentType: 'application/json',
@@ -167,19 +168,31 @@ test('educator teaching desk shows real work and opens the selected assignment r
     body: JSON.stringify([{
       id: assignmentId, lesson_version_id: 'version-001', lesson_title: lessonTitle,
       cohort_id: 'cohort-001', due_at: null, student_count: 2,
-    }]),
+    }, ...(includeSecondAssignment ? [{
+      id: 'assignment-review-002', lesson_version_id: 'version-002', lesson_title: 'Locate an annotated surgical landmark',
+      cohort_id: 'cohort-002', due_at: '2026-10-20T12:00:00Z', student_count: 4,
+    }] : [])]),
   }))
   await page.route('**/api/v1/educator/cohorts', (route) => route.fulfill({
     status: 200,
     contentType: 'application/json',
-    body: JSON.stringify([{ id: 'cohort-001', name: 'Physiological signals seminar', student_count: 2 }]),
+    body: JSON.stringify([
+      { id: 'cohort-001', name: 'Physiological signals seminar', student_count: 2 },
+      { id: 'cohort-002', name: 'Surgical imaging group', student_count: 4 },
+    ]),
   }))
+  await page.route('**/api/v1/educator/versions', route => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }))
+  await page.route('**/api/v1/educator/students', route => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }))
   await page.route(`**/api/v1/educator/assignments/${assignmentId}/attempts`, (route) => route.fulfill({
     status: 200,
     contentType: 'application/json',
     body: JSON.stringify([{
       attempt_id: 'attempt-001', student_id: 'student-001', student_name: 'Learner One',
       state: 'review_required', submitted_at: '2026-10-10T08:30:00Z', score: null,
+      observations: [], rubric_criteria: [], criterion_scores: [], viewer_evidence: null,
+    }, {
+      attempt_id: 'attempt-002', student_id: 'student-002', student_name: 'Learner Two',
+      state: 'graded', submitted_at: '2026-10-09T08:30:00Z', score: 82,
       observations: [], rubric_criteria: [], criterion_scores: [], viewer_evidence: null,
     }]),
   }))
@@ -198,7 +211,42 @@ test('educator teaching desk shows real work and opens the selected assignment r
   await page.getByRole('link', { name: 'Review Learner One submission for Inspect a measured source window' }).click()
   await expect(page).toHaveURL(new RegExp(`/educator/submissions\\?assignmentId=${assignmentId}`))
   await expect(page.getByRole('combobox', { name: 'Assignment' })).toContainText(lessonTitle)
-  await expect(page.getByText('Learner One')).toBeVisible()
+  await expect(page.getByRole('row', { name: /Learner One.*Awaiting review/ })).toBeVisible()
+  await expect(page.getByRole('row', { name: /Learner Two.*Reviewed/ })).toBeVisible()
+  await mkdir('.local-review/UX-24-educator-triage', { recursive: true })
+  for (const [name, width, height] of [['desktop', 1440, 900], ['laptop', 1280, 800], ['tablet', 768, 1024], ['phone', 390, 844]] as const) {
+    await page.setViewportSize({ width, height })
+    await page.screenshot({ path: `.local-review/UX-24-educator-triage/submissions-${name}.png`, fullPage: true })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
+  }
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.getByRole('textbox', { name: 'Search learner attempts' }).fill('Learner Two')
+  await expect(page.getByRole('row', { name: /Learner Two/ })).toBeVisible()
+  await expect(page.getByRole('row', { name: /Learner One/ })).toHaveCount(0)
+  await page.getByRole('textbox', { name: 'Search learner attempts' }).fill('')
+  await page.getByRole('combobox', { name: 'Filter learner attempts by status' }).click()
+  await page.getByRole('option', { name: 'Reviewed' }).click()
+  await expect(page.getByRole('row', { name: /Learner Two.*Reviewed/ })).toBeVisible()
+  await expect(page.getByRole('row', { name: /Learner One/ })).toHaveCount(0)
+
+  includeSecondAssignment = true
+  await page.getByRole('link', { name: 'Assignments', exact: true }).click()
+  await expect(page.getByRole('row', { name: /Inspect a measured source window/ })).toBeVisible()
+  await expect(page.getByRole('row', { name: /Locate an annotated surgical landmark/ })).toBeVisible()
+  for (const [name, width, height] of [['desktop', 1440, 900], ['laptop', 1280, 800], ['tablet', 768, 1024], ['phone', 390, 844]] as const) {
+    await page.setViewportSize({ width, height })
+    await page.screenshot({ path: `.local-review/UX-24-educator-triage/assignments-${name}.png`, fullPage: true })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
+  }
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.getByRole('textbox', { name: 'Search assignments' }).fill('Physiological signals')
+  await expect(page.getByRole('row', { name: /Inspect a measured source window/ })).toBeVisible()
+  await expect(page.getByRole('row', { name: /Locate an annotated surgical landmark/ })).toHaveCount(0)
+  await page.getByRole('textbox', { name: 'Search assignments' }).fill('')
+  await page.getByRole('combobox', { name: 'Filter assignments by due date' }).click()
+  await page.getByRole('option', { name: 'Due date set' }).click()
+  await expect(page.getByRole('row', { name: /Locate an annotated surgical landmark/ })).toBeVisible()
+  await expect(page.getByRole('row', { name: /Inspect a measured source window/ })).toHaveCount(0)
 })
 
 test('embedded FiSaV evidence controls wrap inside the educator review column', async ({ page }) => {
