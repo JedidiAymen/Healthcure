@@ -24,6 +24,9 @@ services:
       MEDFORGE_LOCAL_DB_DIR: /var/lib/medforge/hackcure
       MEDFORGE_DB_KEY_FILE: ""
       MEDFORGE_OPENKBP_FULL_CASES_JSON: '{"openkbp:pt_241":"/datasets/openkbp-opt/pt_241"}'
+    # The overlay deliberately uses plain SQLite for the host read-only preflight.
+    # Remove the base profile's unused SQLCipher secret mount; no key is needed here.
+    secrets: !reset []
     volumes:
       - type: bind
         source: ${MEDFORGE_HACKCURE_DB_DIR:?Start with scripts/start_hackcure_docker.sh}

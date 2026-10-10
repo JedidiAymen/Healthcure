@@ -76,7 +76,7 @@ Prepare the Docker images and the local `pt_241` source files on this machine be
 ./scripts/start_hackcure_docker.sh
 ```
 
-Open the local app at <https://127.0.0.1:8443/studio/dosetwin/cases/openkbp%3Apt_241>. Caddy uses a local certificate authority; trust that certificate on the demo machine before the presentation. Stop the stack with:
+Open the local app at <https://localhost:8443/studio/dosetwin/cases/openkbp%3Apt_241>. Caddy uses its local certificate authority for `localhost`; trust that certificate on the demo machine before the presentation. Stop the stack with:
 
 ```sh
 docker compose -f docker-compose.yml -f docker-compose.hackcure.yml down
@@ -90,7 +90,7 @@ The Compose profile maps `openkbp:pt_241` to `/datasets/openkbp-opt/pt_241` for 
 ./scripts/hackcure_docker_preflight.sh
 ```
 
-The first run is expected to report missing imported comparison state and reviewer credentials. It does not create them. A passing data/profile preflight still does not replace an interactive Docker rehearsal; its loopback item describes the development launcher, while `start_hackcure_docker.sh` independently checks the rendered Compose config and refuses to start if any host-published port is not bound to `127.0.0.1`.
+The first run is expected to report missing imported comparison state and reviewer credentials. It does not create them. The Docker preflight checks the rendered Compose host ports and the source/database profile; its doctor output also reports the development launcher's loopback setting. A passing preflight still does not replace an interactive Docker rehearsal. `start_hackcure_docker.sh` independently checks the rendered Compose config and refuses to start if any host-published port is not bound to `127.0.0.1`.
 
 Once the Docker profile database contains the prepared walkthrough state, use [`docs/HACKCURE_BACKUP_RESTORE.md`](docs/HACKCURE_BACKUP_RESTORE.md) to create a local-only archive and verify it in a disposable directory. That check never overwrites the active database and does not replace the offline second-machine rehearsal.
 
