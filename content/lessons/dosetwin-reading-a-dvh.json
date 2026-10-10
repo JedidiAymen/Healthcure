@@ -1,0 +1,26 @@
+{
+  "id": "dosetwin-reading-a-dvh",
+  "title": "DRAFT: Reading a dose-volume histogram (OpenKBP personal use, unpublishable)",
+  "module": "dosetwin",
+  "preferred_case_id": "openkbp:pt_201",
+  "review_status": "DRAFT pending review by a domain expert. OpenKBP data is for personal hackathon use only and this lesson cannot be published.",
+  "learning_objectives": [
+    "Read a cumulative DVH: the fraction of a structure receiving at least a given dose.",
+    "Compare target and organ-at-risk curves on the same plot.",
+    "Explain why a benchmark reference dose is not a delivered treatment plan."
+  ],
+  "rubric": "DRAFT rubric pending review by a domain expert. Reward accurate reading of the curve, not treatment judgements.",
+  "rubric_criteria": [
+    {"id": "reading", "title": "Reading the DVH", "description": "Correctly reads volume fractions at chosen doses.", "max_points": 50},
+    {"id": "comparison", "title": "Target versus organ at risk", "description": "Describes how target and organ-at-risk curves differ.", "max_points": 30},
+    {"id": "limits", "title": "Limits", "description": "States that this is benchmark data and not a treatment plan.", "max_points": 20}
+  ],
+  "blocks": [
+    {"id": "objectives", "type": "Instruction", "title": "Learning objectives", "content": "Read a cumulative DVH, compare target and organ-at-risk curves, and explain why a benchmark reference dose is not a delivered plan."},
+    {"id": "context", "type": "Instruction", "title": "What you are looking at", "content": "This is an OpenKBP benchmark case on a processed voxel grid. The dose is a reference used for research benchmarking, not a delivered treatment plan, and no patient orientation is implied."},
+    {"id": "evidence", "type": "Evidence view", "title": "Open the DVH", "content": "Select a target (for example PTV70) and an organ at risk (for example the spinal cord) and read their DVH curves."},
+    {"id": "read", "type": "Question", "title": "Read the curve", "content": "What percentage of the chosen target receives at least 95% of its prescription dose, according to the curve?"},
+    {"id": "compare", "type": "Question", "title": "Compare two structures", "content": "How does the organ-at-risk curve differ in shape from the target curve, and why would a planner want that?"},
+    {"id": "limits", "type": "Question", "title": "State a limit", "content": "Name one reason this benchmark dose cannot be read as a real patient's treatment."}
+  ]
+}

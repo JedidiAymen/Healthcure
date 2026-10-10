@@ -12,6 +12,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 
 from .auth import require_role
 from .endoscapes import installed_frame
+from .surgivision_review import SELF_CHECK_TYPE, committed_self_checks, self_check_block_ids
 from . import fisav
 from .schemas import (
     EducatorAssignment,
@@ -394,9 +395,11 @@ def register_learning_routes(app: FastAPI, db: Callable, list_cases: Callable[[]
             criteria = content.get("rubric_criteria", [])
             if len(criteria) < 2 or sum(item["max_points"] for item in criteria) != 100:
                 raise HTTPException(422, detail={"code": "RUBRIC_INVALID", "message": "Add at least two rubric criteria whose maximum points total 100"})
-            questions = [b for b in content["blocks"] if b["type"] == "Question" and b["content"].strip()]
+            questions = [b for b in content["blocks"] if b["type"] in ("Question", SELF_CHECK_TYPE) and b["content"].strip()]
             if not questions:
                 raise HTTPException(422, detail={"code": "QUESTION_REQUIRED", "message": "Add at least one learner question with a prompt"})
+            if self_check_block_ids(content["blocks"]) and case.module != "surgivision":
+                raise HTTPException(422, detail={"code": "CVS_SELF_CHECK_MODULE", "message": "CVS self-check blocks need an Endoscapes SurgiVision frame"})
             if not any(b["content"].strip() for b in content["blocks"] if b["type"] != "Reveal"):
                 raise HTTPException(422, detail={"code": "LEARNER_CONTENT_REQUIRED", "message": "Add learner-visible instructions or questions"})
             mapping = conn.execute(
@@ -642,8 +645,12 @@ def register_learning_routes(app: FastAPI, db: Callable, list_cases: Callable[[]
             answers = {item[0]: json.loads(item[1]) for item in conn.execute(
                 "SELECT block_id,response_json FROM observations WHERE attempt_id=?", (attempt_id,)
             ).fetchall()}
-            if not questions or any(not str(answers.get(block_id, "")).strip() for block_id in questions):
+            self_checks = self_check_block_ids(manifest["blocks"])
+            if not (questions or self_checks) or any(not str(answers.get(block_id, "")).strip() for block_id in questions):
                 raise HTTPException(422, detail={"code": "QUESTION_RESPONSE_REQUIRED", "message": "Answer every question block before submitting"})
+            committed = {item.block_id for item in committed_self_checks(conn, attempt_id)}
+            if any(block_id not in committed for block_id in self_checks):
+                raise HTTPException(422, detail={"code": "CVS_SELF_CHECK_REQUIRED", "message": "Commit every CVS self-check before submitting"})
             evidence_row = conn.execute(
                 "SELECT evidence_json FROM attempt_viewer_evidence WHERE attempt_id=?", (attempt_id,)
             ).fetchone()
@@ -696,6 +703,7 @@ def register_learning_routes(app: FastAPI, db: Callable, list_cases: Callable[[]
                     rubric_criteria=secret.get("rubric_criteria", []), criterion_scores=saved_scores,
                     viewer_evidence=json.loads(evidence_row[0]) if evidence_row else None,
                     assigned_case=_assigned_case(row[7]),
+                    cvs_self_checks=committed_self_checks(conn, row[0]),
                 ))
         return result
 
