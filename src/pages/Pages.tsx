@@ -300,6 +300,10 @@ function EmptySource({ module }: { module: ModuleId }) {
 
 export function Home() {
   const cases = useApi(queryKeys.cases, api.cases, [] as CaseRecord[]);
+  const runHistory = useApi(queryKeys.runs, api.runs, [] as RunRecord[]);
+  const resumableRun = runHistory.data.find((run): run is DoseTwinRunRecord =>
+    run.operation_id === "openkbp.case_summary" && run.status === "completed" && run.results !== null,
+  );
   const areas = [
     { id: "surgivision", name: "SurgiVision", discipline: "Surgical vision research", source: "Endoscapes", measure: "annotated frames" },
     { id: "dosetwin", name: "DoseTwin", discipline: "Radiation oncology & physics", source: "OpenKBP", measure: "benchmark case" },
@@ -321,9 +325,12 @@ export function Home() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <Button render={<Link to="/studio" />} nativeButton={false} size="lg" className="h-11 rounded-[10px] px-5">
-              Open Professional Studio <ArrowRight data-icon="inline-end" />
-            </Button>
+            <Link
+              to={resumableRun ? `/studio/experiments?runId=${encodeURIComponent(resumableRun.id)}` : "/studio"}
+              className={buttonVariants({ size: "lg", className: "h-11 rounded-[10px] px-5" })}
+            >
+              {resumableRun ? "Continue analysis" : "Open Professional Studio"} <ArrowRight data-icon="inline-end" />
+            </Link>
             <span className="inline-flex items-center gap-2 text-sm text-muted-foreground"><ShieldCheck className="size-4 text-primary"/> Source and limits stay visible</span>
           </div>
           <div className="grid max-w-[640px] grid-cols-3 border-t border-border pt-4">
@@ -1312,6 +1319,8 @@ function EmptyWork({
   );
 }
 export function Experiments() {
+  const [searchParams] = useSearchParams();
+  const requestedRunId = searchParams.get("runId") ?? "";
   const [cases, setCases] = useState<CaseRecord[]>([]),
     [runs, setRuns] = useState<DoseTwinRunRecord[]>([]),
     [loading, setLoading] = useState(true),
@@ -1331,7 +1340,7 @@ export function Experiments() {
               item.operation_id === "openkbp.case_summary",
           );
           setRuns(doseRuns);
-          setSelectedRun(doseRuns[0] ?? null);
+          setSelectedRun(doseRuns.find((item) => item.id === requestedRunId) ?? doseRuns[0] ?? null);
         }
       })
       .catch((e: unknown) => {
@@ -1348,7 +1357,7 @@ export function Experiments() {
     return () => {
       live = false;
     };
-  }, []);
+  }, [requestedRunId]);
   const caseId = selectedCase || cases[0]?.id || "";
   const startRun = async () => {
     if (!caseId) return;

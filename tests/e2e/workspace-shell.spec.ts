@@ -11,6 +11,47 @@ test('home exposes the MEDFORGE app shell and role workspaces', async ({ page })
   await expect(page.getByRole('link', { name: /educator studio/i })).toBeAttached()
 })
 
+test('home resumes the latest completed source-backed case summary', async ({ page }) => {
+  const runId = 'run-home-resume'
+  await page.route('**/api/v1/cases', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify([{ id: 'openkbp:pt_201', module: 'dosetwin', dataset_id: 'OpenKBP', source_case_id: 'pt_201', reference_kind: 'benchmark', status: 'ready', label: 'OpenKBP · pt_201' }]),
+  }))
+  await page.route('**/api/v1/runs', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify([{
+      id: runId, case_id: 'openkbp:pt_201', operation_id: 'openkbp.case_summary', status: 'completed',
+      source_kind: 'benchmark', failure_code: null, provenance: { source_revision: 'fixture-source-revision' },
+      results: {
+        case: 'pt_201', grid_shape: [128, 128, 128], voxel_dimensions_mm: [5.422, 5.422, 3], files_sha256: {},
+        available_rois: { Brainstem: { status: 'available', voxels: 10, dmean_gy: 30.25, d0_1cc_gy_openkbp: 32, d95_gy_interpolated: 25, v20gy_percent: 100 } },
+        dose_nonzero_voxels: 10, ct_nonzero_voxels: 10, possible_dose_voxels: 10, dose_reference_kind: 'benchmark reference', coordinate_frame: 'index-space only',
+      },
+    }]),
+  }))
+
+  await page.goto('/')
+  const continueLink = page.getByRole('link', { name: /Continue analysis/ })
+  await expect(continueLink).toHaveAttribute('href', `/studio/experiments?runId=${runId}`)
+  await mkdir('.local-review/UX-25-home-resume', { recursive: true })
+  for (const viewport of [
+    { name: 'desktop', width: 1440, height: 900 },
+    { name: 'tablet', width: 768, height: 1024 },
+    { name: 'phone', width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height })
+    await page.screenshot({ path: `.local-review/UX-25-home-resume/home-${viewport.name}-${viewport.width}x${viewport.height}.png`, fullPage: true })
+  }
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await continueLink.click()
+  await expect(page).toHaveURL(new RegExp(`/studio/experiments\\?runId=${runId}$`))
+  await expect(page.getByRole('heading', { name: 'OpenKBP case summary' })).toBeVisible()
+  await expect(page.getByText(`run ${runId}`)).toBeVisible()
+  await expect(page.getByRole('row', { name: /Brainstem.*10.*30.25/ })).toBeVisible()
+})
+
 test('small phone viewport keeps the app shell within the screen', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/')
