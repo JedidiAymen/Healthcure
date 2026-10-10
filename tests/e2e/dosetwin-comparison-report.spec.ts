@@ -56,7 +56,7 @@ test('authentic pt_241 comparison report reopens with ROI evidence and source ha
 
   await page.goto('/studio/dosetwin/cases/openkbp%3Apt_241')
   await expect(page.getByRole('heading', { name: 'OpenKBP pt_241' })).toBeVisible()
-  await page.getByText('Compare a real dose prediction', { exact: true }).click()
+  await page.getByRole('tab', { name: 'Comparison' }).click()
   const comparison = page.getByLabel('DoseTwin prediction comparison')
   await expect(comparison.getByText('Same-slice dose and Δ-dose')).toBeVisible()
   await comparison.getByText('Prediction provenance and comparison limits', { exact: true }).click()
