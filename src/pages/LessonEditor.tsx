@@ -49,6 +49,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { ResearchCasePicker } from "@/components/ResearchCasePicker";
 import { EducatorSourcePreview } from "@/components/EducatorSourcePreview";
+import { Toggle } from "@/components/ui/toggle";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 type LessonBlock = EducatorLessonBlock;
 type LessonDraft = {
@@ -198,7 +200,13 @@ export function LessonEditorPage() {
   const [sourceConfirmed, setSourceConfirmed] = useState(false);
   const [reviewNote, setReviewNote] = useState("");
   const [published, setPublished] = useState<PublishedLessonVersion | null>(null);
-  const [mobilePane, setMobilePane] = useState<"blocks" | "canvas" | "preview">("canvas");
+  const [mobilePane, setMobilePane] = useState<"blocks" | "canvas" | "inspector">("canvas");
+  const [inspectorTab, setInspectorTab] = useState<"preview" | "rubric">("preview");
+  const [inspectorOpen, setInspectorOpen] = useState(false);
+  const [editorRegion, setEditorRegion] = useState<"wide" | "tablet" | "mobile">(() => {
+    if (typeof window === "undefined") return "wide";
+    return window.matchMedia("(max-width: 767px)").matches ? "mobile" : window.matchMedia("(min-width: 1280px)").matches ? "wide" : "tablet";
+  });
   const [cases, setCases] = useState<CaseRecord[]>([]),
     [casesLoading, setCasesLoading] = useState(true),
     [casesError, setCasesError] = useState("");
@@ -411,6 +419,58 @@ export function LessonEditorPage() {
     if (from >= 0 && to >= 0)
       update({ ...draft, blocks: arrayMove(draft.blocks, from, to) });
   };
+  useEffect(() => {
+    const wide = window.matchMedia("(min-width: 1280px)");
+    const mobile = window.matchMedia("(max-width: 767px)");
+    const sync = () => setEditorRegion(wide.matches ? "wide" : mobile.matches ? "mobile" : "tablet");
+    wide.addEventListener("change", sync);
+    mobile.addEventListener("change", sync);
+    return () => {
+      wide.removeEventListener("change", sync);
+      mobile.removeEventListener("change", sync);
+    };
+  }, []);
+  const rubricTotal = draft.rubricCriteria.reduce((sum, item) => sum + (Number(item.max_points) || 0), 0);
+  const showMobilePane = (pane: "blocks" | "canvas" | "inspector") => {
+    setMobilePane(pane);
+    window.scrollTo({ top: 0, behavior: "instant" });
+  };
+  const inspector = <Card role="complementary" aria-label="Learner preview and rubric inspector" className="min-w-0 border-border bg-card shadow-none">
+    <CardHeader className="pb-2">
+      <div className="flex items-start gap-2.5"><Eye aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary"/><div><CardTitle>Lesson inspector</CardTitle><CardDescription className="mt-1">Check the learner view and educator scoring guidance.</CardDescription></div></div>
+    </CardHeader>
+    <CardContent className="grid gap-3">
+      <div role="group" aria-label="Inspector view" className="grid w-full min-w-0 grid-cols-2 gap-1 rounded-lg bg-muted p-1">
+        <Toggle variant="outline" aria-label="Learner preview" className="w-full min-h-9" pressed={inspectorTab === "preview"} onPressedChange={pressed => { if (pressed) setInspectorTab("preview"); }}>Preview</Toggle>
+        <Toggle variant="outline" aria-label={`Rubric · ${rubricTotal} of 100 points`} className="w-full min-w-0 min-h-9 px-1 text-xs" pressed={inspectorTab === "rubric"} onPressedChange={pressed => { if (pressed) setInspectorTab("rubric"); }}>Rubric · {rubricTotal}/100</Toggle>
+      </div>
+      {inspectorTab === "preview" ? <div className="mt-3 grid w-full min-w-0 gap-3">
+          <div className="min-h-56 rounded-xl border border-border bg-background p-4">
+            <span className="text-[11px] font-semibold text-primary">Learner view</span>
+            <h2 className="mb-2 mt-2 text-lg font-semibold leading-snug tracking-tight">{draft.title.trim() || "Untitled evidence lesson"}</h2>
+            <p className="mb-1 mt-2 text-xs font-medium leading-relaxed">{selectedCase ? `${selectedCase.label} · ${selectedCase.dataset_id}` : "Choose a verified source to continue."}</p>
+            {selectedEvidence && <p className="mb-1 mt-1 text-[11px] leading-relaxed text-muted-foreground">{selectedEvidence.license_label}</p>}
+            <div className="mt-4 grid gap-3 border-t border-border pt-3">
+              {draft.blocks.filter(block => block.type !== "Reveal").length ? draft.blocks.filter(block => block.type !== "Reveal").map((block, index) => <article className="border-l-2 border-primary pl-2.5" key={block.id}><span className="text-[10px] text-muted-foreground">{String(index + 1).padStart(2, "0")} · {block.type}</span><h3 className="mb-1 mt-1 text-[13px] font-semibold leading-snug">{block.title || `${block.type} block`}</h3><p className="m-0 whitespace-pre-wrap text-xs leading-relaxed text-muted-foreground">{block.content || "No learner prompt entered."}</p></article>) : <p className="m-0 text-xs leading-relaxed text-muted-foreground">Add a learner-facing block to preview the lesson.</p>}
+            </div>
+            {draft.blocks.some(block => block.type === "Reveal") && <p className="mb-0 mt-4 flex items-start gap-1.5 text-xs leading-relaxed text-muted-foreground"><LockKeyhole aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary"/> {draft.blocks.filter(block => block.type === "Reveal").length} educator reveal {draft.blocks.filter(block => block.type === "Reveal").length === 1 ? "block is" : "blocks are"} hidden from learners.</p>}
+          </div>
+          <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3"><ShieldCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary"/><span className="grid gap-1"><b className="text-xs font-semibold">Private answers stay hidden</b><small className="text-[11px] leading-relaxed text-muted-foreground">The server publishes its validated learner projection. The rubric and reveal blocks remain protected.</small></span></div>
+      </div> : <div className="mt-3 grid w-full min-w-0 gap-3">
+          <div className="flex items-center justify-between gap-2"><div><p className="m-0 text-sm font-semibold">Scored criteria</p><p className="m-0 text-xs text-muted-foreground">Set observable evidence for manual review.</p></div><span className={rubricTotal === 100 ? "font-mono text-xs text-muted-foreground" : "font-mono text-xs text-destructive"}>{rubricTotal}/100</span></div>
+          <div className="grid gap-3">
+            {draft.rubricCriteria.map((criterion, index) => <Card size="sm" key={criterion.id} className="shadow-none"><CardHeader className="pb-2"><CardTitle className="text-sm">{criterion.title || `Criterion ${index + 1}`} <span className="font-normal text-muted-foreground">· {criterion.max_points} pts</span></CardTitle></CardHeader><CardContent className="grid gap-3">
+              <Field><FieldLabel htmlFor={`rubric-title-${criterion.id}`}>Criterion name</FieldLabel><Input id={`rubric-title-${criterion.id}`} value={criterion.title} maxLength={120} onChange={event => update({ ...draft, rubricCriteria: draft.rubricCriteria.map(item => item.id === criterion.id ? { ...item, title: event.target.value } : item) })}/></Field>
+              <div className="grid grid-cols-[minmax(0,1fr)_5rem] gap-2"><Field><FieldLabel htmlFor={`rubric-description-${criterion.id}`}>Evidence to look for</FieldLabel><Textarea id={`rubric-description-${criterion.id}`} value={criterion.description} maxLength={1200} rows={3} onChange={event => update({ ...draft, rubricCriteria: draft.rubricCriteria.map(item => item.id === criterion.id ? { ...item, description: event.target.value } : item) })}/></Field><Field><FieldLabel htmlFor={`rubric-points-${criterion.id}`}>Points</FieldLabel><Input id={`rubric-points-${criterion.id}`} type="number" min={1} max={100} value={criterion.max_points} onChange={event => update({ ...draft, rubricCriteria: draft.rubricCriteria.map(item => item.id === criterion.id ? { ...item, max_points: Number(event.target.value) } : item) })}/></Field></div>
+              {draft.rubricCriteria.length > 2 && <Button type="button" variant="outline" size="sm" className="justify-self-start" onClick={() => update({ ...draft, rubricCriteria: draft.rubricCriteria.filter(item => item.id !== criterion.id) })}>Remove criterion</Button>}
+            </CardContent></Card>)}
+            <Button type="button" variant="outline" size="sm" className="justify-self-start" disabled={draft.rubricCriteria.length >= 8} onClick={() => update({ ...draft, rubricCriteria: [...draft.rubricCriteria, { id: crypto.randomUUID(), title: "New criterion", description: "Describe the observable evidence for this criterion.", max_points: 10 }] })}><Plus data-icon="inline-start"/>Add criterion</Button>
+          </div>
+          <Field><FieldLabel htmlFor="rubric">Private educator guidance</FieldLabel><Textarea id="rubric" rows={4} value={draft.rubric} onChange={event => update({ ...draft, rubric: event.target.value })} placeholder="Add private context for consistent manual grading."/></Field>
+          <p className="m-0 flex items-start gap-2 text-xs leading-relaxed text-muted-foreground"><LockKeyhole aria-hidden="true" className="size-4 shrink-0 text-primary"/>This rubric is stored in the educator-only draft and excluded from student challenge summaries.</p>
+      </div>}
+    </CardContent>
+  </Card>;
   return (
     <div className="lesson-editor-page relative min-w-0 pb-4 text-foreground">
       <div className="mb-5 flex items-center gap-2 text-xs text-muted-foreground">
@@ -418,7 +478,7 @@ export function LessonEditorPage() {
         <span aria-hidden="true">/</span>
         <b className="font-medium text-foreground">Lesson draft</b>
       </div>
-      <div className="mb-4 flex items-center justify-between gap-4 border-b border-border pb-4 max-[900px]:items-start max-[900px]:flex-col">
+      <div className="mb-4 flex items-center justify-between gap-4 border-b border-border pb-4 max-[767px]:items-start max-[767px]:flex-col">
         <div className="min-w-0">
           <div className="eyebrow text-xs font-semibold tracking-wide text-primary">Server-owned lesson draft</div>
           <h1 className="mb-1 mt-1 text-[clamp(1.65rem,2.1vw,1.95rem)] font-semibold leading-tight tracking-tight text-foreground max-[1150px]:text-[1.7rem]">Compose an evidence lesson</h1>
@@ -426,7 +486,8 @@ export function LessonEditorPage() {
             Drafts and rubrics save to your educator account. Publishing creates a versioned student projection with answers kept private.
           </p>
         </div>
-        <div className="flex w-full flex-wrap items-center justify-start gap-2 min-[901px]:w-auto min-[901px]:justify-end">
+        <div className="flex w-full flex-wrap items-center justify-start gap-2 min-[768px]:w-auto min-[768px]:justify-end">
+          {editorRegion === "tablet" && <Button type="button" variant="outline" onClick={() => setInspectorOpen(true)}><Eye data-icon="inline-start"/>Lesson inspector</Button>}
           <span className={`mr-1 inline-flex items-center gap-1 whitespace-nowrap text-xs text-muted-foreground ${saved ? "" : "text-amber-800 dark:text-amber-300"}`}>
             {saved ? <Check size={14} /> : <CircleAlert size={14} />}{" "}
             {saved ? (serverDraftId ? "Saved to educator account" : "Draft not saved yet") : "Unsaved changes"}
@@ -459,8 +520,8 @@ export function LessonEditorPage() {
         </div>
       ) : (
         <>
-          <div className="mt-4 grid items-start gap-4 min-[1151px]:grid-cols-[minmax(12.5rem,15rem)_minmax(0,1fr)_minmax(17rem,19rem)] max-[1150px]:grid-cols-[minmax(12rem,14rem)_minmax(0,1fr)] max-[900px]:block max-[900px]:pb-18">
-            <div className={`educator-lesson-canvas min-w-0 [grid-column:2] [grid-row:1] ${mobilePane === "canvas" ? "max-[900px]:block" : "max-[900px]:hidden"}`}>
+          <div className="mt-4 grid items-start gap-4 min-[1280px]:grid-cols-[13rem_minmax(0,1fr)_19rem] max-[1279px]:grid-cols-[minmax(12rem,14rem)_minmax(0,1fr)] max-[767px]:block max-[767px]:pb-20">
+            <div className={`educator-lesson-canvas min-w-0 [grid-column:2] [grid-row:1] ${mobilePane === "canvas" ? "max-[767px]:block" : "max-[767px]:hidden"}`}>
               <Field className="mb-4 grid gap-2">
                 <FieldLabel htmlFor="lesson-title">Lesson title</FieldLabel>
                 <Input
@@ -469,7 +530,7 @@ export function LessonEditorPage() {
                   onChange={(e) => update({ ...draft, title: e.target.value })}
                 />
               </Field>
-              <div className="mb-2 flex items-end justify-between border-b border-border py-2 max-[900px]:items-center">
+              <div className="mb-2 flex items-end justify-between border-b border-border py-2 max-[767px]:items-center">
                 <div>
                   <div className="eyebrow">Lesson sequence</div>
                   <h2 className="m-0 text-base font-semibold">Evidence blocks</h2>
@@ -507,39 +568,8 @@ export function LessonEditorPage() {
                   </div>
                 </SortableContext>
               </DndContext>
-              <section className="mb-4 mt-4 grid gap-2">
-                <FieldLabel>Scored rubric · 100 points total</FieldLabel>
-                <div className="flex flex-col gap-3">
-                  {draft.rubricCriteria.map((criterion, index) => (
-                    <Card size="sm" key={criterion.id}>
-                      <CardHeader><CardTitle>Criterion {index + 1} · {criterion.max_points} points</CardTitle></CardHeader>
-                      <CardContent className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_7rem]">
-                        <Field><FieldLabel htmlFor={`rubric-title-${criterion.id}`}>Name</FieldLabel><Input id={`rubric-title-${criterion.id}`} value={criterion.title} maxLength={120} onChange={event => update({ ...draft, rubricCriteria: draft.rubricCriteria.map(item => item.id === criterion.id ? { ...item, title: event.target.value } : item) })}/></Field>
-                        <Field><FieldLabel htmlFor={`rubric-points-${criterion.id}`}>Maximum</FieldLabel><Input id={`rubric-points-${criterion.id}`} type="number" min={1} max={100} value={criterion.max_points} onChange={event => update({ ...draft, rubricCriteria: draft.rubricCriteria.map(item => item.id === criterion.id ? { ...item, max_points: Number(event.target.value) } : item) })}/></Field>
-                        <Field className="sm:col-span-2"><FieldLabel htmlFor={`rubric-description-${criterion.id}`}>What to look for</FieldLabel><Textarea id={`rubric-description-${criterion.id}`} value={criterion.description} maxLength={1200} rows={2} onChange={event => update({ ...draft, rubricCriteria: draft.rubricCriteria.map(item => item.id === criterion.id ? { ...item, description: event.target.value } : item) })}/></Field>
-                        {draft.rubricCriteria.length > 2 && <Button type="button" variant="outline" size="sm" className="sm:col-span-2 justify-self-start" onClick={() => update({ ...draft, rubricCriteria: draft.rubricCriteria.filter(item => item.id !== criterion.id) })}>Remove criterion</Button>}
-                      </CardContent>
-                    </Card>
-                  ))}
-                  <div className="flex flex-wrap items-center gap-3"><Button type="button" variant="outline" size="sm" disabled={draft.rubricCriteria.length >= 8} onClick={() => update({ ...draft, rubricCriteria: [...draft.rubricCriteria, { id: crypto.randomUUID(), title: "New criterion", description: "Describe the observable evidence for this criterion.", max_points: 10 }] })}><Plus size={15}/>Add criterion</Button><span className={draft.rubricCriteria.reduce((sum, item) => sum + (Number(item.max_points) || 0), 0) === 100 ? "text-sm text-muted-foreground" : "text-sm text-destructive"}>Maximum points: {draft.rubricCriteria.reduce((sum, item) => sum + (Number(item.max_points) || 0), 0)} / 100</span></div>
-                </div>
-                <Field>
-                  <FieldLabel htmlFor="rubric">Private educator guidance</FieldLabel>
-                  <Textarea
-                    id="rubric"
-                    rows={4}
-                    value={draft.rubric}
-                    onChange={(e) => update({ ...draft, rubric: e.target.value })}
-                    placeholder="Add any private context that helps another educator apply these criteria consistently."
-                  />
-                </Field>
-                <small className="text-xs leading-relaxed text-muted-foreground">
-                  The rubric is saved in the educator-only draft record and is
-                  never included in student challenge summaries.
-                </small>
-              </section>
             </div>
-            <Card role="complementary" aria-label="Research source and lesson blocks" className={`educator-block-palette sticky top-4 [grid-column:1] [grid-row:1] max-[1150px]:[grid-row:1/span_2] max-[900px]:static max-[900px]:[grid-column:auto] max-[900px]:[grid-row:auto] ${mobilePane === "blocks" ? "max-[900px]:block" : "max-[900px]:hidden"}`}>
+            <Card role="complementary" aria-label="Research source and lesson blocks" className={`educator-block-palette sticky top-4 [grid-column:1] [grid-row:1] max-[1150px]:[grid-row:1/span_2] max-[767px]:static max-[767px]:[grid-column:auto] max-[767px]:[grid-row:auto] ${mobilePane === "blocks" ? "max-[767px]:block" : "max-[767px]:hidden"}`}>
               <CardHeader>
                 <div className="flex items-start gap-2.5"><Layers3 aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary"/><div><CardTitle>Build the lesson</CardTitle><p className="mb-0 mt-1 text-xs leading-relaxed text-muted-foreground">Choose a verified source, then add the evidence tasks learners will complete.</p></div></div>
               </CardHeader>
@@ -567,29 +597,14 @@ export function LessonEditorPage() {
                 </div>
               </CardContent>
             </Card>
-            <Card role="complementary" aria-label="Learner-safe lesson preview" className={`lesson-live-preview min-w-0 sticky top-4 [grid-column:3] [grid-row:1] max-[1150px]:static max-[1150px]:[grid-column:2] max-[1150px]:[grid-row:2] max-[900px]:[grid-column:auto] max-[900px]:[grid-row:auto] ${mobilePane === "preview" ? "max-[900px]:block" : "max-[900px]:hidden"}`}>
-              <CardHeader>
-                <div className="flex items-start gap-2.5"><Eye aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary"/><div><CardTitle>Learner preview</CardTitle><p className="mb-0 mt-1 text-xs leading-relaxed text-muted-foreground">Private rubric and reveal content stay out of this view.</p></div></div>
-              </CardHeader>
-              <CardContent className="grid gap-3">
-                <div className="min-h-56 rounded-xl border border-border bg-background p-4">
-                  <span className="text-[11px] font-semibold tracking-wide text-primary">Lesson preview</span>
-                  <h2 className="mb-2 mt-2 text-lg font-semibold leading-snug tracking-tight">{draft.title.trim() || "Untitled evidence lesson"}</h2>
-                  <p className="mb-1 mt-2 text-xs font-medium leading-relaxed">{selectedCase ? `${selectedCase.label} · ${selectedCase.dataset_id}` : "Choose a verified source to continue."}</p>
-                  {selectedEvidence && <p className="mb-1 mt-1 text-[11px] leading-relaxed text-muted-foreground">{selectedEvidence.license_label}</p>}
-                  <div className="mt-4 grid gap-3 border-t border-border pt-3">
-                    {draft.blocks.filter(block => block.type !== "Reveal").length ? draft.blocks.filter(block => block.type !== "Reveal").map((block, index) => <article className="border-l-2 border-primary pl-2.5" key={block.id}><span className="text-[10px] text-muted-foreground">{String(index + 1).padStart(2, "0")} · {block.type}</span><h3 className="mb-1 mt-1 text-[13px] font-semibold leading-snug">{block.title || `${block.type} block`}</h3><p className="m-0 whitespace-pre-wrap text-xs leading-relaxed text-muted-foreground">{block.content || "No learner prompt entered."}</p></article>) : <p className="m-0 text-xs leading-relaxed text-muted-foreground">Add a learner-facing block to preview the lesson.</p>}
-                  </div>
-                  {draft.blocks.some(block => block.type === "Reveal") && <p className="mb-0 mt-4 flex items-start gap-1.5 text-xs leading-relaxed text-muted-foreground"><LockKeyhole aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary"/> {draft.blocks.filter(block => block.type === "Reveal").length} educator reveal {draft.blocks.filter(block => block.type === "Reveal").length === 1 ? "block is" : "blocks are"} hidden from learners.</p>}
-                </div>
-                <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3"><ShieldCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary"/><span className="grid gap-1"><b className="text-xs font-semibold">Rubric stays private</b><small className="text-[11px] leading-relaxed text-muted-foreground">The server publishes its validated learner projection. The private rubric and reveal blocks stay protected.</small></span></div>
-              </CardContent>
-            </Card>
+            {editorRegion === "wide" && <aside className="sticky top-4 [grid-column:3] [grid-row:1]">{inspector}</aside>}
           </div>
-          <nav className="educator-mobile-nav fixed inset-x-2.5 bottom-2.5 z-20 grid grid-cols-3 gap-1 rounded-xl border border-border bg-card p-1 shadow-lg min-[901px]:hidden" aria-label="Lesson builder sections">
-            <button type="button" className="flex min-h-13 flex-col items-center justify-center gap-1 rounded-lg px-1 py-1 text-[11px] font-medium text-muted-foreground aria-pressed:bg-primary/10 aria-pressed:text-primary" aria-pressed={mobilePane === "blocks"} onClick={() => setMobilePane("blocks")}><Layers3 aria-hidden="true" className="size-4"/>Source & blocks</button>
-            <button type="button" className="flex min-h-13 flex-col items-center justify-center gap-1 rounded-lg px-1 py-1 text-[11px] font-medium text-muted-foreground aria-pressed:bg-primary/10 aria-pressed:text-primary" aria-pressed={mobilePane === "canvas"} onClick={() => setMobilePane("canvas")}><FileText aria-hidden="true" className="size-4"/>Lesson canvas</button>
-            <button type="button" className="flex min-h-13 flex-col items-center justify-center gap-1 rounded-lg px-1 py-1 text-[11px] font-medium text-muted-foreground aria-pressed:bg-primary/10 aria-pressed:text-primary" aria-pressed={mobilePane === "preview"} onClick={() => setMobilePane("preview")}><Eye aria-hidden="true" className="size-4"/>Learner preview</button>
+          {editorRegion === "tablet" && <Sheet open={inspectorOpen} onOpenChange={setInspectorOpen}><SheetContent className="overflow-y-auto sm:max-w-[30rem]"><SheetHeader><SheetTitle>Lesson inspector</SheetTitle><SheetDescription>Review the learner projection or edit educator-only scoring criteria.</SheetDescription></SheetHeader><div className="overflow-y-auto px-4 pb-4">{inspector}</div></SheetContent></Sheet>}
+          {editorRegion === "mobile" && <div className={mobilePane === "inspector" ? "max-[767px]:block" : "max-[767px]:hidden"}>{inspector}</div>}
+          <nav className="educator-mobile-nav fixed inset-x-2.5 bottom-2.5 z-20 grid grid-cols-3 gap-1 rounded-xl border border-border bg-card p-1 shadow-lg min-[768px]:hidden" aria-label="Lesson builder sections">
+            <button type="button" className="flex min-h-13 flex-col items-center justify-center gap-1 rounded-lg px-1 py-1 text-[11px] font-medium text-muted-foreground aria-pressed:bg-primary/10 aria-pressed:text-primary" aria-pressed={mobilePane === "blocks"} onClick={() => showMobilePane("blocks")}><Layers3 aria-hidden="true" className="size-4"/>Source & blocks</button>
+            <button type="button" className="flex min-h-13 flex-col items-center justify-center gap-1 rounded-lg px-1 py-1 text-[11px] font-medium text-muted-foreground aria-pressed:bg-primary/10 aria-pressed:text-primary" aria-pressed={mobilePane === "canvas"} onClick={() => showMobilePane("canvas")}><FileText aria-hidden="true" className="size-4"/>Lesson canvas</button>
+            <button type="button" className="flex min-h-13 flex-col items-center justify-center gap-1 rounded-lg px-1 py-1 text-[11px] font-medium text-muted-foreground aria-pressed:bg-primary/10 aria-pressed:text-primary" aria-pressed={mobilePane === "inspector"} onClick={() => showMobilePane("inspector")}><Eye aria-hidden="true" className="size-4"/>Preview & rubric</button>
           </nav>
         </>
       )}
