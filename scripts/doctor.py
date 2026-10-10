@@ -42,9 +42,9 @@ def _configured_pt241_root() -> tuple[Path, str | None]:
     if raw:
         try:
             cases = json.loads(raw)
-            configured = cases.get("openkbp:pt_241") if isinstance(cases, dict) else None
-            if isinstance(configured, str) and configured.strip():
-                return Path(configured).expanduser().resolve(), None
+            if not isinstance(cases, dict) or "openkbp:pt_241" not in cases:
+                return ROOT / "data/openkbp-opt/pt_241", "The explicit case map does not expose openkbp:pt_241; the local app will not load it."
+            return ROOT / "data/openkbp-opt/pt_241", "pt_241 is configured as viewer-only; MEDFORGE_OPENKBP_FULL_CASES_JSON is required for the archived comparison workflow."
         except (ValueError, TypeError):
             return ROOT / "data/openkbp-opt/pt_241", "MEDFORGE_OPENKBP_CASES_JSON is not valid JSON."
     return ROOT / "data/openkbp-opt/pt_241", None
@@ -142,7 +142,8 @@ def hackcure_preflight() -> tuple[list[dict[str, object]], bool]:
                                 report_ready = True
                                 break
                     reviewer_ready = conn.execute(
-                        "SELECT 1 FROM role_grants g JOIN local_credentials c ON c.user_id=g.user_id "
+                        "SELECT 1 FROM users u JOIN role_grants g ON g.user_id=u.id AND g.scope='platform' "
+                        "JOIN local_credentials c ON c.user_id=u.id "
                         "WHERE g.role IN ('clinical_reviewer','admin') LIMIT 1"
                     ).fetchone() is not None
                     academy_ready = conn.execute(
