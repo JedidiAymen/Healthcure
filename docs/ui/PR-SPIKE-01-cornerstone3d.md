@@ -21,6 +21,8 @@
 
 The main worktree's existing VTK.js viewer experiment uses a separate VTK.js version, so adopting Cornerstone alongside it would add a second rendering stack. Vite also emits a browser externalization warning for `url`; no DICOM parsing is used by this source-array trial.
 
+`npm audit --omit=dev` reports **8 runtime dependency advisories** in this trial graph (5 high, 3 moderate), including `adm-zip` through `dcmjs` and `fflate` through VTK.js. The audit's suggested forced fix downgrades Cornerstone core to 0.19.2, so it is not a safe automatic repair. This dependency risk is an additional reason to defer adoption; the advisories are isolated to this spike branch and are not in the reviewed Cobalt branch.
+
 Production build output for the opt-in route:
 
 - Cornerstone core chunk: 2,894.30 KB (788.53 KB gzip).
