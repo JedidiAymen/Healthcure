@@ -98,6 +98,7 @@ import { EducatorEvidencePreview } from "@/components/EducatorEvidencePreview";
 import "./academy.css";
 import { queryKeys } from "@/lib/query-client";
 import { renderDoseSlicePixels } from "@/lib/dose-visualization";
+import { filterModelCatalog, type ModelReadinessFilter } from "@/lib/model-catalog";
 import { canSubmitMission, getMissionProgress } from "@/lib/academy-mission-progress";
 import clinicalTeamImage from "../assets/clinical-team.jpg";
 import radiologyReviewImage from "../assets/radiology-team.jpg";
@@ -1104,10 +1105,12 @@ export function DomainWorkspace({ module }: { module: ModuleId }) {
 export function Models() {
   const { data, loading, error } = useApi(queryKeys.models, api.models, [] as ModelRecord[]);
   const [moduleFilter, setModuleFilter] = useState<"all" | ModelRecord["module"]>("all");
+  const [readinessFilter, setReadinessFilter] = useState<ModelReadinessFilter>("all");
+  const [searchText, setSearchText] = useState("");
   const [selectedModelId, setSelectedModelId] = useState("");
   const visibleModels = useMemo(
-    () => data.filter((model) => moduleFilter === "all" || model.module === moduleFilter),
-    [data, moduleFilter],
+    () => filterModelCatalog(data, { module: moduleFilter, readiness: readinessFilter, search: searchText }),
+    [data, moduleFilter, readinessFilter, searchText],
   );
   const selectedModel = visibleModels.find((model) => model.id === selectedModelId) ?? visibleModels[0];
   const readyCount = data.filter((model) => model.readiness === "ready").length;
@@ -1139,6 +1142,18 @@ export function Models() {
             <div className="rounded-lg border border-border bg-card px-3 py-2.5"><span className="text-[11px] uppercase tracking-wide text-muted-foreground">Ready to execute</span><strong className="mt-1 block text-xl tabular-nums text-primary">{loading ? "—" : readyCount}</strong></div>
             <div className="col-span-2 rounded-lg border border-border bg-card px-3 py-2.5 sm:col-span-1"><span className="text-[11px] uppercase tracking-wide text-muted-foreground">Need a verified gate</span><strong className="mt-1 block text-xl tabular-nums">{loading ? "—" : gatedCount}</strong></div>
           </div>
+          <div className="mb-3 grid gap-2 sm:grid-cols-[minmax(16rem,1fr)_auto]">
+            <InputGroup className="h-9 w-full">
+              <InputGroupAddon><Search aria-hidden="true" /></InputGroupAddon>
+              <InputGroupInput aria-label="Search model methods" placeholder="Search methods, operations, terms…" value={searchText} onChange={(event) => setSearchText(event.target.value)} />
+              {searchText && <InputGroupAddon align="inline-end"><InputGroupButton aria-label="Clear model search" onClick={() => setSearchText("")}><X aria-hidden="true" /></InputGroupButton></InputGroupAddon>}
+            </InputGroup>
+            <ToggleGroup multiple={false} value={[readinessFilter]} onValueChange={(value) => { if (value[0]) setReadinessFilter(value[0] as ModelReadinessFilter); }} aria-label="Filter methods by execution readiness" className="flex h-auto flex-wrap justify-start gap-1 rounded-lg border border-border bg-muted/35 p-1">
+              <ToggleGroupItem value="all" aria-label="All readiness states" className="h-8 px-3">All</ToggleGroupItem>
+              <ToggleGroupItem value="ready" aria-label="Ready methods" className="h-8 px-3">Ready</ToggleGroupItem>
+              <ToggleGroupItem value="gated" aria-label="Gated methods" className="h-8 px-3">Gated</ToggleGroupItem>
+            </ToggleGroup>
+          </div>
           <ToggleGroup multiple={false} value={[moduleFilter]} onValueChange={(value) => { if (value[0]) setModuleFilter(value[0] as typeof moduleFilter); }} aria-label="Filter model methods by research workspace" className="mb-4 flex h-auto flex-wrap justify-start gap-1 rounded-lg border border-border bg-muted/35 p-1">
             <ToggleGroupItem value="all" aria-label="All methods" className="h-8 px-3">All methods</ToggleGroupItem>
             <ToggleGroupItem value="surgivision" aria-label="SurgiVision methods" className="h-8 px-3">SurgiVision</ToggleGroupItem>
@@ -1160,7 +1175,7 @@ export function Models() {
                   </button>
                 ))}
                 {loading && <div className="grid gap-2 p-4"><Skeleton className="h-12 w-full"/><Skeleton className="h-12 w-full"/><Skeleton className="h-12 w-full"/></div>}
-                {!loading && visibleModels.length === 0 && <div className="p-4 text-sm text-muted-foreground">No methods are registered for this workspace.</div>}
+                {!loading && visibleModels.length === 0 && <div className="p-4 text-sm text-muted-foreground">{searchText || readinessFilter !== "all" ? "No registered methods match this search and filter." : "No methods are registered for this workspace."}</div>}
               </nav>
             </Card>
             {selectedModel ? <Card size="sm" className="min-w-0 overflow-hidden">
