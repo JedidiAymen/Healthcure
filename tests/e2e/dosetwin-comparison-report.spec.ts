@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { createHash } from 'node:crypto'
+import { mkdir } from 'node:fs/promises'
 import { readFile } from 'node:fs/promises'
 
 type DoseArtifact = {
@@ -60,6 +61,24 @@ test('authentic pt_241 comparison report reopens with ROI evidence and source ha
   await expect(comparison.getByText('Same-slice dose and Δ-dose')).toBeVisible()
   await comparison.getByText('Prediction provenance and comparison limits', { exact: true }).click()
   await expect(comparison.getByText(artifact!.source_file_sha256, { exact: true })).toBeVisible()
+  const captureDir = '.local-review/UX-34'
+  await mkdir(captureDir, { recursive: true })
+  for (const viewport of [
+    { width: 1440, height: 900, name: 'desktop' },
+    { width: 768, height: 1024, name: 'tablet' },
+    { width: 390, height: 844, name: 'phone' },
+  ]) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height })
+    const dock = page.getByRole('region', { name: 'DoseTwin measurements and evidence' })
+    await dock.evaluate(element => element.scrollIntoView({ block: 'start' }))
+    await page.waitForTimeout(100)
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    await expect.poll(() => page.getByRole('tablist', { name: 'DoseTwin inspection panels' }).evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
+    await page.screenshot({ path: `${captureDir}/dosetwin-${viewport.name}.png` })
+    await comparison.screenshot({ path: `${captureDir}/dosetwin-${viewport.name}-comparison.png` })
+  }
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await comparison.getByRole('button', { name: 'Save comparison report' }).evaluate(element => element.scrollIntoView({ block: 'center' }))
 
   const saveResponsePromise = page.waitForResponse(response =>
     response.request().method() === 'POST' && new URL(response.url()).pathname === '/api/v1/reports/dosetwin-comparison',
