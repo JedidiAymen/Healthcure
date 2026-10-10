@@ -26,6 +26,7 @@ import {
   ShieldCheck,
   Sparkles,
   Stethoscope,
+  Trophy,
   Upload,
   Workflow,
   X,
@@ -53,6 +54,8 @@ import {
   type ViewerEvidenceState,
 } from "../lib/api";
 import { buildSignalComparisonReport } from "../lib/signal-evidence";
+import { activityAchievementKey, unannouncedActivityAchievements } from "../lib/academy-achievement-announcement";
+import { useSession } from "@/lib/session";
 const DoseViewer = lazy(() =>
   import("./DoseViewer").then((module) => ({ default: module.DoseViewer })),
 );
@@ -1877,7 +1880,60 @@ function useReportList() {
   return { data, reloading, error, hasMoreComparisons, loadingMoreComparisons, moreError, loadMoreComparisons };
 }
 
+const inMemoryAwardAnnouncements = new Map<string, Set<string>>();
+
+function AcademyAchievementAnnouncement({
+  studentId,
+  enabled,
+  achievements,
+}: {
+  studentId?: string;
+  enabled: boolean;
+  achievements: StudentProgress["achievements"];
+}) {
+  const [queue, setQueue] = useState<StudentProgress["achievements"]>([]);
+
+  useEffect(() => {
+    if (!studentId || !enabled || !achievements.length) {
+      if (!enabled || !studentId) setQueue([]);
+      return;
+    }
+    const storageKey = `medforge:academy:announced-awards:${studentId}`;
+    const seen = inMemoryAwardAnnouncements.get(studentId) ?? new Set<string>();
+    try {
+      const saved = JSON.parse(localStorage.getItem(storageKey) ?? "[]");
+      if (Array.isArray(saved)) for (const value of saved) if (typeof value === "string") seen.add(value);
+    } catch {
+      // Keep an in-memory ledger if browser storage is unavailable.
+    }
+    const fresh = unannouncedActivityAchievements(achievements, seen);
+    if (!fresh.length) return;
+    for (const achievement of fresh) seen.add(activityAchievementKey(achievement));
+    inMemoryAwardAnnouncements.set(studentId, seen);
+    try {
+      localStorage.setItem(storageKey, JSON.stringify([...seen]));
+    } catch {
+      // The module-scoped ledger still prevents duplicate notices in this app session.
+    }
+    setQueue(current => {
+      const queued = new Set(current.map(activityAchievementKey));
+      return [...current, ...fresh.filter(achievement => !queued.has(activityAchievementKey(achievement)))];
+    });
+  }, [studentId, enabled, achievements]);
+
+  const achievement = queue[0];
+  if (!achievement) return null;
+  return <div role="status" aria-live="polite" aria-atomic="true" className="relative my-4 flex flex-col items-start gap-3 rounded-xl border border-[#e8bf64] bg-[#fff3cf] p-4 pr-12 text-[#302814] shadow-sm sm:flex-row sm:items-center sm:pr-4">
+    <div className="flex w-full min-w-0 items-start gap-3 sm:items-center">
+      <AchievementBadge role="presentation" badgeSize="sm" achievement={{id:achievement.key,name:achievement.title,trigger:"api",achievedAt:achievement.earned_at}} className="!h-14 !w-14 shrink-0 !gap-0 !p-0 border-[#e8bf64] bg-[#ffefbd] [&>span]:sr-only"/>
+      <div className="min-w-0 flex-1"><p className="m-0 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide"><Trophy aria-hidden="true" className="size-4 shrink-0"/>Achievement Unlocked</p><h2 className="mb-0 mt-1 text-base font-semibold">{achievement.title}</h2><p className="mb-0 mt-1 text-sm leading-relaxed">{achievement.description} Private activity recognition; it does not represent clinical skill.</p></div>
+    </div>
+    <Button type="button" variant="ghost" size="icon-sm" className="absolute right-2 top-2 shrink-0 text-[#302814] sm:static" aria-label={`Dismiss ${achievement.title} announcement`} onClick={()=>setQueue(current=>current.slice(1))}><X/></Button>
+  </div>;
+}
+
 export function Academy() {
+  const { user } = useSession();
   const challenges = useApi(queryKeys.studentChallenges, api.studentChallenges, [] as StudentChallenge[]);
   const paths = useApi(queryKeys.studentLearningPaths, api.studentLearningPaths, [] as StudentLearningPath[]);
   const progress = useApi(queryKeys.studentProgress, api.studentProgress, { xp: 0, xp_enabled: false, achievements_enabled: false, graded_attempts: 0, average_score: null, assigned_activities: 0, next_activity: null, rubric_dimensions: [], rubric_history: [], achievements: [] } as StudentProgress);
@@ -1917,6 +1973,7 @@ export function Academy() {
           <span className="academy-feature-mark" aria-hidden="true"><Microscope/></span>
         </div> : <figure className="academy-welcome-illustration"><img src={clinicalTeamImage} alt="Illustrative portrait of a medical research team; not scientific evidence"/><figcaption><strong>Illustration</strong> · Team image is illustrative and is not source research data.</figcaption></figure>}
       </section>
+      <AcademyAchievementAnnouncement studentId={user?.id} enabled={progress.data.achievements_enabled} achievements={progress.data.achievements}/>
       <div className="academy-guidance-line"><ShieldCheck aria-hidden="true"/><p><strong>Evidence first, answers after.</strong> Reference material stays private until your educator reviews your work. A reviewed lesson records feedback; it does not certify clinical skill.</p></div>
       <section id="academy-pathways" className="academy-journey" aria-labelledby="academy-pathways-title">
         <header className="academy-section-heading">
@@ -2009,7 +2066,9 @@ export function Academy() {
   );
 }
 export function Mission() {
+  const { user } = useSession();
   const { missionId } = useParams();
+  const progress = useApi(queryKeys.studentProgress, api.studentProgress, { xp: 0, xp_enabled: false, achievements_enabled: false, graded_attempts: 0, average_score: null, assigned_activities: 0, next_activity: null, rubric_dimensions: [], rubric_history: [], achievements: [] } as StudentProgress);
   const [attempt, setAttempt] = useState<StudentAttempt | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [viewerEvidence, setViewerEvidence] = useState<StudentViewerEvidence | null>(null);
@@ -2081,6 +2140,7 @@ export function Mission() {
         title={attempt.challenge.title}
         description={`${attempt.challenge.case_label} · versioned source lesson · ${attempt.challenge.source_license}`}
       /></div>
+      <AcademyAchievementAnnouncement studentId={user?.id} enabled={progress.data.achievements_enabled} achievements={progress.data.achievements}/>
       <StudentMissionStepper progress={missionProgress}/>
       {error && <Alert variant="destructive"><CircleAlert/><AlertTitle>Action could not be completed</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
       <Card id="mission-explore" className="mb-4"><CardHeader><div className="eyebrow">Explore evidence</div><CardTitle>{attempt.challenge.case_label}</CardTitle><CardDescription>The scientific viewer is limited to the case attached to this assignment. Reference labels {debrief?.reference_evidence ? "are now available after educator review." : "remain hidden until educator review."}</CardDescription></CardHeader><CardContent><Suspense fallback={<Skeleton className="h-72"/>}>{attempt.challenge.module === "dosetwin" ? <DoseViewer key={attempt.challenge.case_id} caseId={attempt.challenge.case_id} guided onEvidenceChange={setViewerEvidence} viewerEvidence={viewerEvidence?.kind === "dosetwin" ? viewerEvidence : null} locked={locked}/> : attempt.challenge.module === "surgivision" ? <SurgiViewer key={attempt.challenge.case_id} frameId={attempt.challenge.case_id} availableFrameIds={[attempt.challenge.case_id]} guided releasedReference={debrief?.reference_evidence} viewerEvidence={viewerEvidence} onEvidenceChange={setViewerEvidence} locked={locked}/> : <FistulaViewer key={sourceId} recordId={sourceId} availableRecordIds={[sourceId]} guided viewerEvidence={viewerEvidence?.kind === "fistulaguard" ? viewerEvidence : null} onEvidenceChange={setViewerEvidence} locked={locked}/>}</Suspense><div id="mission-observe" className="mt-4 rounded-lg border bg-muted/20 px-3 py-2 text-sm"><b>{viewerEvidence ? "Evidence selected" : "Select evidence to submit"}</b><span className="ml-2 text-muted-foreground">{evidenceSummary}</span></div></CardContent></Card>
@@ -2095,6 +2155,7 @@ export function Mission() {
   );
 }
 export function Progress() {
+  const { user } = useSession();
   const queryClient = useQueryClient();
   const progress = useApi(queryKeys.studentProgress, api.studentProgress, { xp: 0, xp_enabled: false, achievements_enabled: false, graded_attempts: 0, average_score: null, assigned_activities: 0, next_activity: null, rubric_dimensions: [], rubric_history: [], achievements: [] } as StudentProgress);
   const [xpEnabled, setXpEnabled] = useState<boolean | null>(null);
@@ -2170,6 +2231,7 @@ export function Progress() {
         title="Your learning record"
         description="This private learning record is based on educator-reviewed work. Rubric results describe this coursework, not clinical competence."
       />
+      <AcademyAchievementAnnouncement studentId={user?.id} enabled={progress.data.achievements_enabled} achievements={progress.data.achievements}/>
       {progress.error ? <Alert variant="destructive"><CircleAlert/><AlertTitle>Progress could not load</AlertTitle><AlertDescription>{progress.error}</AlertDescription></Alert> : <>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Card><CardHeader><CardDescription>Optional experience points</CardDescription></CardHeader><CardContent>{progress.loading || xpEnabled === null ? <Skeleton className="h-12"/> : xpEnabled ? <PointsBadge size="sm" icon={Sparkles} name="Experience points" total={progress.data.xp} className="border-0 bg-transparent p-0 shadow-none"/> : <div className="text-lg font-medium">Off</div>}<p className="mt-3 text-sm text-muted-foreground">Cosmetic points come only from educator-reviewed submissions.</p></CardContent></Card>
