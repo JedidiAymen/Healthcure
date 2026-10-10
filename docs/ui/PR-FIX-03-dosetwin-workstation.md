@@ -1,6 +1,6 @@
 # FIX-03 — DoseTwin scientific workstation correction
 
-**Status: D1 source-backed 2D workstation implemented for the locally installed OpenKBP `pt_201` case.** This does not claim validated 3D, a second-dose comparison, model inference, or clinical use.
+**Status: D1 source-backed 2D workstation implemented; D2 source-derived 3D ROI surface integrated and verified; D3 compatible-artifact import/compare flow implemented but no genuine second array is installed.** See [`PR-FIX-04`](PR-FIX-04-dosetwin-3d-surface.md) and [`PR-FIX-05`](PR-FIX-05-dosetwin-dose-comparison.md) for later milestones. This does not claim model inference or clinical use.
 
 ## What changed
 
@@ -19,17 +19,16 @@
 - Existing components only: React 19, shadcn Base UI, Tailwind 4, Recharts 3.10.1, TanStack Query 5.104.1 and Lucide. No new package was installed. vtk.js/Cornerstone3D are not part of this D1 correction.
 - Actual running-app screenshots at 1440×900, 768×1024 and 390×844 are in ignored `.local-review/FIX-03/`. The capture report records viewport dimensions, HTTP 200 responses, no horizontal overflow, and no browser page errors.
 
-## Still blocked / next steps
+## Remaining gates
 
-- **D2 real 3D:** not implemented. No mesh or anatomy is fabricated; a vtk.js/Cornerstone3D spike requires explicit processed-index mapping, mask-to-surface validation, parity, memory and fallback checks before adoption.
-- **D3 dose comparison:** blocked. No authentic second compatible `pt_201` dose is in the repository, and a local dose import/validation UI is not implemented. The workspace names this gap instead of displaying pretend Model A/Model B results.
-- **D4 inference/optimization:** blocked by missing validated checkpoints, rights and worker execution.
+- **D3 real comparison evidence:** the import, validation, comparison, and report workflow is integrated, but no authentic compatible second `pt_201` prediction is installed. The UI names this gap instead of displaying pretend Model A/Model B results.
+- **D4 inference/optimization:** blocked by missing validated checkpoints, rights, solver inputs and worker execution.
 - D1 follow-up validation still includes student-view permission parity. The learner viewer continues using the assigned-case lock path and existing API authorization tests; those protections were not reworked in this change.
 
 ## Verification
 
 - `npm run lint`, `npm run typecheck`, `npm run test` — passed (25 unit tests across 5 files).
-- `npm run test:e2e -- --workers=1` — passed (6 Playwright tests), including the new DoseTwin source-operation gates, large viewport, fullscreen, multiple ROI overlays, zoom/pan selection mapping, and existing Educator/global-selector routes.
+- At the original D1 milestone, `npm run test:e2e -- --workers=1` passed 6 Playwright tests, including source-operation gates, large viewport, fullscreen, multiple ROI overlays, zoom/pan selection mapping, and Educator/global-selector routes. Later D2/D3 and Teaching Desk E2E checks are recorded in the linked milestone notes and current `docs/STATUS.md`.
 - `npm run build` — passed.
 - `python3 -m pytest -q apps/api/tests` — passed (32 tests; installed data is exercised by the local screenshot smoke, test fixtures by the suite).
 - `npm run contracts:check` — passed after generating the OpenAPI schema and TypeScript types.

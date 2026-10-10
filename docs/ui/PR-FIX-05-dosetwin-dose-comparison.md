@@ -1,6 +1,6 @@
 # FIX-05 — Same-grid DoseTwin comparison
 
-**Status: PARTIAL.** The local import, validation, comparison, and report workflow is implemented on `spike/dosetwin-comparison`. A real second `pt_201` prediction is not installed in the available resources, so the source-backed comparison itself remains gated. No archive was downloaded and no prediction was generated.
+**Status: PARTIAL; integrated on `review/cobalt-dosetwin-d2-d3` (commit `ce3e2c4`).** The local import, validation, comparison, and report workflow is implemented. A real second `pt_201` prediction is not installed in the available resources, so source-backed comparison evidence remains gated. No archive was downloaded and no prediction was generated.
 
 ## Implemented
 
