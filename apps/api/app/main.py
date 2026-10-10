@@ -611,7 +611,6 @@ def create_app() -> FastAPI:
     @app.get('/api/v1/cases/{case_id}/viewer-manifest',response_model=ViewerManifest)
     def manifest(case_id:str):
         if case_id==_synthetic_dose.CASE_ID:
-            from .schemas import VoxelVolumeArtifact
             return ViewerManifest(
                 case_id=_synthetic_dose.CASE_ID,
                 modality='radiotherapy-volume',
