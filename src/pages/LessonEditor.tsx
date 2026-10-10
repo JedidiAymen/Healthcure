@@ -48,6 +48,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { ResearchCasePicker } from "@/components/ResearchCasePicker";
+import { EducatorSourcePreview } from "@/components/EducatorSourcePreview";
 
 type LessonBlock = EducatorLessonBlock;
 type LessonDraft = {
@@ -546,6 +547,7 @@ export function LessonEditorPage() {
                 <div className="mb-0 grid gap-2">
                   <ResearchCasePicker id="case-select" label="Research source" cases={cases} value={draft.caseId} onValueChange={(caseId) => update({ ...draft, caseId })} loading={casesLoading} error={casesError} />
                   {selectedCase && <div className="lesson-case-summary grid wrap-anywhere gap-1 border-l-2 border-primary bg-muted/50 p-2.5 text-xs leading-relaxed text-muted-foreground [&_b]:text-foreground"><b>{selectedCase.label}</b><span>{selectedCase.module} · {selectedCase.dataset_id} · {selectedCase.source_case_id}</span><span>Evidence origin: {selectedCase.reference_kind}.</span><span>Source terms: {selectedEvidence?.license_label ?? (evidenceError ? evidenceError : "Loading source terms…")}</span><span>{selectedEvidence ? `Draft use: ${selectedEvidence.draft_use}. Publication review: ${selectedEvidence.publication_review}. ${selectedEvidence.publication_note}` : "Publication permissions are not established until source review."}</span><Link className="font-medium text-primary hover:underline" to={`/studio/${selectedCase.module}/cases/${encodeURIComponent(selectedCase.id)}`}>Open this source in its scientific viewer</Link></div>}
+                  <EducatorSourcePreview key={selectedCase?.id ?? "no-source"} source={selectedCase} evidence={selectedEvidence} evidenceError={evidenceError} />
                 </div>
                 <div className="my-3 grid gap-1 border-t border-border pt-3"><span className="text-sm font-semibold">Lesson blocks</span><small className="text-xs leading-relaxed text-muted-foreground">Arrange by drag, keyboard, or move controls.</small></div>
                 <div className="grid gap-2 [&_button]:min-h-10">
