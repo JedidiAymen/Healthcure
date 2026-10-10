@@ -166,6 +166,12 @@ def _review_from_row(conn, row) -> ResearchReview:
     return review.model_copy(update={'audit_row_hash': audit_row[0] if audit_row else None})
 
 
+def _require_review_owner(review: ResearchReview, user: dict) -> ResearchReview:
+    if user['role'] != 'admin' and review.reviewer_id != user['id']:
+        raise HTTPException(404, detail={'code': 'REVIEW_NOT_FOUND', 'message': 'No research review matches this ID'})
+    return review
+
+
 def register_research_review_routes(app: FastAPI, db: Callable) -> None:
     reviewer = require_any_role('clinical_reviewer')
 
@@ -200,8 +206,9 @@ def register_research_review_routes(app: FastAPI, db: Callable) -> None:
             method_code_sha256=_sha256_file(Path(__file__).with_name('dose_artifacts.py')))
         with db() as conn:
             if request.supersedes_id:
-                previous = conn.execute('SELECT case_id,artifact_id FROM research_reviews WHERE id=?', (request.supersedes_id,)).fetchone()
-                if previous is None or previous != (case.id, request.artifact_id):
+                previous = conn.execute('SELECT case_id,artifact_id,reviewer_id FROM research_reviews WHERE id=?', (request.supersedes_id,)).fetchone()
+                if (previous is None or previous[:2] != (case.id, request.artifact_id)
+                        or (user['role'] != 'admin' and previous[2] != user['id'])):
                     raise HTTPException(404, detail={'code': 'REVIEW_NOT_FOUND', 'message': 'The superseded review does not belong to this case and artifact'})
             name = conn.execute('SELECT display_name FROM users WHERE id=?', (user['id'],)).fetchone()
             review = ResearchReview(
@@ -221,6 +228,9 @@ def register_research_review_routes(app: FastAPI, db: Callable) -> None:
     @app.get('/api/v1/research-reviews', response_model=list[ResearchReview])
     def research_review_list(case_id: str | None = None, artifact_id: str | None = None, user: dict = Depends(reviewer)):
         clauses, params = [], []
+        if user['role'] != 'admin':
+            clauses.append('reviewer_id=?')
+            params.append(user['id'])
         for column, value in (('case_id', case_id), ('artifact_id', artifact_id)):
             if value:
                 clauses.append(f'{column}=?')
@@ -236,7 +246,7 @@ def register_research_review_routes(app: FastAPI, db: Callable) -> None:
             row = conn.execute('SELECT review_json FROM research_reviews WHERE id=?', (review_id,)).fetchone()
             if row is None:
                 raise HTTPException(404, detail={'code': 'REVIEW_NOT_FOUND', 'message': 'No research review matches this ID'})
-            return _review_from_row(conn, row)
+            return _require_review_owner(_review_from_row(conn, row), user)
 
     @app.get('/api/v1/research-reviews/{review_id}/export')
     def research_review_export(review_id: str, user: dict = Depends(reviewer)):
@@ -260,4 +270,4 @@ def register_research_review_fhir_route(app: FastAPI, db: Callable) -> None:
             row = conn.execute('SELECT review_json FROM research_reviews WHERE id=?', (review_id,)).fetchone()
             if row is None:
                 raise HTTPException(404, detail={'code': 'REVIEW_NOT_FOUND', 'message': 'No research review matches this ID'})
-            return review_bundle(_review_from_row(conn, row))
+            return review_bundle(_require_review_owner(_review_from_row(conn, row), user))
