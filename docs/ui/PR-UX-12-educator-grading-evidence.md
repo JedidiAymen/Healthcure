@@ -1,6 +1,6 @@
 # UX-12 — Show the submitted evidence beside educator grading
 
-**Status: Implemented in `1b5141f`; timestamp jitter fix in `d1a5417`; focused code checks and production build passed. Authenticated visual recapture is in progress.**
+**Status: Implemented in `1b5141f`; bounded FiSaV timestamp fix `d1a5417`; embedded-control responsive fix `476a387`. Focused checks, production build, and authenticated source-backed desktop/tablet/phone review passed.**
 
 ## Change
 
@@ -20,7 +20,8 @@ The server adds only the published manifest's learner-visible `module`, `case_id
 - `apps/api/tests/test_contracts.py` — assert exact assignment identity through review, grade and idempotent replay.
 - `contracts/openapi-implemented.json`, `packages/contracts/generated-api.ts`, `src/lib/api.ts` — update the typed contract.
 - `src/components/EducatorEvidencePreview.tsx`, `src/lib/educator-evidence-preview.ts` and `.test.ts` — safe dispatch and preview gate.
-- `src/pages/Pages.tsx`, `src/pages/DoseViewer.tsx` — responsive review layout and locked submission state.
+- `src/pages/Pages.tsx`, `src/pages/DoseViewer.tsx`, `src/pages/FistulaViewer.tsx` — responsive review layout, locked submission state and width-aware signal control layout.
+- `tests/e2e/workspace-shell.spec.ts` — regression for source controls wrapping within the desktop review column and phone-width overflow.
 
 No new package was installed. It reuses project viewers and existing source APIs.
 
@@ -31,8 +32,9 @@ No new package was installed. It reuses project viewers and existing source APIs
 - `npm run contracts:check` — passed.
 - `npm run lint` and `npm run typecheck` — passed.
 - `npm run build` — passed after the viewer implementation.
+- Focused Playwright: `embedded FiSaV evidence controls wrap inside the educator review column` — passed. It verifies the desktop evidence/rubric layout, all signal channel controls fit the review column, and the phone page/control strip do not overflow.
 - Regression for the authentic source's 5.0-second request/4.9969-second response and 50,000 source samples — passed; larger duration/count drift and changed start time are rejected.
-- Authenticated visual review at desktop, tablet and phone widths initially confirmed the privacy/layout but exposed the overly strict duration comparison. The check has been fixed; a second isolated real-FiSaV capture is in progress. No regular user DB or credentials are used.
+- Authenticated review used an isolated temporary educator database and a real FiSaV `pat001` attempt. At 1440×900, 768×1024 and 390×844 the measured PZT1 waveform for 2.5–7.5 seconds (50,000 source samples), checksum, CC BY 4.0 label and unspecified-unit caveat were visible; there were no page errors, failed requests, horizontal page overflow, or hidden Reveal text. The review caught the timestamp mismatch, which `d1a5417` corrected. The final width-aware controls at `476a387` are additionally covered by the focused Playwright regression. Screenshots: [desktop](../../.local-review/UX12-grading-evidence/grading-desktop.png), [tablet](../../.local-review/UX12-grading-evidence/grading-tablet.png), [phone](../../.local-review/UX12-grading-evidence/grading-phone.png), [measurements](../../.local-review/UX12-grading-evidence/visual-review.json). The disposable database, credentials and capture scripts were removed.
 
 ## Limits
 
