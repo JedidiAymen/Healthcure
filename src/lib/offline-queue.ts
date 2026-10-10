@@ -72,8 +72,15 @@ export function isNetworkError(error: unknown) {
     || (error instanceof Error && /API returned 50[234]/.test(error.message))
 }
 
-// Replays queued submits in order. A network failure stops the replay and keeps the rest;
-// a server answer (success or a definite refusal) removes the item, since retrying cannot help.
+function isAuthenticationError(error: unknown) {
+  // A tab reload clears the in-memory session token. Keep queued work until
+  // the student signs in again; a 401/403 is not a permanent refusal of the
+  // submission itself.
+  return error instanceof Error && /API returned 40[13]/.test(error.message)
+}
+
+// Replays queued submits in order. Network and authentication failures stop
+// replay and keep the queue; a definite submission refusal removes that item.
 export async function drainQueue(store: KeyValueStore, send: (item: QueuedSubmit) => Promise<void>) {
   const queue = await queuedSubmits(store)
   const sent: QueuedSubmit[] = [], failed: { item: QueuedSubmit; error: string }[] = []
@@ -81,7 +88,7 @@ export async function drainQueue(store: KeyValueStore, send: (item: QueuedSubmit
   for (; index < queue.length; index++) {
     try { await send(queue[index]); sent.push(queue[index]); await clearDraft(store, queue[index].attemptId) }
     catch (error) {
-      if (isNetworkError(error)) break
+      if (isNetworkError(error) || isAuthenticationError(error)) break
       failed.push({ item: queue[index], error: error instanceof Error ? error.message : String(error) })
     }
   }

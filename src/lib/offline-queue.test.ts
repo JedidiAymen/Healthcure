@@ -40,6 +40,18 @@ describe("queued submits", () => {
     expect(result.failed[0].error).toMatch(/already been submitted/);
     expect(await queuedSubmits(store)).toEqual([]);
   });
+
+  it("keeps queued submissions until an authenticated student session can replay them", async () => {
+    const store = memoryStore();
+    await enqueueSubmit(store, { attemptId: "a1", revision: 1, idempotencyKey: "original-key" });
+    await saveDraft(store, "a1", { q: "saved answer" });
+
+    const result = await drainQueue(store, vi.fn().mockRejectedValue(new Error("API returned 401")));
+
+    expect(result).toMatchObject({ remaining: 1, sent: [], failed: [] });
+    expect(await queuedSubmits(store)).toMatchObject([{ attemptId: "a1", idempotencyKey: "original-key" }]);
+    expect((await loadDraft(store, "a1"))?.answers).toEqual({ q: "saved answer" });
+  });
 });
 
 describe("isNetworkError", () => {
