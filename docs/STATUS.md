@@ -2,6 +2,12 @@
 
 Updated: 2026-10-10
 
+## Latest local integration (2026-10-10)
+
+- Fetched the collaborator's latest `upgrade/hackcure-compliance` tip (`531c1b6`) and merged its history into the current integration branch (`e2e9471`). Its compliance implementation is already represented in shared `main` via `82df99c`; the collaborator tip is an older tree and would remove later Academy, source-video, and registry work if copied over. The merge therefore preserves the newer shared tree and all source-backed features.
+- Replaced the generic professional-entry imagery with a live, clearly separated preview of installed Endoscapes, OpenKBP, and FiSaV source evidence. The preview uses the existing API records and scientific viewers; it labels publisher references and archived measurements explicitly and does not join the unrelated datasets. Change: `0cdf66c`.
+- Verified after integration: frontend lint and typecheck; 67 frontend unit tests; production build; OpenAPI contract check; claims scan; 143 API tests passed and 2 skipped. The build succeeds with the existing large DoseTwin viewer chunk and React compiler directive warnings. No browser E2E or Docker checks were run in this integration pass.
+
 ## Latest integration update
 
 - **Fresh local education demos now have a clear credential path — UX-41:** the local run guide points to the existing demo seeder, which creates separate educator/student accounts, a cohort and source-backed lesson drafts in an isolated local database. Random passwords are displayed only once at creation; the docs explain how to sign in and how a friend can create separate local credentials. No passwords, user records or screenshots are committed. The focused seeder suite passes (3 tests). Details: [`PR-UX-41`](ui/PR-UX-41-local-demo-profile-guide.md).
