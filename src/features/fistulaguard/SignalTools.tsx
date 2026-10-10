@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts"
-import { AlertTriangle, HeartPulse, Layers, SlidersHorizontal, StickyNote, Trash2 } from "lucide-react"
-import { api, type BeatAnalysis, type SignalAnnotation, type SignalFilterQuery, type SignalFilterResult, type SignalWindow } from "@/lib/api"
+import { AlertTriangle, CheckCircle2, HeartPulse, Layers, SlidersHorizontal, StickyNote, Trash2, XCircle } from "lucide-react"
+import { api, type SignalQuality, type BeatAnalysis, type SignalAnnotation, type SignalFilterQuery, type SignalFilterResult, type SignalWindow } from "@/lib/api"
 import { overlayWindows, validateFilterInput } from "@/lib/signal-tools"
 import { useSession } from "@/lib/session"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -163,6 +163,31 @@ function OverlayTab({ recordId, channel, start, duration, recordDuration }: Prop
   )
 }
 
+function QualityTab({ recordId, channel, start, duration }: Props) {
+  const [result, setResult] = useState<SignalQuality | null>(null)
+  const [error, setError] = useState("")
+  const window = Math.max(2, Math.min(duration, 30))
+  useEffect(() => {
+    let live = true
+    setResult(null); setError("")
+    api.signalQuality(recordId, channel, start, window).then(value => { if (live) setResult(value) })
+      .catch(e => { if (live) setError(e instanceof Error ? e.message : "Quality checks failed to run") })
+    return () => { live = false }
+  }, [recordId, channel, start, window])
+  if (error) return <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>
+  if (!result) return <p className="text-sm text-muted-foreground">Running signal-quality checks...</p>
+  return (
+    <div className="grid gap-3">
+      <Badge variant={result.usable ? "secondary" : "outline"}>{result.usable ? "Usable window" : "Insufficient quality, not scored"}</Badge>
+      <ul className="grid gap-1.5">{result.checks.map(check => <li key={check.name} className="flex flex-wrap items-center gap-2 text-sm">
+        {check.passed ? <CheckCircle2 aria-label="passed" className="size-4 text-[var(--med-success)]" /> : <XCircle aria-label="failed" className="size-4 text-destructive" />}
+        <b>{check.name}</b><span className="font-mono text-xs">{check.measured.toPrecision(4)}</span><span className="text-xs text-muted-foreground">({check.threshold})</span>
+      </li>)}</ul>
+      <ul className="list-disc pl-5 text-xs text-muted-foreground">{result.limitations.map(note => <li key={note}>{note}</li>)}</ul>
+    </div>
+  )
+}
+
 function AnnotationsTab({ recordId, channel, start, duration }: Props) {
   const { user } = useSession()
   const canAnnotate = user?.role === "educator" || user?.role === "admin"
@@ -210,10 +235,11 @@ export function SignalTools(props: Props) {
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="filter" className="min-w-0 flex-col gap-3">
-          <TabsList aria-label="Signal tools" className="flex-wrap"><TabsTrigger value="filter"><SlidersHorizontal data-icon="inline-start" />Filter</TabsTrigger><TabsTrigger value="beats"><HeartPulse data-icon="inline-start" />Beats</TabsTrigger><TabsTrigger value="overlay"><Layers data-icon="inline-start" />Overlay</TabsTrigger><TabsTrigger value="annotations"><StickyNote data-icon="inline-start" />Annotations</TabsTrigger></TabsList>
+          <TabsList aria-label="Signal tools" className="flex-wrap"><TabsTrigger value="filter"><SlidersHorizontal data-icon="inline-start" />Filter</TabsTrigger><TabsTrigger value="beats"><HeartPulse data-icon="inline-start" />Beats</TabsTrigger><TabsTrigger value="overlay"><Layers data-icon="inline-start" />Overlay</TabsTrigger><TabsTrigger value="quality"><CheckCircle2 data-icon="inline-start" />Quality</TabsTrigger><TabsTrigger value="annotations"><StickyNote data-icon="inline-start" />Annotations</TabsTrigger></TabsList>
           <TabsContent value="filter"><FilterTab {...props} /></TabsContent>
           <TabsContent value="beats"><BeatsTab {...props} /></TabsContent>
           <TabsContent value="overlay"><OverlayTab {...props} /></TabsContent>
+          <TabsContent value="quality"><QualityTab {...props} /></TabsContent>
           <TabsContent value="annotations"><AnnotationsTab {...props} /></TabsContent>
         </Tabs>
       </CardContent>

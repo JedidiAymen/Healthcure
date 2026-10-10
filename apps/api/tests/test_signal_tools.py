@@ -159,3 +159,12 @@ def test_educator_annotations_keep_source_hash_and_window(client):
     assert client.delete(f"/api/v1/fistulaguard/annotations/{annotation['id']}", headers=other).status_code == 404
     assert client.delete(f"/api/v1/fistulaguard/annotations/{annotation['id']}", headers=educator).status_code == 204
     assert client.get(f'{BASE}/annotations', headers=educator).json() == []
+
+
+def test_quality_checks_pass_on_a_clean_window_and_abstain_on_a_stuck_signal(client):
+    body = client.get(f'{BASE}/quality', params={'channel': 'raw PZT1', 'start_sec': 0, 'duration_sec': 6}).json()
+    assert body['usable'] is True and body['status'] == 'usable' and body['provenance_kind'] == 'RULE_BASED_METHOD'
+    assert {check['name'] for check in body['checks']} >= {'Finite samples', 'No clipping', 'Heartbeats detected on ECG'}
+    flat = client.get(f'{BASE}/quality', params={'channel': 'raw PZT2', 'start_sec': 0, 'duration_sec': 6}).json()
+    assert flat['usable'] is False and flat['status'] == 'insufficient quality, not scored'
+    assert next(check for check in flat['checks'] if check['name'] == 'Not flat or stuck')['passed'] is False
