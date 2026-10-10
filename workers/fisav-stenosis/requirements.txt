@@ -1,0 +1,4 @@
+# Isolated FiSaV stenosis evaluation worker. Never imported by the API process.
+numpy==2.3.5
+scipy==1.16.3
+scikit-learn==1.7.2
