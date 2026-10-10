@@ -2,6 +2,7 @@
 
 **Snapshot date:** 2026-10-10
 **Review branch:** `review/cobalt-dosetwin-d2-d3`
+**Latest pushed commit:** `d8727b3` (`feat(educator): add assignment and submission triage`)
 **Purpose:** friend/reviewer handoff; development continues after review.
 
 ## Current state
@@ -11,7 +12,8 @@ MEDFORGE is a local-first scientific research and clinician education applicatio
 - **DoseTwin:** `pt_201` has a large source-backed primary slice, two simultaneous linked orthogonal views, dose/structure layers, multi-ROI DVHs and source provenance. The Y-view real-pixel selection updates the common X/Y/Z voxel. An authentic `pt_241`/OpenKBP-Opt case and prediction pair are separately configured where installed. Neither case creates a fake prediction. The official 23 `pt_201` metric comparisons pass; maximum absolute difference is `0.0000076471 Gy`.
 - **SurgiVision:** the page distinguishes the Appendix300 native appendectomy clip (no aligned results), CholecT50 sparse sampled cholecystectomy images with their matching source labels, and Endoscapes annotated stills. Full-rate cholecystectomy footage with synchronized labels is not installed. No annotations are fabricated or placed on another procedure's video.
 - **FistulaGuard:** FiSaV waveform, PSD, spectrogram and window-comparison views use the installed checksum-verified recordings and retain source-time and units limitations.
-- **Academy and Educator:** local source-backed investigations, learner-safe publications, assignments, manual review, debrief, progress, private opt-in XP/achievements and educator editing are implemented. Complete instructor-approved competency mapping and final authored curriculum are still open.
+- **Model Lab and Experiments:** Model Lab now validates a selected registered operation against a compatible installed case and displays the actual API-returned blockers. CVS-AdaptNet inference remains disabled until worker/checkpoint provenance and use terms are resolved. The enabled OpenKBP reference summary remains a real benchmark calculation, not model prediction.
+- **Academy and Educator:** local source-backed investigations, learner-safe publications, assignments, manual review, debrief, progress, private opt-in XP/achievements and educator editing are implemented. Educator assignments can be searched and filtered by cohort/due date; submissions can be searched by learner and filtered by review status. Complete instructor-approved competency mapping and final authored curriculum are still open.
 
 ## Verification in this snapshot
 
@@ -20,6 +22,7 @@ MEDFORGE is a local-first scientific research and clinician education applicatio
 - FastAPI suite: **42 passed** (`python3 -m pytest -q apps/api/tests`).
 - DoseTwin focused Playwright linked-plane review passed on UI interaction fixtures; a separate running-app review used the installed `pt_201` arrays, clicked a real secondary-plane voxel, checked linked plane values, and captured desktop (1440×900), laptop (1280×800), tablet (768×1024), and phone (390×844) without horizontal overflow or page errors. Screenshots are ignored local artifacts under `.local-review/DOSETWIN-LINKED-MPR-REAL/`.
 - SurgiVision source-backed E2E review passed at desktop/tablet/phone sizes; screenshots are under `.local-review/SURGIVISION-MEDIA-MODES/`.
+- Current focused review slices passed for Model Lab case-aware blockers and Educator assignment/review filters. The educator routes were captured at 1440×900, 1280×800, 768×1024 and 390×844 with no document overflow; `npm run test -- --run` passed all 44 frontend tests, and `npm run build` passed (with the existing large DoseTwin chunk and React Compiler directive warnings). Local captures are ignored under `.local-review/UX-05-model-validation/` and `.local-review/UX-24-educator-triage/`.
 - Exact per-milestone commands, component sources/licenses, images, and caveats are recorded in [`PR-FIX-08`](ui/PR-FIX-08-dosetwin-linked-orthogonal-planes.md) and [`PR-UX-22`](ui/PR-UX-22-surgivision-media-modes.md). Full history is in [`STATUS.md`](STATUS.md) and the current gates are in [`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md).
 
 ## Open work and release limits
@@ -32,7 +35,7 @@ MEDFORGE is a local-first scientific research and clinician education applicatio
 
 ## Open the app and provision profiles
 
-From the review checkout, follow [`LOCAL_ACCESS_AND_PROFILES.md`](LOCAL_ACCESS_AND_PROFILES.md) for dependency setup, launch command, workspace URLs, and student/educator account creation. Start with `./scripts/start_local.sh`, then open <http://127.0.0.1:5173>. The API remains loopback-only.
+From the review checkout, follow [`LOCAL_ACCESS_AND_PROFILES.md`](LOCAL_ACCESS_AND_PROFILES.md) for dependency setup, launch command, workspace URLs, and student/educator account creation. Start with `./scripts/start_local.sh`, then open <http://127.0.0.1:5173>. For this active checkout, the review server is currently available at <http://127.0.0.1:4174>; it will stop when its local review process is stopped. The API remains loopback-only.
 
 Professional Studio does not require an account. Academy requires an operator-provisioned student account; Educator Studio requires a separate operator-provisioned educator account. **There are no default credentials to share:** each reviewer chooses each password when creating their local account. User databases, passwords, sessions, research datasets, weights and generated reports are excluded from Git and must be provisioned/acquired separately on each machine. Do not put secrets or local user databases in commits.
 
