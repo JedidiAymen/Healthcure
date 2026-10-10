@@ -18,7 +18,7 @@ type ComparisonReport = {
   }
 }
 
-test('authentic pt_241 comparison report reopens with ROI evidence and source hashes', async ({ page }) => {
+test('authentic pt_241 comparison report reopens with ROI evidence and source hashes @source', async ({ page }) => {
   test.setTimeout(120_000)
   const errors: string[] = []
   page.on('pageerror', error => errors.push(error.message))

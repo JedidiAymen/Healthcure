@@ -404,13 +404,14 @@ test('SurgiVision frame picker stays readable beside the professional sidebar at
   await page.route('**/api/v1/runs', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }))
 
   await page.goto('/studio/surgivision/cases/endoscapes%3Atest%3A162_6575')
-  await expect(page.getByText('Surgical video review', { exact: true })).toBeVisible()
-  await expect(page.getByText(/separate procedure dataset.*no Endoscapes annotations or masks are aligned/i)).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'SurgiVision surgical media review' })).toBeVisible()
+  await expect(page.getByText(/different procedure and recording from both annotated cholecystectomy frame sets/i)).toBeVisible()
   const nativePlayer = page.locator('video[aria-label="Appendix300 laparoscopic appendectomy source video"]')
   await expect(nativePlayer).toHaveAttribute('src', /appendix300%3Afixture-clip/)
   await expect.poll(() => nativePlayer.evaluate((video: HTMLVideoElement) => video.readyState)).toBeGreaterThanOrEqual(1)
   await page.getByRole('button', { name: 'Play' }).click()
   await expect.poll(() => nativePlayer.evaluate((video: HTMLVideoElement) => video.paused)).toBe(false)
+  await page.getByRole('tab', { name: 'Annotated stills' }).click()
   await expect(page.getByText('Frame review', { exact: false })).toBeVisible()
   const input = page.getByRole('combobox', { name: 'Jump to surgical frame by split, video, or frame number' })
   await input.fill('test 162')
@@ -435,7 +436,7 @@ test('SurgiVision frame picker stays readable beside the professional sidebar at
   await input.press('ArrowDown')
   await input.press('Enter')
   await expect(page).toHaveURL(/endoscapes%3Atest%3A162_7325/)
-  await expect(page.getByRole('heading', { name: /frame 7325/ })).toBeVisible()
+  await expect(page.getByLabel('Breadcrumb')).toContainText('video-162:frame-7325')
 })
 
 test('model lab filters source-linked methods and explains an execution gate', async ({ page }) => {

@@ -33,7 +33,7 @@ type SavedComparison = {
 const closeTo = (actual: number, expected: number, tolerance: number) =>
   expect(Math.abs(actual - expected)).toBeLessThanOrEqual(tolerance)
 
-test('authentic FiSaV switches records, bounds windows, and reopens saved comparison identity', async ({ page }) => {
+test('authentic FiSaV switches records, bounds windows, and reopens saved comparison identity @source', async ({ page }) => {
   test.setTimeout(120_000)
   const errors: string[] = []
   page.on('pageerror', error => errors.push(error.message))
