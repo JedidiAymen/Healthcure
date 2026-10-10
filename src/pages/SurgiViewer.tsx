@@ -64,6 +64,7 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
   const [sampledFrames,setSampledFrames]=useState<SurgicalSequenceFrame[]>([])
   const [sampledFramesError,setSampledFramesError]=useState('')
   const [publicClip,setPublicClip]=useState<SurgicalClipRecord|null>(null)
+  const [publicClipLoading,setPublicClipLoading]=useState(true)
   const [showPublicClip,setShowPublicClip]=useState(false)
   const sampledMediaId=sourceMedia?.media_id
   const sampledMediaCount=sourceMedia?.sampled_frame_count
@@ -149,7 +150,8 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
   useEffect(()=>{
     if(guided){setPublicClip(null);setShowPublicClip(false);return}
     let live=true
-    api.surgicalClips().then(items=>{if(live){const clip=items[0]??null;setPublicClip(clip);setShowPublicClip(Boolean(clip))}}).catch(()=>{if(live)setPublicClip(null)})
+    setPublicClipLoading(true)
+    api.surgicalClips().then(items=>{if(live){const clip=items[0]??null;setPublicClip(clip);setShowPublicClip(Boolean(clip))}}).catch(()=>{if(live)setPublicClip(null)}).finally(()=>{if(live)setPublicClipLoading(false)})
     return()=>{live=false}
   },[guided])
   const referenceIsReleased=Boolean(frame && releasedReference?.case_id===frame.id)
@@ -233,15 +235,23 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
   return <section className="mt-4 grid min-w-0 gap-3" aria-label="SurgiVision frame review">
     {openedReportError&&<div role="alert" className="rounded-md border border-destructive/40 p-3 text-sm text-destructive">{openedReportError}</div>}
     {reportId&&!openedReportError&&<div role="status" className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm">Reopened the saved Endoscapes frame and annotation view.</div>}
-    {!guided&&<CholecT50Review/>}
-    {!guided&&publicClip&&<Card className="overflow-hidden border-border shadow-sm" aria-label="Unannotated native Appendix300 surgical video">
+    <Tabs defaultValue={guided?'annotated-frames':'native-video'} className="min-w-0 flex-col gap-3">
+      <TabsList aria-label={guided?'Assigned surgical source':'Surgical media modes'} className={`!grid h-auto w-full grid-cols-1 gap-1 sm:grid-cols-3 ${guided?'sr-only':''}`}>
+        {guided?<TabsTrigger className="!h-10" value="annotated-frames">Assigned source frame</TabsTrigger>:<><TabsTrigger className="!h-10" value="native-video">Native video · no aligned labels</TabsTrigger><TabsTrigger className="!h-10" value="sampled-replay">Sampled replay · source labels</TabsTrigger><TabsTrigger className="!h-10" value="annotated-frames">Annotated stills</TabsTrigger></>}
+      </TabsList>
+      {!guided&&<TabsContent value="native-video" className="mt-0 grid min-w-0 gap-3">
+      {publicClip&&<Card role="region" className="overflow-hidden border-border shadow-sm" aria-label="Unannotated native Appendix300 surgical video">
       <CardHeader className="gap-1"><div className="flex flex-wrap items-center gap-2"><Badge variant="outline">Playback only · no aligned results</Badge><Badge variant="secondary">{publicClip.procedure_label} · {publicClip.duration_sec.toFixed(1)} sec</Badge></div><CardTitle className="mt-1">Separate source footage</CardTitle><CardDescription>Authentic, de-identified Appendix300 laparoscopic appendectomy footage. This clip has no synchronized annotations, masks or model predictions. It is a different procedure and recording from both annotated cholecystectomy frame sets shown in this workspace.</CardDescription></CardHeader>
       <CardContent className="grid gap-3">
         {showPublicClip?<VideoPlayer><NeutralVideoSkin className="w-full overflow-hidden rounded-lg bg-[#101624]" style={{aspectRatio:'16 / 9'}}><Video className="size-full" src={api.surgicalClipVideoUrl(publicClip.clip_id)} playsInline preload="metadata" aria-label="Appendix300 laparoscopic appendectomy source video"/></NeutralVideoSkin></VideoPlayer>:<Button variant="outline" className="w-fit" onClick={()=>setShowPublicClip(true)}>Load licensed video excerpt</Button>}
         <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-2 text-xs text-muted-foreground"><span>{publicClip.license_label} · SHA-256 {publicClip.sha256.slice(0,12)}…</span><a className="text-primary hover:underline" href={publicClip.source_url} target="_blank" rel="noreferrer">OPARA dataset and citation ↗</a></div>
         <p className="m-0 text-xs leading-relaxed text-muted-foreground">{publicClip.citation}</p>
       </CardContent>
-    </Card>}
+      </Card>}
+      {!publicClip&&<Card><CardHeader><CardTitle>{publicClipLoading?'Checking installed surgical video…':'No native surgical video is installed'}</CardTitle><CardDescription>{publicClipLoading?'The local media manifest determines which authorized recordings are available.':'The sampled and annotated frame modes remain available for checksum-verified source evidence.'}</CardDescription></CardHeader></Card>}
+      </TabsContent>}
+      {!guided&&<TabsContent value="sampled-replay" className="mt-0 min-w-0"><CholecT50Review/></TabsContent>}
+      <TabsContent value="annotated-frames" className="mt-0 grid min-w-0 gap-3">
     <div className="flex min-w-0 flex-col gap-3 rounded-xl border bg-card p-3 xl:flex-row xl:items-center xl:justify-between">
       <div className="min-w-0 flex-1">
         {guided ? (
@@ -356,6 +366,8 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
       </Tabs>
     </div>
     <div className="mt-3 flex items-start gap-2 text-xs leading-relaxed text-muted-foreground"><AlertCircle className="mt-0.5 size-4 shrink-0"/><span>Local non-commercial research sample · CC BY-NC-SA 4.0 · do not redistribute this frame or annotations.</span></div>
+      </TabsContent>
+    </Tabs>
   </section>
 }
 
