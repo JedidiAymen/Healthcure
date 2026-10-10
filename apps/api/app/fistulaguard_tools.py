@@ -17,7 +17,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from . import fisav
 from . import audit
 from .auth import require_role
-from .signal_processing import FILTER_ORDER, FilterSpec, apply_filter, beat_features, detect_r_peaks, envelope, marker_intervals
+from .signal_processing import FILTER_ORDER, FilterSpec, apply_filter, beat_features, detect_r_peaks, envelope, marker_intervals, quality_checks
 
 CHANNEL_PATTERN = '^(ECG|raw PZT1|raw PZT2|raw PZT3|raw PZT4)$'
 PAD_SEC = 0.5
@@ -97,6 +97,26 @@ class BeatAnalysis(_Model):
     ensemble: EnsembleAverage
     occlusion_test: OcclusionTestMarker
     method: str
+    limitations: list[str]
+
+
+class QualityCheck(_Model):
+    name: str
+    measured: float
+    threshold: str
+    passed: bool
+
+
+class SignalQuality(_Model):
+    record_id: str
+    channel: str
+    start_sec: float
+    duration_sec: float
+    source_sha256: str
+    usable: bool
+    status: Literal['usable', 'insufficient quality, not scored']
+    checks: list[QualityCheck]
+    provenance_kind: Literal['RULE_BASED_METHOD'] = 'RULE_BASED_METHOD'
     limitations: list[str]
 
 
@@ -208,6 +228,18 @@ def register_fistulaguard_tool_routes(app: FastAPI, db: Callable) -> None:
             limitations=[UNCALIBRATED, 'Automatic beat detection can miss or add beats in noisy windows; check the marked peaks against the trace.',
                          'Heart rate here describes this window only and is not a clinical measurement.'],
         )
+
+    @app.get('/api/v1/fistulaguard/records/{record_id}/quality', response_model=SignalQuality)
+    def fistulaguard_quality(record_id: str, channel: str = Query('raw PZT1', pattern=CHANNEL_PATTERN),
+                             start_sec: float = Query(0, ge=0), duration_sec: float = Query(10, ge=2, le=30)):
+        values, fs, digest = _loaded(record_id)
+        _check_window(values, fs, start_sec, duration_sec)
+        times = values[:, 0]
+        indices = np.flatnonzero((times >= start_sec) & (times < start_sec + duration_sec))
+        checks, usable = quality_checks(times[indices], values[indices, fisav.CHANNEL_INDEX[channel]], values[indices, fisav.CHANNEL_INDEX['ECG']], fs)
+        return SignalQuality(record_id=record_id, channel=channel, start_sec=start_sec, duration_sec=duration_sec, source_sha256=digest,
+                             usable=usable, status='usable' if usable else 'insufficient quality, not scored', checks=checks,
+                             limitations=[UNCALIBRATED, 'These are signal-quality checks, not a clinical adequacy grade. Any future index must abstain when a check fails.'])
 
     @app.get('/api/v1/fistulaguard/records/{record_id}/annotations', response_model=list[SignalAnnotation])
     def fistulaguard_annotations(record_id: str, user: dict = Depends(educator)):

@@ -132,3 +132,44 @@ def marker_intervals(times: np.ndarray, flags: np.ndarray) -> list[list[float]]:
         end_time = float(times[ends[number]]) if number < len(ends) else float(times[-1])
         intervals.append([round(float(times[start]), 6), round(end_time, 6)])
     return intervals
+
+
+QUALITY_THRESHOLDS = {
+    'finite_fraction': 1.0,
+    'timestamp_deviation_fraction': 0.001,
+    'clipping_fraction': 0.001,
+    'adjacent_repeat_fraction': 0.2,
+    'min_beats': 3,
+    'rr_cv_max': 0.25,
+}
+
+
+def quality_checks(times: np.ndarray, signal: np.ndarray, ecg: np.ndarray, fs: float) -> tuple[list[dict], bool]:
+    """Named, rule-based checks on one measured window. Each check reports its measured value,
+    threshold and pass or fail; the window is usable only if every check passes."""
+    finite = np.isfinite(signal)
+    steps = np.diff(times)
+    median_step = float(np.median(steps)) if len(steps) else 0.0
+    deviation = float(np.mean(np.abs(steps - median_step) > 0.001 * median_step)) if median_step > 0 else 1.0
+    clean = signal[finite]
+    # Clipping shows as runs of at least 3 consecutive samples stuck at the window extreme;
+    # a smooth periodic signal touching its peak once per cycle is not clipping.
+    extreme = 1.0
+    if clean.size:
+        at_edge = (clean == clean.max()) | (clean == clean.min())
+        runs = np.convolve(at_edge.astype(int), np.ones(3, dtype=int), mode='valid') == 3
+        extreme = float(np.mean(np.convolve(runs.astype(int), np.ones(3, dtype=int), mode='full')[:clean.size] > 0))
+    repeats = float(np.mean(np.diff(clean) == 0)) if clean.size > 1 else 1.0
+    peaks = detect_r_peaks(np.nan_to_num(ecg), fs) if len(ecg) else np.array([], dtype=int)
+    rr = np.diff(peaks) / fs
+    rr_cv = float(np.std(rr) / np.mean(rr)) if len(rr) >= 2 and np.mean(rr) > 0 else float('inf')
+    t = QUALITY_THRESHOLDS
+    checks = [
+        {'name': 'Finite samples', 'measured': float(np.mean(finite)), 'threshold': f">= {t['finite_fraction']}", 'passed': bool(np.mean(finite) >= t['finite_fraction'])},
+        {'name': 'Regular timestamps', 'measured': deviation, 'threshold': f"<= {t['timestamp_deviation_fraction']} of intervals off the median by more than 0.1%", 'passed': deviation <= t['timestamp_deviation_fraction']},
+        {'name': 'No clipping', 'measured': extreme, 'threshold': f"<= {t['clipping_fraction']} of samples in runs of 3 or more at the window minimum or maximum", 'passed': extreme <= t['clipping_fraction']},
+        {'name': 'Not flat or stuck', 'measured': repeats, 'threshold': f"<= {t['adjacent_repeat_fraction']} adjacent repeated values", 'passed': repeats <= t['adjacent_repeat_fraction']},
+        {'name': 'Heartbeats detected on ECG', 'measured': float(len(peaks)), 'threshold': f">= {t['min_beats']} beats", 'passed': len(peaks) >= t['min_beats']},
+        {'name': 'Plausible heart rhythm regularity', 'measured': rr_cv if np.isfinite(rr_cv) else -1.0, 'threshold': f"RR coefficient of variation <= {t['rr_cv_max']}", 'passed': bool(np.isfinite(rr_cv) and rr_cv <= t['rr_cv_max'])},
+    ]
+    return checks, all(check['passed'] for check in checks)
