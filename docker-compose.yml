@@ -57,6 +57,7 @@ services:
       MEDFORGE_APPENDIX300_ROOT: /datasets/appendix300
       MEDFORGE_CHOLECT50_VALIDATION_ROOT: /datasets/cholect50/challenge-validation
       MEDFORGE_ARTIFACTS_DIR: /artifacts
+      MEDFORGE_MQTT_HOST: mqtt
       # SQLCipher key from a Docker secret: the database file is AES-256 encrypted at rest.
       MEDFORGE_DB_KEY_FILE: /run/secrets/db_key
     secrets:
@@ -74,6 +75,28 @@ services:
       timeout: 5s
       retries: 12
       start_period: 20s
+    restart: unless-stopped
+
+  mqtt:
+    # Broker for the SIMULATED device. Private network only; nothing is published to the host.
+    image: eclipse-mosquitto:2.0.20
+    expose: ["1883"]
+    volumes:
+      - type: bind
+        source: ./docker/mosquitto.conf
+        target: /mosquitto/config/mosquitto.conf
+        read_only: true
+    restart: unless-stopped
+
+  sim-device:
+    # Opt in with: docker compose --profile device up -d sim-device
+    profiles: ["device"]
+    build:
+      context: .
+      dockerfile: docker/sim-device.Dockerfile
+    image: medforge-sim-device:local
+    depends_on: [mqtt]
+    command: ["--host", "mqtt", "--device-id", "sim-wrist-01"]
     restart: unless-stopped
 
   worker:
