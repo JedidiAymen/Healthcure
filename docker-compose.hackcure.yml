@@ -1,0 +1,30 @@
+# Local-only HackCure rehearsal overlay. Run through scripts/start_hackcure_docker.sh.
+# The database bind mount is deliberately unencrypted so the host's read-only
+# HackCure preflight can inspect this exact file. Protect it as local demo data.
+services:
+  api:
+    # Do not seed demo educator/student accounts on stack start. The app still
+    # applies its normal schema migrations when it opens the local database.
+    entrypoint:
+      - python
+      - -m
+      - uvicorn
+      - app.main:app
+      - --app-dir
+      - /app/apps/api
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --proxy-headers
+      - --forwarded-allow-ips=*
+    user: "${MEDFORGE_HACKCURE_UID:?Start with scripts/start_hackcure_docker.sh}:${MEDFORGE_HACKCURE_GID:?Start with scripts/start_hackcure_docker.sh}"
+    environment:
+      MEDFORGE_DB_PATH: /var/lib/medforge/hackcure/medforge.sqlite3
+      MEDFORGE_LOCAL_DB_DIR: /var/lib/medforge/hackcure
+      MEDFORGE_DB_KEY_FILE: ""
+      MEDFORGE_OPENKBP_FULL_CASES_JSON: '{"openkbp:pt_241":"/datasets/openkbp-opt/pt_241"}'
+    volumes:
+      - type: bind
+        source: ${MEDFORGE_HACKCURE_DB_DIR:?Start with scripts/start_hackcure_docker.sh}
+        target: /var/lib/medforge/hackcure
