@@ -36,6 +36,10 @@ BANDS = [(25, 100), (100, 250), (250, 500), (500, 1000), (1000, 2000)]
 FEATURES = [f"rel_power_{lo}_{hi}_hz" for lo, hi in BANDS] + [
     "log10_spectral_centroid_hz", "log10_spectral_edge90_hz", "log10_high_low_power_ratio", "log10_systolic_diastolic_energy_ratio"]
 C_GRID = [0.01, 0.1, 1.0, 10.0]
+PROTOCOL_VERSION = "1.1"
+RR_RANGE_SEC = (0.4, 1.5)
+SYSTOLIC_FRACTION = (0.06, 0.36)
+DIASTOLIC_FRACTION = (0.55, 0.85)
 
 
 def sha256_file(path: Path) -> str:
@@ -84,15 +88,18 @@ def recording_features(times: np.ndarray, ecg: np.ndarray, pzt1: np.ndarray, occ
     values["log10_spectral_centroid_hz"] = float(np.log10(centroid))
     values["log10_spectral_edge90_hz"] = float(np.log10(max(edge90, 1.0)))
     values["log10_high_low_power_ratio"] = float(np.log10(max(high_power, 1e-30) / max(low_power, 1e-30)))
-    # Bruit energy early in the cardiac cycle versus later, per beat, from the ECG R peaks.
+    # Bruit energy early in the cardiac cycle versus late, per beat. Windows scale with each beat's
+    # RR interval (protocol v1.1) so fast heart rates are not excluded.
     sos = sps.butter(4, [100, 1000], btype="bandpass", fs=fs, output="sos")
     energy = sps.sosfiltfilt(sos, vib) ** 2
     ratios = []
-    for r_peak, next_peak in zip(detect_r_peaks(lead, fs)[:-1], detect_r_peaks(lead, fs)[1:]):
-        if (next_peak - r_peak) / fs < 0.75:
+    peaks = detect_r_peaks(lead, fs)
+    for r_peak, next_peak in zip(peaks[:-1], peaks[1:]):
+        rr = next_peak - r_peak
+        if not RR_RANGE_SEC[0] * fs <= rr <= RR_RANGE_SEC[1] * fs:
             continue
-        systolic = energy[r_peak + int(0.05 * fs):r_peak + int(0.30 * fs)].mean()
-        diastolic = energy[r_peak + int(0.45 * fs):r_peak + int(0.70 * fs)].mean()
+        systolic = energy[r_peak + int(SYSTOLIC_FRACTION[0] * rr):r_peak + int(SYSTOLIC_FRACTION[1] * rr)].mean()
+        diastolic = energy[r_peak + int(DIASTOLIC_FRACTION[0] * rr):r_peak + int(DIASTOLIC_FRACTION[1] * rr)].mean()
         if systolic > 0 and diastolic > 0:
             ratios.append(np.log10(systolic / diastolic))
     if len(ratios) < 5:
@@ -108,35 +115,35 @@ def load_recording(path: Path) -> tuple[np.ndarray, ...]:
     return times, data[:, 1], data[:, 2], data[:, 3], fs
 
 
-def nested_cv(X: np.ndarray, y: np.ndarray, repeats: int, seed: int):
+def nested_cv(X: np.ndarray, y: np.ndarray, groups: np.ndarray, repeats: int, seed: int):
+    """Repeated nested CV with patient-grouped, stratified folds at both levels."""
     from sklearn.linear_model import LogisticRegression
-    from sklearn.model_selection import GridSearchCV, RepeatedStratifiedKFold, StratifiedKFold
+    from sklearn.model_selection import GridSearchCV, StratifiedGroupKFold
     from sklearn.pipeline import make_pipeline
     from sklearn.preprocessing import StandardScaler
     from sklearn.metrics import roc_auc_score
 
-    def model():
+    def model(inner_seed: int):
+        # Scaling and the C search happen inside each training fold only.
         return GridSearchCV(make_pipeline(StandardScaler(), LogisticRegression(class_weight="balanced", max_iter=2000)),
                             {"logisticregression__C": C_GRID}, scoring="roc_auc",
-                            cv=StratifiedKFold(4, shuffle=True, random_state=seed))
+                            cv=StratifiedGroupKFold(n_splits=4, shuffle=True, random_state=inner_seed))
 
-    outer = RepeatedStratifiedKFold(n_splits=5, n_repeats=repeats, random_state=seed)
     per_patient: list[list[float]] = [[] for _ in range(len(y))]
-    repeat_aucs, fold_scores = [], []
-    for fold, (train, test) in enumerate(outer.split(X, y)):
-        fitted = model().fit(X[train], y[train])
-        probabilities = fitted.predict_proba(X[test])[:, 1]
-        for index, probability in zip(test, probabilities):
-            per_patient[index].append(float(probability))
-        fold_scores.append((fold // 5, test, probabilities))
+    repeat_aucs = []
     for repeat in range(repeats):
-        oof = np.zeros(len(y))
-        for _, test, probabilities in [item for item in fold_scores if item[0] == repeat]:
-            oof[test] = probabilities
+        outer = StratifiedGroupKFold(n_splits=5, shuffle=True, random_state=seed + repeat)
+        oof = np.full(len(y), np.nan)
+        for train, test in outer.split(X, y, groups):
+            assert not set(groups[train]) & set(groups[test]), "a patient appears in both training and test folds"
+            fitted = model(seed + repeat).fit(X[train], y[train], groups=groups[train])
+            oof[test] = fitted.predict_proba(X[test])[:, 1]
+        for index, probability in enumerate(oof):
+            per_patient[index].append(float(probability))
         repeat_aucs.append(float(roc_auc_score(y, oof)))
     mean_oof = np.array([np.mean(values) for values in per_patient])
     sd_oof = np.array([np.std(values) for values in per_patient])
-    return mean_oof, sd_oof, repeat_aucs, model
+    return mean_oof, sd_oof, repeat_aucs, lambda: model(seed)
 
 
 def bootstrap_auc(y: np.ndarray, scores: np.ndarray, seed: int, resamples: int = 2000) -> list[float]:
@@ -177,7 +184,7 @@ def main() -> None:
         if not expected or not path.is_file():
             excluded[patient] = "recording not installed"
             continue
-        key = f"{expected}:{MAX_SECONDS}:{MAX_CLEAN_SECONDS}:{OCCLUSION_MARGIN_SEC}"
+        key = f"{expected}:{MAX_SECONDS}:{MAX_CLEAN_SECONDS}:{OCCLUSION_MARGIN_SEC}:{PROTOCOL_VERSION}"
         if cache.get(patient, {}).get("key") == key:
             values = cache[patient]["values"]
         else:
@@ -200,7 +207,8 @@ def main() -> None:
     if len(set(y)) < 2 or min(np.bincount(y)) < 5:
         raise SystemExit("Too few patients in one class for a nested cross-validated evaluation")
 
-    mean_oof, sd_oof, repeat_aucs, model = nested_cv(X, y, args.repeats, args.seed)
+    groups = np.array(patients)
+    mean_oof, sd_oof, repeat_aucs, model = nested_cv(X, y, groups, args.repeats, args.seed)
     auroc = float(roc_auc_score(y, mean_oof))
     predicted = (mean_oof >= 0.5).astype(int)
     sensitivity = float(np.mean(predicted[y == 1] == 1))
@@ -211,17 +219,17 @@ def main() -> None:
     null_aucs = []
     for _ in range(args.permutations):
         shuffled = rng.permutation(y)
-        oof, _, _, _ = nested_cv(X, shuffled, 1, int(rng.integers(1 << 30)))
+        oof, _, _, _ = nested_cv(X, shuffled, groups, 1, int(rng.integers(1 << 30)))
         null_aucs.append(float(roc_auc_score(shuffled, oof)))
     permutation_p = float((1 + sum(value >= auroc for value in null_aucs)) / (1 + len(null_aucs))) if null_aucs else None
 
     # Exam-only baseline from the patient sheet: systolic-only (not continuous) thrill and bruit.
     exam = np.array([[1.0 if labels_doc["patients"][p]["thrill_pattern"] == "Systolic" else 0.0,
                       1.0 if labels_doc["patients"][p]["bruit_pattern"] == "Systolic" else 0.0] for p in patients])
-    exam_oof, _, _, _ = nested_cv(exam + np.random.default_rng(args.seed).normal(0, 1e-9, exam.shape), y, args.repeats, args.seed)
+    exam_oof, _, _, _ = nested_cv(exam, y, groups, args.repeats, args.seed)
     exam_auroc = float(roc_auc_score(y, exam_oof))
 
-    final = model().fit(X, y)
+    final = model().fit(X, y, groups=groups)
     pipeline = final.best_estimator_
     scaler, logistic = pipeline.named_steps["standardscaler"], pipeline.named_steps["logisticregression"]
     model_doc = {
@@ -239,7 +247,8 @@ def main() -> None:
     evaluation = {
         "schema": "medforge.fisav-stenosis-evaluation.v1", "model_id": MODEL_ID, "model_version": MODEL_VERSION,
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
-        "parameters": {"seed": args.seed, "outer_folds": 5, "inner_folds": 4, "repeats": args.repeats, "permutations": args.permutations,
+        "protocol_version": PROTOCOL_VERSION,
+        "parameters": {"seed": args.seed, "rr_range_sec": RR_RANGE_SEC, "systolic_fraction_of_rr": SYSTOLIC_FRACTION, "diastolic_fraction_of_rr": DIASTOLIC_FRACTION, "outer_folds": 5, "inner_folds": 4, "fold_grouping": "patient (StratifiedGroupKFold at both levels)", "repeats": args.repeats, "permutations": args.permutations,
                        "C_grid": C_GRID, "threshold": 0.5, "class_weight": "balanced", "max_seconds_read": MAX_SECONDS,
                        "clean_segment_seconds": [MIN_CLEAN_SECONDS, MAX_CLEAN_SECONDS], "occlusion_margin_sec": OCCLUSION_MARGIN_SEC},
         "inputs": {"records": {p: records[p] for p in patients}, "labels_sha256": sha256_file(args.labels),
