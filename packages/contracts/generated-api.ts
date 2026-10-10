@@ -1542,14 +1542,14 @@ export interface components {
              * Reference Kind
              * @enum {string}
              */
-            reference_kind: "benchmark" | "research" | "synthetic-test";
+            reference_kind: "benchmark" | "research" | "synthetic" | "synthetic-test";
             /** Source Case Id */
             source_case_id: string;
             /**
              * Status
              * @enum {string}
              */
-            status: "ready" | "blocked";
+            status: "ready" | "blocked" | "synthetic-viewer";
         };
         /** CholecT50FrameRecord */
         CholecT50FrameRecord: {
@@ -1943,18 +1943,30 @@ export interface components {
             curve: components["schemas"]["DvhPoint"][];
             /** Dose Display Max Gy */
             dose_display_max_gy: number;
+            /**
+             * Dose Scale Kind
+             * @default physical-gy-reference
+             * @enum {string}
+             */
+            dose_scale_kind: "physical-gy-reference" | "synthetic-illustrative-scale";
             /** Dose Sha256 */
             dose_sha256: string;
             /** Mean Dose Gy */
             mean_dose_gy: number | null;
             /** Method */
             method: string;
+            /**
+             * Metrics Kind
+             * @default openkbp-official-evaluator
+             * @enum {string}
+             */
+            metrics_kind: "openkbp-official-evaluator" | "synthetic-descriptive";
             official_metrics: components["schemas"]["DvhMetrics"];
             /**
              * Origin
              * @enum {string}
              */
-            origin: "computed-from-benchmark-arrays" | "computed-from-synthetic-test-fixture";
+            origin: "computed-from-benchmark-arrays" | "computed-from-synthetic-test-fixture" | "synthetic-phantom";
             /** Roi */
             roi: string;
             /** Roi Sha256 */
@@ -1963,7 +1975,7 @@ export interface components {
              * Source Kind
              * @enum {string}
              */
-            source_kind: "benchmark" | "research" | "synthetic-test";
+            source_kind: "benchmark" | "research" | "synthetic" | "synthetic-test";
             /** Source Revision */
             source_revision: string;
             /** Spacing Mm */
@@ -2573,9 +2585,9 @@ export interface components {
             case_id: string;
             /**
              * Coordinate Frame
-             * @constant
+             * @enum {string}
              */
-            coordinate_frame: "openkbp-processed-voxel-grid";
+            coordinate_frame: "openkbp-processed-voxel-grid" | "synthetic-phantom-grid";
             /**
              * Index Convention
              * @constant
@@ -2585,7 +2597,7 @@ export interface components {
              * Origin
              * @enum {string}
              */
-            origin: "computed-from-benchmark-array" | "computed-from-synthetic-test-fixture";
+            origin: "computed-from-benchmark-array" | "computed-from-synthetic-test-fixture" | "synthetic-phantom";
             /** Shape */
             shape: [
                 number,
@@ -2598,7 +2610,7 @@ export interface components {
              * Source Kind
              * @enum {string}
              */
-            source_kind: "benchmark" | "research" | "synthetic-test";
+            source_kind: "benchmark" | "research" | "synthetic" | "synthetic-test";
             /** Source Revision */
             source_revision: string;
             /** Source Sha256 */
@@ -3887,16 +3899,16 @@ export interface components {
             case_id: string;
             /**
              * Coordinate Frame
-             * @constant
+             * @enum {string}
              */
-            coordinate_frame: "openkbp-processed-voxel-grid";
+            coordinate_frame: "openkbp-processed-voxel-grid" | "synthetic-phantom-grid";
             /** Index */
             index: number;
             /**
              * Origin
              * @enum {string}
              */
-            origin: "benchmark-reference" | "computed-from-benchmark-array" | "synthetic-test-fixture";
+            origin: "benchmark-reference" | "computed-from-benchmark-array" | "synthetic-test-fixture" | "synthetic-phantom";
             /** Shape */
             shape: [
                 number,
@@ -3908,7 +3920,7 @@ export interface components {
              * Source Kind
              * @enum {string}
              */
-            source_kind: "benchmark" | "research" | "synthetic-test";
+            source_kind: "benchmark" | "research" | "synthetic" | "synthetic-test";
             /** Source Revision */
             source_revision: string;
             /** Source Sha256 */
@@ -3917,7 +3929,7 @@ export interface components {
              * Unit
              * @enum {string}
              */
-            unit: "benchmark-value" | "Gy" | "binary-mask";
+            unit: "benchmark-value" | "Gy" | "binary-mask" | "synthetic-relative-density" | "synthetic-illustrative-scale";
             /** Values */
             values: number[];
         };
@@ -3928,15 +3940,15 @@ export interface components {
             /**
              * Coordinate Frame
              * @default openkbp-processed-voxel-grid
-             * @constant
+             * @enum {string}
              */
-            coordinate_frame: "openkbp-processed-voxel-grid";
+            coordinate_frame: "openkbp-processed-voxel-grid" | "synthetic-phantom-grid";
             /**
              * Dose Unit
              * @default Gy
-             * @constant
+             * @enum {string}
              */
-            dose_unit: "Gy";
+            dose_unit: "Gy" | "synthetic-illustrative-scale";
             /**
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
@@ -4767,7 +4779,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description Request Entity Too Large */
+            /** @description Content Too Large */
             413: {
                 headers: {
                     [name: string]: unknown;
@@ -4776,7 +4788,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description Unprocessable Entity */
+            /** @description Unprocessable Content */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -4819,7 +4831,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description Unprocessable Entity */
+            /** @description Unprocessable Content */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -4865,7 +4877,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description Unprocessable Entity */
+            /** @description Unprocessable Content */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -5113,7 +5125,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description Unprocessable Entity */
+            /** @description Unprocessable Content */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -6215,7 +6227,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description Unprocessable Entity */
+            /** @description Unprocessable Content */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -6259,7 +6271,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description Unprocessable Entity */
+            /** @description Unprocessable Content */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -6303,7 +6315,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description Unprocessable Entity */
+            /** @description Unprocessable Content */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -6575,7 +6587,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description Unprocessable Entity */
+            /** @description Unprocessable Content */
             422: {
                 headers: {
                     [name: string]: unknown;

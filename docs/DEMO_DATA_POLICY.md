@@ -21,6 +21,6 @@ Licence terms below come from each source's own documentation, as recorded in `d
    - a 128 cube water-cylinder CT;
    - one spherical target and two cylindrical organs at risk;
    - a dose with a smooth falloff from the target.
-   The existing code computes its DVHs. It is not built yet, because no off-machine display is planned.
+   A deterministic, local-only viewer implementation is documented in [`SYNTHETIC_DOSETWIN_DEMO.md`](SYNTHETIC_DOSETWIN_DEMO.md). It is deliberately absent from the real case registry and cannot be used for model runs, prediction imports, comparisons, or reports. Its dose values use an arbitrary illustrative scale, not physically calibrated Gy. This does not make the HackCure L2 deliverable ready: there is no hosted URL, organizer acceptance, or clinical acceptance.
 4. Synthetic data is always labelled synthetic, on screen and in exports, and is never presented as measured.
 5. Demo accounts are created by `scripts/seed_demo.py` in the encrypted local database. Their passwords are printed once and are never placed in slides.
