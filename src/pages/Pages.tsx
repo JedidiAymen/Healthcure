@@ -954,10 +954,12 @@ export function DomainWorkspace({ module }: { module: ModuleId }) {
             <span className="grid size-8 place-items-center rounded-md bg-secondary text-primary"><Icon aria-hidden="true"/></span>
             <span>{m.name}</span><span aria-hidden="true">/</span><span>{m.short}</span>
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">{record?.label ?? m.subtitle}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">{module === "surgivision" ? "SurgiVision surgical media review" : record?.label ?? m.subtitle}</h1>
           <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
             {record
-              ? `Source case ${record.source_case_id} · ${record.dataset_id} · ${record.reference_kind}`
+              ? module === "surgivision"
+                ? `Choose a source-specific mode below: Appendix300 native appendectomy video without aligned labels, CholecT50 sampled cholecystectomy frames with matching source labels, or Endoscapes annotated stills (${record.source_case_id}).`
+                : `Source case ${record.source_case_id} · ${record.dataset_id} · ${record.reference_kind}`
               : "No source case has been selected for this workspace."}
           </p>
           {module === "dosetwin" && doseCases.length > 1 && (

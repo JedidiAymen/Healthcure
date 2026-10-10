@@ -5,6 +5,8 @@ test('CholecT50 sample playback keeps authentic labels on their exact frames', a
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('/studio/surgivision/cases/current')
 
+  await expect(page.getByRole('heading', { name: 'SurgiVision surgical media review' })).toBeVisible()
+  await expect(page.getByText(/Appendix300 native appendectomy video without aligned labels/)).toBeVisible()
   const modes = page.getByRole('tablist', { name: 'Surgical media modes' })
   await expect(modes.getByRole('tab', { name: 'Native video · no aligned labels' })).toHaveAttribute('aria-selected', 'true')
   await expect(page.getByRole('region', { name: 'Unannotated native Appendix300 surgical video' })).toBeVisible()
