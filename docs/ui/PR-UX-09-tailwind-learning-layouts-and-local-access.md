@@ -8,7 +8,7 @@
 - Replaced Academy progress links, recognition statistics and educator assignment rows with semantic Tailwind utilities. Removed the corresponding unused legacy selectors from `src/styles.css` and `src/pages/academy.css`; the Tailwind entry stylesheet is now 12,567 bytes.
 - Added [`docs/LOCAL_ACCESS_AND_PROFILES.md`](../LOCAL_ACCESS_AND_PROFILES.md) with start commands, profile URLs, local account setup and credential handling. It clarifies there are no seeded/shared credentials, the only provisionable sign-in roles are student and educator, and Professional Studio is local unauthenticated research browsing.
 - Linked the profile guide from the README and local-run instructions.
-- Reused the machine's already-installed source datasets through ignored, local-only links; the data are not committed. This checkout contains one OpenKBP case (`pt_201`), 1,933 Endoscapes annotated stills and 59 FiSaV recordings. It has no continuous surgical video or second dose case.
+- At this milestone, the checkout used one OpenKBP case (`pt_201`), 1,933 Endoscapes annotated stills and 59 FiSaV recordings through ignored local links. The inventory was expanded later: see `docs/STATUS.md` and `docs/BLOCKERS.md` for the separately licensed Appendix300 excerpt and the verified full `pt_241` comparison profile. Source data remain local and are not committed.
 
 ## Components and libraries
 

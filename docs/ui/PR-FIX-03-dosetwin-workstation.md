@@ -1,6 +1,6 @@
 # FIX-03 — DoseTwin scientific workstation correction
 
-**Status: D1 source-backed 2D workstation implemented; D2 source-derived 3D ROI surface integrated and verified; D3 compatible-artifact import/compare flow implemented but no genuine second array is installed.** See [`PR-FIX-04`](PR-FIX-04-dosetwin-3d-surface.md) and [`PR-FIX-05`](PR-FIX-05-dosetwin-dose-comparison.md) for later milestones. This does not claim model inference or clinical use.
+**Status: D1 source-backed 2D workstation implemented; D2 source-derived 3D ROI surface integrated and verified; D3 authentic `pt_241` comparison implemented in a separate local profile. `pt_201` still has no compatible second array.** See [`PR-FIX-04`](PR-FIX-04-dosetwin-3d-surface.md), [`PR-FIX-05`](PR-FIX-05-dosetwin-dose-comparison.md), and [`PR-FIX-06`](PR-FIX-06-research-viewer-and-academy-corrections.md). This does not claim local inference or clinical use.
 
 ## What changed
 
@@ -21,7 +21,7 @@
 
 ## Remaining gates
 
-- **D3 real comparison evidence:** the import, validation, comparison, and report workflow is integrated, but no authentic compatible second `pt_201` prediction is installed. The UI names this gap instead of displaying pretend Model A/Model B results.
+- **D3 `pt_201` comparison:** no authentic compatible second `pt_201` prediction is installed. The authentic OpenKBP-Opt `pt_241` pair is available through the separate local profile documented in `PR-FIX-06`; it must never be mixed with `pt_201`.
 - **D4 inference/optimization:** blocked by missing validated checkpoints, rights, solver inputs and worker execution.
 - D1 follow-up validation still includes student-view permission parity. The learner viewer continues using the assigned-case lock path and existing API authorization tests; those protections were not reworked in this change.
 

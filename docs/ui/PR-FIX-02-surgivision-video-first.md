@@ -1,6 +1,6 @@
 # FIX-02 — SurgiVision source-first video readiness
 
-**Status: honest annotated-stills mode implemented; real video playback remains blocked by missing authorized media.** This implements the immediate part of the supplied SurgiVision correction. It does not claim the full video-first vision is complete.
+**Status: Endoscapes remains an annotated sampled-stills workflow; a separate licensed Appendix300 excerpt is available for continuous-video playback.** The excerpt is an appendectomy clip from a different dataset. It is not mapped onto Endoscapes, has no instrument masks, and does not enable temporal model inference.
 
 ## What changed
 
@@ -8,7 +8,7 @@
 - Every current record is `annotated_stills`: `asset_uri`, native FPS, sampling FPS and duration are null; the only capability is `browse_annotated_frames`. The API does not invent a movie, elapsed time, intermediate frame, track or synchronization.
 - Added a professional-viewer media-mode card with the actual installed still count and split/video. The existing verified single-frame inspection, annotations, source hashes, CVS reference values and evidence-save path remain in place. Learner mode does not make the full cohort or media manifest newly visible.
 - Added operation-readiness rows. Native playback, source-synchronized timelines and model inference show an explicit blocked reason instead of being implied by an installed frame source.
-- Video.js was not added. The installed Endoscapes BBox201 import contains sparse annotated images, and no authorized native continuous recording or temporal annotation source is present. The existing video package metadata is not a playback implementation.
+- The Endoscapes BBox201 import still contains sampled annotated images, not continuous recordings. A separate, source-attributed 38.1384-second Appendix300 appendectomy excerpt is now installed and can be opened in the professional viewer through the native HTML5 player. Video.js remains unnecessary for this single simple excerpt; the clip is not presented as Endoscapes, cholecystectomy footage, or annotated model output.
 
 ## Evidence and limits
 
@@ -19,7 +19,7 @@
 
 ## Still blocked
 
-Native play/pause/seek, byte-range streaming, speed controls, timecode, phase/tool/triplet tracks, and temporal inference require a rights-cleared, checksum-verified native recording or a correctly described sampled sequence plus source-aligned labels. The Endoscapes stills cannot support those features. Do not install Video.js or synthesize a timeline to fill that gap. Cholec80 access, CholecT50 sampled media, any cross-dataset ID mapping, and temporal-model weights remain separate acquisition/validation work.
+The Appendix300 clip supports native play/pause/seek only. It is not time-aligned with Endoscapes and has no synchronized phase/tool tracks, source annotations, or temporal inference. The Endoscapes stills cannot support those features. Cholec80 access, CholecT50 sampled media, cross-dataset ID mapping, and temporal-model weights remain separate acquisition/validation work.
 
 ## Verification
 

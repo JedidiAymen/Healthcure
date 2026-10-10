@@ -335,7 +335,7 @@ test('DoseTwin keeps one Gy scale, linked ROI overlays and voxel mapping under z
   await page.getByText('Compare a real dose prediction', { exact: true }).click()
   await expect(page.getByText('No compatible second array is installed.')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Validate and add prediction' })).toBeDisabled()
-  await expect(page.getByText('No prediction is supplied by MEDFORGE.')).toBeVisible()
+  await expect(page.getByText('The feature never creates a placeholder result.')).toBeVisible()
   const sourceViewport = page.getByRole('group', { name: /Z-index plane imaging viewport/ })
   const primaryPane = page.locator('section[aria-labelledby="dose-view-title"]')
   const paneWidth = await primaryPane.evaluate(element => element.getBoundingClientRect().width)

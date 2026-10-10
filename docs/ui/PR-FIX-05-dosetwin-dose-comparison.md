@@ -1,6 +1,6 @@
 # FIX-05 — Same-grid DoseTwin comparison
 
-**Status: PARTIAL; integrated on `review/cobalt-dosetwin-d2-d3` (commit `ce3e2c4`).** The local import, validation, comparison, and report workflow is implemented. A real second `pt_201` prediction is not available, so source-backed comparison evidence for that case remains gated. An authentic official OpenKBP-Opt prediction/reference pair for `pt_241` was range-extracted to ignored local data; it has a different patient identity and spacing and cannot be compared with `pt_201`.
+**Status: `pt_241` source-backed comparison implemented; `pt_201` comparison remains partial.** The local import, validation, comparison, and report workflow is implemented on `review/cobalt-dosetwin-d2-d3`. The official OpenKBP-Opt archive has no `pt_201` prediction. Its authentic `pt_241` prediction is now imported only against the matching `pt_241` reference, CT, masks, and grid in a separate local profile. It is never compared with `pt_201`.
 
 ## Implemented
 
@@ -12,11 +12,11 @@
 
 ## Source and rights gate
 
-The installed `pt_201` source contains its benchmark reference dose only. The official OpenKBP-Opt archive central directory was verified from the publisher's ETag-pinned range response; its prediction members cover `pt_241`–`pt_340` and contain no `pt_201`. A local `pt_241` reference/prediction pair is CRC32- and SHA-256-verified and uses a 128³ processed grid, but spacing `[3.906, 3.906, 2.5] mm` and patient identity differ from `pt_201` `[5.422, 5.422, 3.0] mm`. The UI cannot compare these cases or resample them into apparent compatibility. Test-fixture imports verify API behavior only and are not presented as research results. The local data manifest records user-authorized local research use; no redistribution or public display rights are claimed.
+The installed `pt_201` source contains its benchmark reference dose only. The official OpenKBP-Opt archive central directory was verified from the publisher's ETag-pinned range response; its prediction members cover `pt_241`–`pt_340` and contain no `pt_201`. The authentic `pt_241` reference/prediction pair and complete matching case are installed in ignored local data, verified by source blob hashes, ZIP CRC32, SHA-256, shape, spacing, and ROI masks. Its spacing `[3.906, 3.906, 2.5] mm` and patient identity differ from `pt_201` `[5.422, 5.422, 3.0] mm`; the UI cannot compare these cases or resample them into apparent compatibility. The isolated `pt_241` profile imports the published `set_1` prediction against its matching case and displays seven ROI comparisons and same-grid reference/prediction/Δ planes. The source publishes no checkpoint hash, which is recorded as unavailable. The local data manifest records user-authorized local research use; no redistribution or public display rights are claimed.
 
 ## Visual review
 
-Actual local Healthcure app, configured against `pt_201`, at 1440×900, 768×1024 and 390×844. The comparison accordion is open and truthfully shows no second array installed. All three captures returned HTTP 200, had no page exceptions and no horizontal overflow. Screenshots are private, ignored local review assets because they contain source-derived medical imagery:
+Historical `pt_201` review: the comparison accordion truthfully shows no compatible second array. This state remains correct for `pt_201`. The newer populated `pt_241` review is captured separately under `.local-review/openkbp-pt241/` at 1440×900, 768×1024, and 390×844; all three returned HTTP 200 with no page exceptions or horizontal overflow. Screenshots are private, ignored local review assets because they contain source-derived medical imagery:
 
 - `.local-review/FIX-05/dosetwin-comparison-1440x900.png`
 - `.local-review/FIX-05/dosetwin-comparison-768x1024.png`
@@ -33,10 +33,10 @@ Actual local Healthcure app, configured against `pt_201`, at 1440×900, 768×102
 - `npm run contracts:check` — pass.
 - `npm run build` — pass. vtk.js remains a lazily loaded 835.33 kB / 221.13 kB gzip D2 chunk. DoseTwin comparison tools are also lazy-mounted and only load when opened.
 
-## Still required for D3 completion
+## Remaining scope
 
-- Acquire a compatible `pt_201` prediction with an established local-use basis, or add a separately modeled full `pt_241` workflow with its matching CT, ROI masks, and source metadata.
-- Cross-check the prediction-vs-reference voxel deltas and per-ROI statistics independently against the source model's documented evaluation.
-- Capture real-artifact screenshots and verify a saved comparison report reopens with all same source hashes.
+- A compatible `pt_201` prediction remains unavailable. Do not compare `pt_241` with it or claim that case's D3 comparison is complete.
+- Verify that a saved `pt_241` comparison report reopens with all source hashes in a fresh local session.
+- Continue remaining redesign milestones; this local comparison profile does not complete DoseTwin or the wider product.
 
-Until those steps pass, the feature is **PARTIAL**, not a validated model comparison.
+The `pt_241` artifact is a published archived prediction, not a locally executed model or a clinical validation. Keep `pt_201` comparison marked **PARTIAL** until a compatible authentic prediction is available.

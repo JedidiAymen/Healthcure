@@ -1,6 +1,6 @@
 # PR-FIX-06 — scientific plane geometry and Academy touch targets
 
-**Status:** local comparison profile implemented for authentic `pt_241`; comparison for `pt_201` remains gated because its prediction is not in the archive. This is a review-branch milestone and does not finish the wider redesign.
+**Status:** authentic `pt_241` comparison is implemented in a separate local profile; `pt_201` comparison remains gated because its prediction is not in the archive. This review-branch milestone does not finish the wider redesign.
 
 ## DoseTwin comparison planes
 
@@ -24,5 +24,5 @@ The assigned-path summary uses a semantic definition list while retaining API-so
 ## Remaining evidence
 
 - A compatible `pt_201` prediction remains unavailable; keep that comparison partial.
-- Capture the authenticated Academy path at desktop, tablet, and phone widths with an assigned learner account.
+- Repeat the Academy assigned-path review at phone/tablet widths and complete keyboard traversal; the prior populated path evidence covers desktop only.
 - Continue the remaining handoff milestones for DoseTwin, SurgiVision, FistulaGuard, Academy, Educator, and Model Lab.
