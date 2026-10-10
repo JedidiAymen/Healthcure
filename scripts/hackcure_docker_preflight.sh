@@ -5,10 +5,8 @@ ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 DB_PATH="$ROOT/data/hackcure-docker/medforge.sqlite3"
 CASE_DIR="$ROOT/data/openkbp-opt/pt_241"
 
-if ! command -v docker >/dev/null 2>&1 || ! docker compose version >/dev/null 2>&1; then
-  printf 'Docker Engine with the Compose plugin is required.\n' >&2
-  exit 1
-fi
+source "$ROOT/scripts/lib/hackcure-compose-version.sh"
+require_hackcure_compose
 
 # Match the host-side paths to the bind mounts and container paths declared in
 # docker-compose.hackcure.yml. The doctor opens this database read-only.
