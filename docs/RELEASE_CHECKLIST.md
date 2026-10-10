@@ -70,6 +70,7 @@ Updated 2026-10-10. This is a local-demo checklist. MEDFORGE is **not v1.0 locke
 
 ## Required before an external demo
 
+- [x] A read-only local `pt_241` rehearsal preflight reports source, imported comparison, saved report, reviewer profile, loopback configuration and optional Academy readiness. It does not make a missing profile/demo assignment ready; the current reviewer gate still fails until an operator provisions that role in the selected local database. See [`PR-UX-52`](ui/PR-UX-52-hackcure-preflight-and-educator-toolbar.md).
 - [x] The local demo guide names one flagship route (`pt_241`) and the same-database reviewer/artifact preflight; optional Academy credentials and published/assigned lesson requirements are explicit. Shell and SurgiVision video evidence have been reviewed responsively. The local screenshots and remaining L2/L3 gaps are recorded in [`PR-UX-51`](ui/PR-UX-51-role-shell-video-inspector-and-hackcure-readiness.md).
 
 - [ ] Rights reviewer records permission for the intended Endoscapes and OpenKBP display and audience. Current OpenKBP dataset rights are not established; Endoscapes requires scope-specific non-commercial attribution review.
