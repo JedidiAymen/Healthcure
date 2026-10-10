@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { MouseEvent as ReactMouseEvent, PointerEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { AlertCircle, Check, ChevronLeft, ChevronRight, Download, FlaskConical, Image, LoaderCircle, Move, Save, ZoomIn, ZoomOut } from 'lucide-react'
 import { api, type CvsCoverage, type CvsInferenceRunRecord, type EvidenceReport, type ModelValidation, type StudentReferenceEvidence, type StudentSurgiViewerEvidence, type StudentViewerEvidence, type SurgicalAnnotation, type SurgicalClipRecord, type SurgicalFrameRecord, type SurgicalMediaRecord, type SurgicalSequenceFrame } from '../lib/api'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -50,9 +50,11 @@ const cvsCriteria=[
 
 export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedReference,viewerEvidence,onEvidenceChange,locked=false}:{frameId:string;availableFrameIds:string[];guided?:boolean;releasedReference?:StudentReferenceEvidence|null;viewerEvidence?:StudentViewerEvidence|null;onEvidenceChange?:(evidence:StudentSurgiViewerEvidence)=>void;locked?:boolean}) {
   const navigate=useNavigate()
+  const [searchParams]=useSearchParams()
+  const reportId=searchParams.get('report')
   const maskCanvas=useRef<HTMLCanvasElement>(null)
   const viewportRef=useRef<HTMLDivElement>(null)
-  const savedPreferences=useMemo(()=>guided?null:readSurgicalViewPreferences(frameId),[guided,frameId])
+  const savedPreferences=useMemo(()=>guided||reportId?null:readSurgicalViewPreferences(frameId),[guided,frameId,reportId])
   const [activeFrameId,setActiveFrameId]=useState(frameId)
   const [frameSearch,setFrameSearch]=useState('')
   const [frame,setFrame]=useState<SurgicalFrameRecord|null>(null)
@@ -86,11 +88,26 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
   const [savingFrameReport,setSavingFrameReport]=useState(false)
   const [savedFrameReport,setSavedFrameReport]=useState<EvidenceReport|null>(null)
   const [saveFrameReportError,setSaveFrameReportError]=useState('')
+  const [openedReportError,setOpenedReportError]=useState('')
   const setScale=(value:number)=>{const next=Math.max(1,Math.min(3,value));setZoom(next);if(next===1)setPan({x:0,y:0})}
-  useEffect(()=>{if(guided||!frame||frame.id!==activeFrameId)return;const bounds=viewportRef.current?.getBoundingClientRect();if(!bounds||bounds.width<=0||bounds.height<=0)return;const clampRatio=(value:number,size:number)=>Math.max(-2,Math.min(2,value/size));try{localStorage.setItem(`medforge:surgivision:${activeFrameId}`,JSON.stringify({frame_id:activeFrameId,show_boxes:showBoxes,zoom,selected_annotation_id:selected,pan_ratio:{x:clampRatio(pan.x,bounds.width),y:clampRatio(pan.y,bounds.height)}} satisfies SurgicalViewPreferences & {frame_id:string}))}catch{/* Local persistence is optional when browser storage is unavailable. */}},[guided,activeFrameId,frame,showBoxes,zoom,selected,pan])
+  useEffect(()=>{if(guided||reportId||!frame||frame.id!==activeFrameId)return;const bounds=viewportRef.current?.getBoundingClientRect();if(!bounds||bounds.width<=0||bounds.height<=0)return;const clampRatio=(value:number,size:number)=>Math.max(-2,Math.min(2,value/size));try{localStorage.setItem(`medforge:surgivision:${activeFrameId}`,JSON.stringify({frame_id:activeFrameId,show_boxes:showBoxes,zoom,selected_annotation_id:selected,pan_ratio:{x:clampRatio(pan.x,bounds.width),y:clampRatio(pan.y,bounds.height)}} satisfies SurgicalViewPreferences & {frame_id:string}))}catch{/* Local persistence is optional when browser storage is unavailable. */}},[guided,reportId,activeFrameId,frame,showBoxes,zoom,selected,pan])
   useEffect(()=>{if(guided||!frame||frame.id!==activeFrameId)return;const bounds=viewportRef.current?.getBoundingClientRect();if(savedPreferences&&bounds&&bounds.width>0&&bounds.height>0)setPan({x:savedPreferences.pan_ratio.x*bounds.width,y:savedPreferences.pan_ratio.y*bounds.height})},[guided,frame,activeFrameId,savedPreferences])
   useEffect(()=>{if(viewerEvidence?.kind==='surgivision'){const point={x:viewerEvidence.selection_x_px,y:viewerEvidence.selection_y_px};setEvidencePoint(point);setCoordinateDraft({x:String(point.x),y:String(point.y)})}else{setEvidencePoint(null);setCoordinateDraft({x:'',y:''})}},[viewerEvidence])
   useEffect(()=>setActiveFrameId(frameId),[frameId])
+  useEffect(()=>{
+    if(!reportId||guided||!frame||frame.id!==activeFrameId)return
+    let live=true
+    setOpenedReportError('')
+    api.reports().then(reports=>{
+      if(!live)return
+      const report=reports.find(item=>item.id===reportId)
+      if(!report||report.document.schema!=='medforge.surgivision-source-frame-evidence/v1'||report.document.case?.id!==activeFrameId){setOpenedReportError('This saved frame report does not match the selected source frame.');return}
+      const state=report.document.display_state
+      if(!state){setOpenedReportError('This frame report does not contain a saved overlay view.');return}
+      setShowBoxes(state.show_annotations);setShowMasks(state.show_annotations);setSelected(state.selected_annotation_id);setScale(1);setPan({x:0,y:0})
+    }).catch(error=>{if(live)setOpenedReportError(error instanceof Error?error.message:'Saved frame view could not be reopened')})
+    return()=>{live=false}
+  },[reportId,guided,activeFrameId,frame])
   useEffect(()=>{
     if(guided)return
     let live=true
@@ -109,7 +126,7 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
     }).catch(()=>{})
     return()=>{live=false}
   },[activeFrameId,guided])
-  useEffect(()=>{let live=true;const saved=guided?null:readSurgicalViewPreferences(activeFrameId);setLoading(true);setFrame(null);setSelected(saved?.selected_annotation_id??null);setShowBoxes(saved?.show_boxes??true);setScale(saved?.zoom??1);setPan({x:0,y:0});api.surgicalFrame(activeFrameId).then(value=>{if(live){setFrame(value);setError('')}}).catch(e=>{if(live)setError(e instanceof Error?e.message:'Unable to load local frame')}).finally(()=>{if(live)setLoading(false)});return()=>{live=false}},[activeFrameId,guided])
+  useEffect(()=>{let live=true;const saved=guided||reportId?null:readSurgicalViewPreferences(activeFrameId);setLoading(true);setFrame(null);setSelected(saved?.selected_annotation_id??null);setShowBoxes(saved?.show_boxes??true);setShowMasks(true);setScale(saved?.zoom??1);setPan({x:0,y:0});api.surgicalFrame(activeFrameId).then(value=>{if(live){setFrame(value);setError('')}}).catch(e=>{if(live)setError(e instanceof Error?e.message:'Unable to load local frame')}).finally(()=>{if(live)setLoading(false)});return()=>{live=false}},[activeFrameId,guided,reportId])
   useEffect(()=>{let live=true;let objectUrl='';setImageUrl('');setImageSize(null);setImageError('');api.surgicalImage(activeFrameId).then(url=>{objectUrl=url;if(live)setImageUrl(url);else URL.revokeObjectURL(url)}).catch(e=>{if(live)setImageError(e instanceof Error?e.message:'Unable to load the assigned source image')});return()=>{live=false;if(objectUrl)URL.revokeObjectURL(objectUrl)}},[activeFrameId])
   useEffect(()=>{
     if(guided||!frame)return
@@ -213,6 +230,8 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
   if(loading)return <div className="my-6 grid min-h-40 content-center gap-3"><Skeleton className="h-24 w-full"/><p className="text-sm text-muted-foreground">Loading verified image and annotation record…</p></div>
   if(error||!frame)return <Alert variant="destructive" className="my-6 min-h-36 items-center"><AlertCircle/><AlertDescription><strong className="block font-semibold">Endoscapes sample is unavailable</strong>{error||'No validated frame record was returned.'}</AlertDescription></Alert>
   return <section className="mt-4 grid min-w-0 gap-3" aria-label="SurgiVision frame review">
+    {openedReportError&&<div role="alert" className="rounded-md border border-destructive/40 p-3 text-sm text-destructive">{openedReportError}</div>}
+    {reportId&&!openedReportError&&<div role="status" className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm">Reopened the saved Endoscapes frame and annotation view.</div>}
     {!guided&&publicClip&&<Card className="overflow-hidden border-primary/25 shadow-sm" aria-label="Primary native surgical video">
       <CardHeader className="gap-1"><div className="flex flex-wrap items-center gap-2"><Badge variant="outline" className="border-primary/25 bg-primary/5 text-primary">Native video · licensed source</Badge><Badge variant="secondary">{publicClip.procedure_label} · {publicClip.duration_sec.toFixed(1)} sec</Badge></div><CardTitle className="mt-1">Surgical video review</CardTitle><CardDescription>Authentic, de-identified Appendix300 laparoscopic appendectomy footage. This is a separate procedure dataset from the Endoscapes cholecystectomy stills below; no Endoscapes annotations or masks are aligned to this clip.</CardDescription></CardHeader>
       <CardContent className="grid gap-3">

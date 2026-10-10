@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Activity, AlertCircle, ArrowLeftRight, AudioWaveform, Database, Download, Radio } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts'
 import uPlot from 'uplot'
 import 'uplot/dist/uPlot.min.css'
@@ -131,7 +131,9 @@ function SignalSpectrogram({data}:{data:SignalSpectrogram}) {
 
 export function FistulaViewer({recordId,availableRecordIds,guided=false,onEvidenceChange,viewerEvidence,locked=false}:{recordId:string;availableRecordIds:string[];guided?:boolean;onEvidenceChange?:(evidence:StudentSignalViewerEvidence)=>void;viewerEvidence?:StudentSignalViewerEvidence|null;locked?:boolean}) {
   const navigate=useNavigate()
-  const savedState=useMemo(()=>guided?null:readSignalWorkspaceState(recordId),[recordId,guided])
+  const [searchParams]=useSearchParams()
+  const comparisonId=searchParams.get('comparison')
+  const savedState=useMemo(()=>guided||comparisonId?null:readSignalWorkspaceState(recordId),[recordId,guided,comparisonId])
   const [record,setRecord]=useState<SignalRecord|null>(null)
   const [recordSearch,setRecordSearch]=useState('')
   const [windowData,setWindowData]=useState<SignalWindow|null>(null)
@@ -149,6 +151,7 @@ export function FistulaViewer({recordId,availableRecordIds,guided=false,onEviden
   const [savedComparisons,setSavedComparisons]=useState<SignalWindowComparison[]>([])
   const [savingComparison,setSavingComparison]=useState(false)
   const [saveComparisonError,setSaveComparisonError]=useState('')
+  const [openedComparisonError,setOpenedComparisonError]=useState('')
   const [channel,setChannel]=useState<StudentSignalViewerEvidence['channel']>(()=>savedState?.channel??'raw PZT1')
   const [start,setStart]=useState(()=>savedState?.start_sec??0)
   const [duration,setDuration]=useState<number>(()=>savedState?.duration_sec??5)
@@ -170,17 +173,30 @@ export function FistulaViewer({recordId,availableRecordIds,guided=false,onEviden
   const recordDuration=record?.duration_sec
   const recordSourceId=record?.source_case_id
   useEffect(()=>{if(recordDuration===undefined)return;const maximum=Math.max(0,recordDuration-duration);if(start>maximum)setStart(maximum)},[recordCaseId,recordDuration,duration,start])
-  useEffect(()=>{if(guided||!recordSourceId)return;try{localStorage.setItem(`medforge:fistulaguard:${recordSourceId}`,JSON.stringify({record_id:recordSourceId,channel,start_sec:start,duration_sec:duration} satisfies SignalWorkspacePreferences))}catch{/* Local persistence is optional when browser storage is unavailable. */}},[guided,recordSourceId,channel,start,duration])
+  useEffect(()=>{if(guided||comparisonId||!recordSourceId)return;try{localStorage.setItem(`medforge:fistulaguard:${recordSourceId}`,JSON.stringify({record_id:recordSourceId,channel,start_sec:start,duration_sec:duration} satisfies SignalWorkspacePreferences))}catch{/* Local persistence is optional when browser storage is unavailable. */}},[guided,comparisonId,recordSourceId,channel,start,duration])
   useEffect(()=>{if(recordDuration!==undefined)setComparisonStart(Math.min(5,Math.max(0,recordDuration-5)))},[recordCaseId,recordDuration])
   useEffect(()=>{if(!record)return;const maximum=Math.max(0,record.duration_sec-duration);if(start>maximum)return;let live=true;const timer=window.setTimeout(()=>{setAnalysisLoading(true);setWindowData(null);setSpectrum(null);setFeatures(null);setError('');Promise.all([api.signalWindow(record.id,channel,start,duration),api.signalSpectrum(record.id,channel,start,duration),api.signalFeatures(record.id,channel,start,duration)]).then(([trace,psd,summary])=>{if(live){setWindowData(trace);setSpectrum(psd);setFeatures(summary)}}).catch(e=>{if(live)setError(e instanceof Error?e.message:'Unable to calculate this source window')}).finally(()=>{if(live)setAnalysisLoading(false)})},120);return()=>{live=false;window.clearTimeout(timer)}},[record,channel,start,duration])
   useEffect(()=>{if(!record||spectralView!=='spectrogram')return;let live=true;setSpectrogramLoading(true);setSpectrogramError('');setSpectrogram(null);const timer=window.setTimeout(()=>{api.signalSpectrogram(record.id,channel,start,duration).then(value=>{if(live)setSpectrogram(value)}).catch(e=>{if(live)setSpectrogramError(e instanceof Error?e.message:'Unable to calculate the selected-window spectrogram')}).finally(()=>{if(live)setSpectrogramLoading(false)})},120);return()=>{live=false;window.clearTimeout(timer)}},[record,channel,start,duration,spectralView])
   useEffect(()=>{if(!record||!comparisonEnabled)return;let live=true;setComparisonLoading(true);setComparisonError('');setComparisonFeatures(null);const timer=window.setTimeout(()=>{api.signalFeatures(record.id,channel,Math.min(comparisonStart,maxComparisonStart),duration).then(value=>{if(live)setComparisonFeatures(value)}).catch(e=>{if(live)setComparisonError(e instanceof Error?e.message:'Unable to calculate the comparison window')}).finally(()=>{if(live)setComparisonLoading(false)})},120);return()=>{live=false;window.clearTimeout(timer)}},[record,channel,comparisonEnabled,comparisonStart,maxComparisonStart,duration])
   useEffect(()=>{if(!record||guided){setSavedComparisons([]);return}let live=true;api.signalComparisons(record.case_id).then(value=>{if(live)setSavedComparisons(value)}).catch(()=>{if(live)setSavedComparisons([])});return()=>{live=false}},[record,guided])
+  useEffect(()=>{
+    if(!record||!comparisonId||guided)return
+    let live=true
+    setOpenedComparisonError('')
+    api.signalComparison(comparisonId).then(item=>{
+      if(!live)return
+      if(item.case_id!==record.case_id||item.source_sha256!==record.source_sha256){setOpenedComparisonError('This saved comparison belongs to a different source recording or source revision.');return}
+      setChannel(item.channel);setStart(item.selected_window.start_sec);setDuration(item.duration_sec);setComparisonStart(item.reference_window.start_sec);setComparisonEnabled(true)
+    }).catch(error=>{if(live)setOpenedComparisonError(error instanceof Error?error.message:'Saved comparison could not be reopened')})
+    return()=>{live=false}
+  },[record,comparisonId,guided])
   const saveSignalComparison=async()=>{if(!record||!features||!comparisonFeatures)return;setSavingComparison(true);setSaveComparisonError('');try{const saved=await api.createSignalComparison({case_id:record.case_id,channel,selected_start_sec:start,reference_start_sec:Math.min(comparisonStart,maxComparisonStart),duration_sec:duration});setSavedComparisons(current=>[saved,...current.filter(item=>item.id!==saved.id)])}catch(e){setSaveComparisonError(e instanceof Error?e.message:'Unable to save this source comparison')}finally{setSavingComparison(false)}}
   if(loading)return <div className="my-4 flex min-h-32 items-center gap-3 rounded-lg border bg-card p-5 text-sm text-muted-foreground"><Activity size={17}/>Validating the local FiSaV recording and source checksum…</div>
   if(error&&!record)return <div className="my-4 flex min-h-32 items-center gap-3 rounded-lg border border-destructive/40 bg-card p-5 text-destructive"><AlertCircle size={18}/><div><b>FiSaV source is unavailable</b><p>{error}</p></div></div>
   if(!record)return <div className="my-4 flex min-h-32 items-center gap-3 rounded-lg border border-destructive/40 bg-card p-5 text-destructive"><AlertCircle size={18}/><b>No checksum-verified FiSaV recording is installed.</b></div>
   return <section className="fistulaguard-workspace mt-4 grid gap-4 pb-2" aria-label="FistulaGuard source signal review">
+    {openedComparisonError&&<div role="alert" className="rounded-md border border-destructive/40 p-3 text-sm text-destructive">{openedComparisonError}</div>}
+    {comparisonId&&!openedComparisonError&&<div role="status" className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm">Reopened saved FiSaV windows from their checksum-verified source recording.</div>}
     <header className="grid gap-2 border-b border-border pb-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
       <div><span className="eyebrow">FISTULAGUARD / FiSaV SOURCE LAB</span><h2 className="mt-1 mb-0 text-2xl font-semibold tracking-tight">AVF multichannel signal review</h2><p className="mt-1 mb-0 text-sm text-muted-foreground">Measured CSV recording · {record.source_case_id} · {record.sample_count.toLocaleString()} time samples</p></div>
       <Badge variant="outline" className="w-fit gap-2 text-primary"><span className="size-2 rounded-full bg-primary"/>Checksum verified</Badge>

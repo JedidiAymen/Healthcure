@@ -470,6 +470,8 @@ export const api = {
     ),
   signalComparisons: (caseId: string) =>
     request<SignalWindowComparison[]>(`/api/v1/comparisons?case_id=${encodeURIComponent(caseId)}`),
+  signalComparison: (comparisonId: string) =>
+    request<SignalWindowComparison>(`/api/v1/comparisons/${encodeURIComponent(comparisonId)}`),
   allSignalComparisons: (limit = 25, offset = 0) =>
     request<SignalWindowComparison[]>(`/api/v1/comparisons?limit=${limit}&offset=${offset}`),
   createSignalComparison: (input: ApiSchemas['SignalWindowComparisonCreate']) =>

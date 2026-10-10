@@ -1559,6 +1559,7 @@ export function Reports() {
                   </Table>
                 </div>
                 <ul className="my-3 grid gap-1 pl-4 text-xs leading-relaxed text-muted-foreground">{entry.comparison.limitations.map((item) => <li key={item}>{item}</li>)}</ul>
+                <Button render={<Link to={`/studio/fistulaguard/cases/${encodeURIComponent(entry.comparison.case_id)}?comparison=${encodeURIComponent(entry.comparison.id)}`} />} nativeButton={false} variant="outline" size="sm" className="mr-2"><ExternalLink data-icon="inline-start"/>Open reviewed FiSaV windows</Button>
                 <Button variant="ghost" size="sm" onClick={() => downloadComparison(entry.comparison)}><FileText data-icon="inline-start"/>Download JSON evidence</Button>
               </CardContent>
             </Card>
@@ -1586,6 +1587,7 @@ export function Reports() {
                   </div>
                   <p className="text-xs leading-relaxed text-muted-foreground">{report.document.source?.citation??"Endoscapes source citation not recorded."} · {report.document.source?.license??"Source license not recorded."}</p>
                   {(report.document.limitations?.length??0)>0&&<ul className="grid gap-1 pl-4 text-xs leading-relaxed text-muted-foreground">{report.document.limitations!.map(item=><li key={item}>{item}</li>)}</ul>}
+                  {frame?.id&&<Button render={<Link to={`/studio/surgivision/cases/${encodeURIComponent(frame.id)}?report=${encodeURIComponent(report.id)}`} />} nativeButton={false} variant="outline" size="sm" className="w-fit"><ExternalLink data-icon="inline-start"/>Open reviewed frame</Button>}
                   <Button variant="outline" size="sm" className="w-fit" onClick={()=>download(report)}><FileText data-icon="inline-start"/>Download JSON evidence</Button>
                 </CardContent>
               </Card>;
