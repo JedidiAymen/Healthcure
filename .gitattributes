@@ -1,0 +1,6 @@
+# Generated contract files are compared byte for byte by npm run contracts:check;
+# keep them LF on every OS so the check does not depend on core.autocrlf.
+contracts/openapi-implemented.json text eol=lf
+packages/contracts/generated-api.ts text eol=lf
+# Shell entrypoints run inside Linux containers.
+*.sh text eol=lf

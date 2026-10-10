@@ -15,6 +15,7 @@ from fastapi import Depends, FastAPI, HTTPException, Query, Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from . import fisav
+from . import audit
 from .auth import require_role
 from .signal_processing import FILTER_ORDER, FilterSpec, apply_filter, beat_features, detect_r_peaks, envelope, marker_intervals
 
@@ -227,12 +228,18 @@ def register_fistulaguard_tool_routes(app: FastAPI, db: Callable) -> None:
             conn.execute('''INSERT INTO signal_annotations(id,record_id,source_sha256,channel,start_sec,end_sec,label,note,created_by,created_at)
                 VALUES (?,?,?,?,?,?,?,?,?,?)''', (annotation.id, record_id, digest, annotation.channel, annotation.start_sec, annotation.end_sec,
                                                    annotation.label, annotation.note, user['id'], annotation.created_at))
+            audit.append(conn, action='signal_annotation.create', target_kind='signal_annotation', target_id=annotation.id, actor=user,
+                         owner_id=user['id'], details={'record_id': record_id, 'source_sha256': digest,
+                                                       'window': [annotation.start_sec, annotation.end_sec], 'channel': annotation.channel})
         return annotation
 
     @app.delete('/api/v1/fistulaguard/annotations/{annotation_id}', status_code=204)
     def fistulaguard_annotation_delete(annotation_id: str, user: dict = Depends(educator)):
         with db() as conn:
             deleted = conn.execute('DELETE FROM signal_annotations WHERE id=? AND created_by=?', (annotation_id, user['id'])).rowcount
+            if deleted:
+                audit.append(conn, action='signal_annotation.delete', target_kind='signal_annotation', target_id=annotation_id,
+                             actor=user, owner_id=user['id'])
         if not deleted:
             raise HTTPException(404, detail={'code': 'ANNOTATION_NOT_FOUND', 'message': 'No annotation of yours matches this ID'})
         return Response(status_code=204)

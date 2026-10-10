@@ -892,3 +892,5 @@ class Health(StrictModel):
     status: Literal['ok'] = 'ok'
     reference_harness: bool = True
     public_deployment_ready: bool = False
+    # Whether the app database file is encrypted at rest. Research datasets are never covered.
+    storage_encryption: Literal['sqlcipher-aes-256','none'] = 'none'
