@@ -68,7 +68,7 @@ The viewer paths read installed local files and call the local API. They do not 
 
 ## Local-only Docker HackCure profile
 
-Use this profile when the rehearsal must run in Docker and the host preflight must inspect the exact database used by the app. It keeps the source tree mounted read-only, adds only the authenticated `pt_241` comparison mapping, and publishes the existing proxy ports on `127.0.0.1`. The API and broker have no published host ports. Do not use this profile for LAN access or public hosting.
+Use this profile when the rehearsal must run in Docker and the host preflight must inspect the exact database used by the app. It requires Docker Engine and Docker Compose **2.24.4 or newer** because the overlay uses Compose's [`!reset` merge tag](https://docs.docker.com/reference/compose-file/merge/) to remove the default SQLCipher secret mount. Both startup and preflight reject older versions before proceeding. It keeps the source tree mounted read-only, adds only the authenticated `pt_241` comparison mapping, and publishes the existing proxy ports on `127.0.0.1`. The API and broker have no published host ports. Do not use this profile for LAN access or public hosting.
 
 Prepare the Docker images and the local `pt_241` source files on this machine before rehearsal. The launcher below does not build or pull images; it verifies the resolved Compose ports and starts only already available images. It creates the ignored `data/hackcure-docker/` directory when needed. The app applies its normal database schema migrations at startup but does **not** seed student, educator, reviewer, or admin accounts. Do not provision reviewer/student accounts as part of this setup unless the people responsible for the rehearsal explicitly arrange that separately.
 

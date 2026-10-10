@@ -5,10 +5,8 @@ ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 CASE_DIR="$ROOT/data/openkbp-opt/pt_241"
 DB_DIR="$ROOT/data/hackcure-docker"
 
-if ! command -v docker >/dev/null 2>&1 || ! docker compose version >/dev/null 2>&1; then
-  printf 'Docker Engine with the Compose plugin is required.\n' >&2
-  exit 1
-fi
+source "$ROOT/scripts/lib/hackcure-compose-version.sh"
+require_hackcure_compose
 if [ ! -f "$CASE_DIR/medforge-source-manifest.json" ] || [ ! -f "$CASE_DIR/ct.csv" ] || [ ! -f "$CASE_DIR/prediction-set_1.csv" ]; then
   printf 'Verified OpenKBP-Opt pt_241 files are missing. Follow RUN_LOCAL.md source setup first.\n' >&2
   exit 1
