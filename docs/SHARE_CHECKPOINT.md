@@ -2,7 +2,7 @@
 
 **Snapshot date:** 2026-10-10
 **Review branch:** `review/cobalt-dosetwin-d2-d3`
-**Latest feature commit:** `5908041` (`ci: make browser checks source-independent`)
+**Latest pushed commit:** `f372980` (`test: exercise full source-backed browser flow`)
 **Purpose:** friend/reviewer handoff; development continues after review.
 
 ## Current state
@@ -17,6 +17,7 @@ MEDFORGE is a local-first scientific research and clinician education applicatio
 - **Home handoff:** when local run history contains a completed DoseTwin case summary, the primary Home action resumes that exact run and opens its real saved metrics. The desktop/tablet/phone captures and focused browser verification are recorded in [`PR-UX-25`](ui/PR-UX-25-home-resume-analysis.md).
 - **SurgiVision label discovery:** the video-first native Appendix300 panel states that it has no aligned results and links directly to separate authentic CholecT50 sampled frames, where the source labels appear. Real-source Playwright passes and responsive captures are recorded in [`PR-UX-26`](ui/PR-UX-26-surgivision-labeled-sample-discovery.md). Full-rate aligned cholecystectomy footage remains unavailable.
 - **Portable browser checks:** the branch's CI browser step runs 16 data-independent E2E checks; source-dataset integrations remain available in the full local E2E command and are labeled `@source`. The CholecT50 navigation test uses explicit UI-only fixture mode in clean CI and has separately passed against local authentic frames. The accessible Combobox also fits a visual viewport at 200% zoom. See [`PR-UX-27`](ui/PR-UX-27-reproducible-browser-checks.md).
+- **Full source review:** the full 19-test browser suite now passes against the installed research data, using a temporary database and artifact store. It covers the keyboard Academy mission, authentic `pt_241` prediction comparison/report, FiSaV source-window comparison, CholecT50 matched labels, and the CI-safe shell flows. See [`PR-UX-28`](ui/PR-UX-28-source-backed-browser-review.md).
 
 ## Verification in this snapshot
 
@@ -29,6 +30,7 @@ MEDFORGE is a local-first scientific research and clinician education applicatio
 - Home saved-run continuation: focused Playwright passed and confirmed the exact run ID, case summary, and Brainstem values; screenshots show the real app shell with an explicitly test-only API fixture at desktop 1440×900, tablet 768×1024, and phone 390×844 under ignored `.local-review/UX-25-home-resume/`. Lint, typecheck, 44 frontend tests, and build passed.
 - SurgiVision label discovery: `MEDFORGE_API_PORT=18098 MEDFORGE_E2E_SOURCE_API=1 npx playwright test tests/e2e/cholect50-sampled-review.spec.ts --workers=1` passed against the active local source service; it confirms navigation into the matching labels, sample playback/pause, and responsive layouts. Lint/typecheck/build passed; actual source screenshots are in `.local-review/SURGIVISION-MEDIA-MODES/`.
 - Clean-data browser CI path: `npm run test:e2e:ci -- --workers=2` — **16 passed** with no API on port 8000. `npm run lint`, `npm run typecheck`, frontend unit tests (**44 passed**) and production build passed. The full local E2E command retains three source-asset checks that require the installed research data.
+- Full source-backed browser verification: `MEDFORGE_API_PORT=18109 MEDFORGE_E2E_SOURCE_API=1 npm run test:e2e -- --workers=2` — **19 passed** against locally installed assets. The isolated test DB and uploaded dose prediction were stored under `/tmp` and removed when verification ended.
 - Fresh full API recheck: `python3 -m pytest -q apps/api/tests` — **42 passed**. `npm run contracts:check` — passed. Live source smoke against ports 18098/4174 checked 2 DoseTwin cases, 1,933 SurgiVision cases, 59 FiSaV records, CholecT50 source labels, all ten `pt_201` ROI DVHs, 36 source planes and all 19 app routes. The first smoke invocation used its default port while no default-port API was listening; the run against the active review services passed. API readiness still correctly reports public deployment disabled.
 - Exact per-milestone commands, component sources/licenses, images, and caveats are recorded in [`PR-FIX-08`](ui/PR-FIX-08-dosetwin-linked-orthogonal-planes.md) and [`PR-UX-22`](ui/PR-UX-22-surgivision-media-modes.md). Full history is in [`STATUS.md`](STATUS.md) and the current gates are in [`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md).
 
