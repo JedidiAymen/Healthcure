@@ -31,7 +31,7 @@ S0 Audit licenses, data and checkpoint access + machine capabilities
 S1 Monorepo + typed cases + asset URLs + source fixtures + design tokens
  |
 S2 Viewer components x3 + scientific units & transforms
- |
+ |                         
 S3 Capability registry + case adapters + tested calculations
  |
 S4 Educator selects source and publishes immutable learning case
