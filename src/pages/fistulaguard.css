@@ -26,6 +26,26 @@
   color: var(--signal-muted);
 }
 
+.fistula-inspection-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 1rem;
+}
+
+.fistula-inspector {
+  border-color: var(--border);
+  background: var(--card);
+}
+
+.fistula-compact-spectrum {
+  height: 340px;
+}
+
+.fistula-inspector [data-slot="tabs-content"] {
+  min-width: 0;
+}
+
 .fistula-viewport-header [data-slot="card-title"] {
   color: var(--signal-text);
 }
@@ -103,5 +123,11 @@
 
   .fistula-trace-footer {
     flex-direction: column;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1023px) {
+  .fistula-waveform-chart {
+    height: 320px !important;
   }
 }
