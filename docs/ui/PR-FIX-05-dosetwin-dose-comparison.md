@@ -36,7 +36,8 @@ Historical `pt_201` review: the comparison accordion truthfully shows no compati
 ## Remaining scope
 
 - A compatible `pt_201` prediction remains unavailable. Do not compare `pt_241` with it or claim that case's D3 comparison is complete.
-- Verify that a saved `pt_241` comparison report reopens with all source hashes in a fresh local session.
+- Saved `pt_241` comparison reports now reopen in Evidence Reports with all reference/prediction hashes, the archived output's provenance, seven ROI measurements and comparison limitations. A real-source Playwright run verified persistence after navigating away from the comparison panel; a separate local database is not required because the API report is read back from persistence.
+- The actual report view was reviewed at desktop 1440×900, tablet 768×1024 and phone 390×844. All responses returned 200 with no page errors or document-level horizontal overflow. Screenshots: `.local-review/DOSETWIN-COMPARISON-REPORT-REOPEN/reports-desktop.png`, `reports-tablet.png`, and `reports-phone.png`.
 - Continue remaining redesign milestones; this local comparison profile does not complete DoseTwin or the wider product.
 
 The `pt_241` artifact is a published archived prediction, not a locally executed model or a clinical validation. Keep `pt_201` comparison marked **PARTIAL** until a compatible authentic prediction is available.

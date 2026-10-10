@@ -1535,6 +1535,7 @@ export function Experiments() {
 }
 type ReportFeedItem =
   | { kind: "openkbp-run"; id: string; created_at: string; report: EvidenceReport }
+  | { kind: "dosetwin-comparison"; id: string; created_at: string; report: EvidenceReport }
   | { kind: "surgivision-frame"; id: string; created_at: string; report: EvidenceReport }
   | { kind: "fisav-comparison"; id: string; created_at: string; comparison: SignalWindowComparison };
 
@@ -1652,6 +1653,32 @@ export function Reports() {
                   {(report.document.limitations?.length??0)>0&&<ul className="grid gap-1 pl-4 text-xs leading-relaxed text-muted-foreground">{report.document.limitations!.map(item=><li key={item}>{item}</li>)}</ul>}
                   {frame?.id&&<Button render={<Link to={`/studio/surgivision/cases/${encodeURIComponent(frame.id)}?report=${encodeURIComponent(report.id)}`} />} nativeButton={false} variant="outline" size="sm" className="w-fit"><ExternalLink data-icon="inline-start"/>Open reviewed frame</Button>}
                   <Button variant="outline" size="sm" className="w-fit" onClick={()=>download(report)}><FileText data-icon="inline-start"/>Download JSON evidence</Button>
+                </CardContent>
+              </Card>;
+            }
+            if(entry.kind==="dosetwin-comparison"){
+              const comparison=report.document.comparison;
+              const hashes=report.document.source?.files_sha256??{};
+              return <Card className="overflow-hidden" key={report.id}>
+                <CardHeader className="gap-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <Badge variant="outline" className="text-primary">DoseTwin · same-grid comparison</Badge>
+                    <span className="text-xs tabular-nums text-muted-foreground">{new Date(report.created_at+"Z").toLocaleString()}</span>
+                  </div>
+                  <CardTitle>{report.document.title??"DoseTwin prediction comparison"}</CardTitle>
+                  <CardDescription>OpenKBP · {report.document.case?.source_case_id??report.case_id} · archived output compared with its matching benchmark reference</CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-4">
+                  <div className="grid gap-3 border-y py-3 text-sm sm:grid-cols-2">
+                    <div className="grid gap-1"><span className="text-xs text-muted-foreground">Selected view</span><span>{report.document.selection?.roi??"—"} · {report.document.selection?.axis===0?"X":report.document.selection?.axis===1?"Y":"Z"} index {report.document.selection?.index??"—"} · processed-grid coordinates</span></div>
+                    <div className="grid gap-1"><span className="text-xs text-muted-foreground">Prediction source</span><span>{report.document.source?.model_revision??"Model revision unavailable"} · {report.document.source?.prediction_source_revision??"source revision unavailable"}</span></div>
+                    {Object.entries(hashes).map(([name,hash])=><div key={name} className="grid min-w-0 gap-1"><span className="text-xs text-muted-foreground">SHA-256 · {name}</span><code className="break-all text-[11px]">{hash}</code></div>)}
+                    <div className="grid gap-1"><span className="text-xs text-muted-foreground">Checkpoint SHA-256</span><code className="break-all text-[11px]">{report.document.source?.checkpoint_sha256??"Not published by source"}</code></div>
+                    <div className="grid gap-1 sm:col-span-2"><span className="text-xs text-muted-foreground">Declared local-use basis</span><span className="text-xs leading-relaxed">{report.document.source?.rights_basis??"Not recorded"}</span></div>
+                  </div>
+                  {comparison&&<div className="overflow-x-auto rounded-md border border-border"><Table><caption className="p-2 text-left text-xs text-muted-foreground">Saved ROI measurements · archived prediction versus reference · Gy</caption><TableHeader><TableRow><TableHead>Structure</TableHead><TableHead>Voxels</TableHead><TableHead>Reference mean</TableHead><TableHead>Prediction mean</TableHead><TableHead>Mean |Δ|</TableHead><TableHead>Max |Δ|</TableHead></TableRow></TableHeader><TableBody>{comparison.roi_comparisons.map(item=><TableRow key={item.roi}><TableCell className="font-medium">{item.roi}</TableCell><TableCell className="font-mono tabular-nums">{item.voxel_count.toLocaleString()}</TableCell><TableCell className="font-mono tabular-nums">{item.reference_mean_gy.toFixed(2)} Gy</TableCell><TableCell className="font-mono tabular-nums">{item.prediction_mean_gy.toFixed(2)} Gy</TableCell><TableCell className="font-mono tabular-nums">{item.mean_absolute_delta_gy.toFixed(2)} Gy</TableCell><TableCell className="font-mono tabular-nums">{item.maximum_absolute_delta_gy.toFixed(2)} Gy</TableCell></TableRow>)}</TableBody></Table></div>}
+                  {(report.document.limitations?.length??0)>0&&<ul className="grid gap-1 pl-4 text-xs leading-relaxed text-muted-foreground">{report.document.limitations!.map(item=><li key={item}>{item}</li>)}</ul>}
+                  <div className="flex flex-wrap gap-2"><Button render={<Link to={`/studio/dosetwin/cases/${encodeURIComponent(report.case_id)}`} />} nativeButton={false} variant="outline" size="sm"><ExternalLink data-icon="inline-start"/>Open source case</Button><Button variant="outline" size="sm" onClick={()=>download(report)}><FileText data-icon="inline-start"/>Download JSON evidence</Button></div>
                 </CardContent>
               </Card>;
             }
@@ -1810,7 +1837,7 @@ function useReportList() {
       .then(([reports,comparisons]) => {
         if (!live) return;
         const combined:ReportFeedItem[]=[
-          ...reports.map(report=>({kind:(report.document.schema==='medforge.surgivision-source-frame-evidence/v1'?"surgivision-frame":"openkbp-run") as "surgivision-frame"|"openkbp-run",id:report.id,created_at:report.created_at,report})),
+          ...reports.map(report=>({kind:(report.document.schema==='medforge.surgivision-source-frame-evidence/v1'?"surgivision-frame":report.document.schema==='medforge.dosetwin-dose-comparison/v1'?"dosetwin-comparison":"openkbp-run") as "surgivision-frame"|"dosetwin-comparison"|"openkbp-run",id:report.id,created_at:report.created_at,report})),
           ...comparisons.map(comparison=>({kind:"fisav-comparison" as const,id:comparison.id,created_at:comparison.created_at,comparison})),
         ];
         combined.sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at));
