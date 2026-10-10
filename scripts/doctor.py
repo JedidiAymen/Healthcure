@@ -85,7 +85,23 @@ def source_readiness() -> dict[str, object]:
     except (OSError, ValueError, TypeError):
         splits = {}
         endo_count = 0
-    endo_images_present = sum(1 for path in endoscapes.glob("*/[0-9]*_[0-9]*.jpg") if path.is_file())
+    # Count the frame files named in the curated BBox201 manifest. The local
+    # Endoscapes directory can also contain the much larger sampled-frame
+    # release under train_seg/val_seg/test_seg; those extra images must not
+    # make this 1,933-frame inventory appear incomplete.
+    endo_images_present = 0
+    for split, split_meta in splits.items():
+        if not isinstance(split_meta, dict):
+            continue
+        images = split_meta.get("images", [])
+        if not isinstance(images, list):
+            continue
+        for image in images:
+            if not isinstance(image, dict):
+                continue
+            file_name = image.get("file_name")
+            if isinstance(file_name, str) and Path(file_name).name == file_name:
+                endo_images_present += int((endoscapes / split / file_name).is_file())
     endo_annotations_present = sum(1 for split in splits if (endoscapes / split / "annotation_coco.json").is_file())
     fisav_manifest = fisav / "medforge-source-manifest.json"
     try:
