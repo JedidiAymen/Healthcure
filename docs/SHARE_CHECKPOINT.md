@@ -1,36 +1,39 @@
 # HealthCure / MEDFORGE review checkpoint
 
-**Snapshot date:** 2026-10-09
-**Purpose:** hand off the current implementation to a reviewer; work continues after review.
+**Snapshot date:** 2026-10-10
+**Review branch:** `review/cobalt-dosetwin-d2-d3`
+**Purpose:** friend/reviewer handoff; development continues after review.
 
-## What is in this repository
+## Current state
 
-MEDFORGE is a local-first research and clinician education application for SurgiVision, DoseTwin, and FistulaGuard. The shipped source includes the React/Vite/Tailwind app, shadcn Base Nova components, FastAPI service, learning workflows, source-acquisition and validation scripts, API contracts, and the supplied v0.8 product and architecture handoff under `docs/source/v0.8/`.
+MEDFORGE is a local-first scientific research and clinician education application for SurgiVision, DoseTwin, and FistulaGuard. This branch contains the React 19 / Vite 8 / Tailwind 4 interface, shadcn Base Nova/Base UI components, FastAPI service, source validation/acquisition tools, education workflows, API contracts, and the supplied v0.8 and locked B Cobalt / Porcelain design handoffs.
 
-The Student Academy and educator workflow include pathway pages, cohort assignments, learner-safe lesson attempts, educator scoring and debrief, progress summaries/history, participation export, and opt-in XP/activity achievements. Assignment, privacy, grading, and gamification behavior have API regression coverage. This is a substantial working slice, not a finished curriculum: instructor-approved competency mapping and complete authored learning content are still outstanding.
+- **DoseTwin:** `pt_201` has a large source-backed primary slice, two simultaneous linked orthogonal views, dose/structure layers, multi-ROI DVHs and source provenance. The Y-view real-pixel selection updates the common X/Y/Z voxel. An authentic `pt_241`/OpenKBP-Opt case and prediction pair are separately configured where installed. Neither case creates a fake prediction. The official 23 `pt_201` metric comparisons pass; maximum absolute difference is `0.0000076471 Gy`.
+- **SurgiVision:** the page distinguishes the Appendix300 native appendectomy clip (no aligned results), CholecT50 sparse sampled cholecystectomy images with their matching source labels, and Endoscapes annotated stills. Full-rate cholecystectomy footage with synchronized labels is not installed. No annotations are fabricated or placed on another procedure's video.
+- **FistulaGuard:** FiSaV waveform, PSD, spectrogram and window-comparison views use the installed checksum-verified recordings and retain source-time and units limitations.
+- **Academy and Educator:** local source-backed investigations, learner-safe publications, assignments, manual review, debrief, progress, private opt-in XP/achievements and educator editing are implemented. Complete instructor-approved competency mapping and final authored curriculum are still open.
 
-## Verification recorded for this snapshot
+## Verification in this snapshot
 
-- Frontend: `npm run lint`, `npm run build`, and `npm run test` — 17 tests passed.
-- API: `python3 -m pytest -q apps/api/tests` — 30 tests passed.
-- Local source/route smoke: `npm run smoke:local` — 19 app routes plus installed-source checks passed.
-- Responsive review: Academy assignment/pathway and Progress layouts checked at 390×844 and 768×1024; no horizontal page overflow. Keyboard focus was seen on the assigned lesson link.
+- `npm run lint`, `npm run typecheck`, `npm run build` passed.
+- Frontend unit suite: **44 passed** (`npm run test`).
+- FastAPI suite: **42 passed** (`python3 -m pytest -q apps/api/tests`).
+- DoseTwin focused Playwright linked-plane review passed on UI interaction fixtures; a separate running-app review used the installed `pt_201` arrays, clicked a real secondary-plane voxel, checked linked plane values, and captured desktop (1440×900), laptop (1280×800), tablet (768×1024), and phone (390×844) without horizontal overflow or page errors. Screenshots are ignored local artifacts under `.local-review/DOSETWIN-LINKED-MPR-REAL/`.
+- SurgiVision source-backed E2E review passed at desktop/tablet/phone sizes; screenshots are under `.local-review/SURGIVISION-MEDIA-MODES/`.
+- Exact per-milestone commands, component sources/licenses, images, and caveats are recorded in [`PR-FIX-08`](ui/PR-FIX-08-dosetwin-linked-orthogonal-planes.md) and [`PR-UX-22`](ui/PR-UX-22-surgivision-media-modes.md). Full history is in [`STATUS.md`](STATUS.md) and the current gates are in [`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md).
 
-The Progress screen currently has no educator-reviewed grades in its isolated preview database. Therefore populated rubric-history chart interaction/keyboard review remains open. Academy pathway selection now has a keyboard focus and Enter-navigation check at desktop, tablet and phone sizes; an unassigned learner’s path detail correctly shows the no-lessons state. See `docs/RELEASE_CHECKLIST.md` for the exact gates and `docs/STATUS.md` for the implementation history.
+## Open work and release limits
 
-## What remains open
+- Finish the remaining page-by-page review and feature gates in the locked handoff. The local-demo checklist is not a claim that every V3 visual/functional requirement has passed.
+- Complete instructor-approved competency mapping and authored curriculum.
+- Dataset display rights for an external audience, especially OpenKBP and Endoscapes, still require scope-specific review. OpenKBP dataset rights are not established by the source-code license. Do not publish research data or screenshots before review.
+- Keep the API bound to `127.0.0.1`; general research endpoints do not have production authorization. No public deployment is enabled.
+- CVS-AdaptNet inference remains blocked until the specific checkpoint's provenance, integrity and use terms are resolved. Do not claim clinical or model performance.
 
-- Finish interactive review of a populated Progress chart, criterion selector, values table, and keyboard access. A reviewed grade is needed to populate that view without inventing sample progress.
-- Complete instructor-approved competency mapping and the authored curriculum.
-- Keep the service bound to loopback. General research routes do not have production authorization, and hosting is disabled.
-- Resolve dataset display/redistribution rights for the intended audience before sharing any data-backed screenshots or running a public demo. OpenKBP data rights and CVS-AdaptNet checkpoint-specific terms/provenance remain unresolved; other sources also have attribution and scope requirements. See `docs/BLOCKERS.md` and `docs/RELEASE_CHECKLIST.md`.
+## Open the app and provision profiles
 
-## Data and local setup
+From the review checkout, follow [`LOCAL_ACCESS_AND_PROFILES.md`](LOCAL_ACCESS_AND_PROFILES.md) for dependency setup, launch command, workspace URLs, and student/educator account creation. Start with `./scripts/start_local.sh`, then open <http://127.0.0.1:5173>. The API remains loopback-only.
 
-This push contains application source and documentation, **not** the locally installed research datasets, pretrained weights, generated evidence, SQLite databases, or preview accounts. Those files are excluded by `.gitignore` because they are large, local-only, or still subject to display/use review. A fresh clone must follow `RUN_LOCAL.md` and `docs/BLOCKERS.md`; expect the research viewers to have no installed cases until each allowed source is acquired locally.
+Professional Studio does not require an account. Academy requires an operator-provisioned student account; Educator Studio requires a separate operator-provisioned educator account. **There are no default credentials to share:** each reviewer chooses each password when creating their local account. User databases, passwords, sessions, research datasets, weights and generated reports are excluded from Git and must be provisioned/acquired separately on each machine. Do not put secrets or local user databases in commits.
 
-To run the application shell, install the documented Python API and Node dependencies, then launch `./scripts/start_local.sh`. It binds to `127.0.0.1`; do not expose it to a network. Do not reuse or publish temporary preview credentials.
-
-## Supplied handoff
-
-The supplied v0.8 handoff documents are preserved under `docs/source/v0.8/`. They describe the intended product and acceptance gates. This checkpoint describes implementation evidence and remaining work; it does not claim every handoff requirement is complete.
+This branch push contains application source and documentation, not the large local datasets or user credentials. A fresh checkout must follow [`RUN_LOCAL.md`](../RUN_LOCAL.md) and [`BLOCKERS.md`](BLOCKERS.md); viewer data appears only after its permitted source files are installed.

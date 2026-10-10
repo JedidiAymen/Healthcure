@@ -6,7 +6,7 @@ Updated 2026-10-10. This is a local-demo checklist. MEDFORGE is **not v1.0 locke
 
 - [x] A clean frontend install succeeds with `npm ci`; every direct dependency is pinned in `package.json` and `package-lock.json`. `npm run lint` and `npm run build` pass after the clean install.
 - [x] React/Vite/TypeScript production build passes.
-- [x] Current API suite passes: **30 tests**, including role denial, immutable publications, hidden learner answers, delayed reference release, source-bound evidence, opt-in XP/achievement preferences, no XP award after opt-out, latest-grade progress aggregation, durable grade retry receipts, changed-payload key conflicts, authorization before receipt replay, educator assignment retrieval, persisted CVS run provenance, OpenKBP malformed-index/value/grid errors, and student denial for the SurgiVision coverage endpoint. Authentic `pt_201` still passes all 23 official evaluator metric checks. Latest run: `python3 -m pytest -q apps/api/tests`.
+- [x] Current API suite passes: **42 tests**, including role denial, immutable publications, hidden learner answers, delayed reference release, source-bound evidence, opt-in XP/achievement preferences, no XP award after opt-out, latest-grade progress aggregation, durable grade retry receipts, changed-payload key conflicts, authorization before receipt replay, educator assignment retrieval, persisted CVS run provenance, OpenKBP malformed-index/value/grid errors, student denial for the SurgiVision coverage endpoint, and Endoscapes/CholecT50/Appendix300 source checks. Authentic `pt_201` still passes all 23 official evaluator metric checks. Latest run: `python3 -m pytest -q apps/api/tests`.
 - [x] `npm run lint` passes using ESLint flat config, TypeScript and React Hooks rules; `npm run build` passes.
 - [x] Pydantic API schemas export the implemented OpenAPI contract and generated frontend schema types are current: `npm run contracts:check`.
 - [x] Reference checks pass: 34 required SQLite tables and foreign-key enforcement; 18 API contracts; generated OpenAPI; TypeScript selection contract.
@@ -37,6 +37,7 @@ Updated 2026-10-10. This is a local-demo checklist. MEDFORGE is **not v1.0 locke
 - [x] No pretrained model output or fake clinical result is seeded.
 - [x] CVS-AdaptNet single-frame API adapter persists a source-bound run and is visibly blocked while checkpoint checksum and checkpoint-specific terms remain unresolved.
 - [x] Authentic OpenKBP-Opt `pt_241` report history reopens the matching archived prediction comparison with both full array hashes, all seven ROI measurements and source limitations; the `pt_201` no-prediction gate remains explicit. Focused real-data Playwright verification and desktop/tablet/phone visual review are recorded in [`PR-UX-18`](ui/PR-UX-18-dosetwin-comparison-report-history.md).
+- [x] DoseTwin shows one large primary plane and two simultaneous, clickable orthogonal planes on the real `pt_201` arrays. A source-pixel selection in the Y plane updated the shared X/Z voxel and the primary Z slice; real running-app captures cover desktop/laptop/tablet/phone with no page-level overflow. The 23 official metric comparison and 44 frontend unit tests still pass. See [`PR-FIX-08`](ui/PR-FIX-08-dosetwin-linked-orthogonal-planes.md).
 
 ## Required before calling the local education pathway fully reviewed
 
