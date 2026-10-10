@@ -603,20 +603,20 @@ export function Studio() {
         </div>
       </div>
       {runs.data.length ? (
-        <div className="case-list">
+        <div className="border-t border-border">
           {runs.data.slice(0, 5).map((run) => (
-            <Link className="case-row" key={run.id} to="/studio/experiments">
-              <span className="case-module-icon">
+            <Link className="flex min-h-[62px] items-center gap-3 border-b border-border px-3 hover:bg-accent/50 max-sm:gap-2 max-sm:px-1" key={run.id} to="/studio/experiments">
+              <span className="grid size-8 shrink-0 place-items-center rounded-md bg-muted text-primary">
                 <FlaskConical size={17} />
               </span>
-              <span className="case-primary">
-                <b>{run.operation_id}</b>
-                <small>
+              <span className="grid min-w-0 flex-1 gap-1">
+                <b className="truncate text-sm font-medium">{run.operation_id}</b>
+                <small className="truncate text-xs text-muted-foreground">
                   {run.case_id} · {run.source_kind} · {run.status}
                 </small>
               </span>
-              <span className="case-id">{run.id}</span>
-              <ArrowRight size={16} />
+              <span className="max-w-[120px] truncate font-mono text-[11px] text-muted-foreground max-sm:max-w-[70px]">{run.id}</span>
+              <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
             </Link>
           ))}
         </div>
@@ -765,28 +765,28 @@ export function Cases() {
         </Alert>
       ) : rows.length ? (
         <>
-          <div className="case-list">
+          <div className="border-t border-border">
           {visibleRows.map((c) => (
             <Link
-              className="case-row"
+              className="flex min-h-[62px] items-center gap-3 border-b border-border px-3 hover:bg-accent/50 max-sm:gap-2 max-sm:px-1"
               key={c.id}
               to={`/studio/${c.module}/cases/${encodeURIComponent(c.id)}`}
             >
-              <span className="case-module-icon">
+              <span className="grid size-8 shrink-0 place-items-center rounded-md bg-muted text-primary">
                 <Database size={17} />
               </span>
-              <span className="case-primary">
-                <b>{c.label}</b>
-                <small>
+              <span className="grid min-w-0 flex-1 gap-1">
+                <b className="truncate text-sm font-medium">{c.label}</b>
+                <small className="truncate text-xs text-muted-foreground">
                   {c.dataset_id} · source case {c.source_case_id}
                 </small>
               </span>
-              <span className="case-origin">
-                <span className="state-mark ready" />
+              <Badge variant="outline" className="hidden shrink-0 gap-1.5 text-xs text-muted-foreground md:inline-flex">
+                <span className="size-1.5 rounded-full bg-primary" aria-hidden="true" />
                 {c.reference_kind}
-              </span>
-              <span className="case-id">{c.id}</span>
-              <ArrowRight size={16} />
+              </Badge>
+              <span className="max-w-[120px] truncate font-mono text-[11px] text-muted-foreground max-sm:max-w-[70px]">{c.id}</span>
+              <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
             </Link>
           ))}
           </div>
@@ -1390,30 +1390,30 @@ export function Experiments() {
             </div>
           </div>
           {runs.length ? (
-            <div className="case-list">
+            <div className="border-t border-border">
               {runs.map((run) => (
                 <Button
                   type="button"
                   variant="ghost"
                   key={run.id}
-                  className={`case-row saved-run-row h-auto w-full justify-start whitespace-normal text-left${selectedRun?.id === run.id ? " bg-muted" : ""}`}
+                  className="h-auto min-h-[62px] w-full justify-start gap-3 rounded-none border-b border-border px-3 py-3 text-left whitespace-normal hover:bg-accent/50 aria-pressed:bg-accent max-sm:gap-2 max-sm:px-1"
                   aria-pressed={selectedRun?.id === run.id}
                   onClick={() => {
                     setSelectedRun(run);
                     setReport(null);
                   }}
                 >
-                  <span className="case-module-icon">
+                  <span className="grid size-8 shrink-0 place-items-center rounded-md bg-muted text-primary">
                     <FlaskConical size={17} />
                   </span>
-                  <span className="case-primary">
-                    <b>{run.operation_id}</b>
-                    <small>
+                  <span className="grid min-w-0 flex-1 gap-1">
+                    <b className="truncate text-sm font-medium">{run.operation_id}</b>
+                    <small className="truncate text-xs text-muted-foreground">
                       {run.case_id} · {run.source_kind} · {run.status}
                     </small>
                   </span>
-                  <span className="case-id">{run.id}</span>
-                  <ArrowRight size={16} />
+                  <span className="max-w-[120px] truncate font-mono text-[11px] text-muted-foreground max-sm:max-w-[70px]">{run.id}</span>
+                  <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
                 </Button>
               ))}
             </div>
