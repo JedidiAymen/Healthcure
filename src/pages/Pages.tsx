@@ -1349,10 +1349,9 @@ export function Models() {
         <Alert variant="destructive"><CircleAlert/><AlertTitle>Model registry is unavailable</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>
       ) : (
         <>
-          <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <div className="rounded-lg border border-border bg-card px-3 py-2.5"><span className="text-[11px] uppercase tracking-wide text-muted-foreground">Catalogued methods</span><strong className="mt-1 block text-xl tabular-nums">{loading ? "—" : data.length}</strong></div>
-            <div className="rounded-lg border border-border bg-card px-3 py-2.5"><span className="text-[11px] uppercase tracking-wide text-muted-foreground">Ready to execute</span><strong className="mt-1 block text-xl tabular-nums text-primary">{loading ? "—" : readyCount}</strong></div>
-            <div className="col-span-2 rounded-lg border border-border bg-card px-3 py-2.5 sm:col-span-1"><span className="text-[11px] uppercase tracking-wide text-muted-foreground">Need a verified gate</span><strong className="mt-1 block text-xl tabular-nums">{loading ? "—" : gatedCount}</strong></div>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-y border-border py-2 text-sm">
+            <span><strong className="tabular-nums">{loading ? "—" : data.length}</strong> registered methods</span>
+            <span className="text-xs text-muted-foreground">{loading ? "Checking catalog status…" : `${readyCount} marked ready · ${gatedCount} gated or unverified`}</span>
           </div>
           <div className="mb-3 grid gap-2 sm:grid-cols-[minmax(16rem,1fr)_auto]">
             <InputGroup className="h-9 w-full">
@@ -1372,27 +1371,50 @@ export function Models() {
             <ToggleGroupItem value="dosetwin" aria-label="DoseTwin methods" className="h-8 px-3">DoseTwin</ToggleGroupItem>
             <ToggleGroupItem value="fistulaguard" aria-label="FistulaGuard methods" className="h-8 px-3">FistulaGuard</ToggleGroupItem>
           </ToggleGroup>
-          <div className="grid min-w-0 items-start gap-3 lg:grid-cols-[minmax(17rem,.85fr)_minmax(0,1.35fr)]">
+          <div className="grid min-w-0 items-start gap-3 xl:grid-cols-[minmax(0,1.15fr)_minmax(20rem,.85fr)]">
             <Card size="sm" className="min-w-0 overflow-hidden">
               <CardHeader className="border-b border-border px-4 py-3">
-                <div className="text-xs font-medium text-muted-foreground">METHOD CATALOG</div>
                 <CardTitle className="text-base">{visibleModels.length} source-linked methods</CardTitle>
                 <CardDescription>Choose a method to inspect its provenance and execution gate.</CardDescription>
               </CardHeader>
-              <nav aria-label="Research methods" className="grid divide-y divide-border">
-                {visibleModels.map((model) => (
-                  <button type="button" aria-pressed={selectedModel?.id === model.id} key={model.id} onClick={() => setSelectedModelId(model.id)} className={`grid min-w-0 gap-2 px-4 py-3 text-left transition-colors hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring ${selectedModel?.id === model.id ? "bg-primary/5" : "bg-card"}`}>
-                    <span className="flex min-w-0 items-start justify-between gap-3"><strong className="min-w-0 text-sm font-semibold leading-5 text-foreground">{model.name}</strong><Badge variant="outline" className="shrink-0 text-[10px]">{model.readiness.replaceAll("-", " ")}</Badge></span>
-                    <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground"><span>{moduleLabels[model.module]}</span><span aria-hidden="true">·</span><span>{model.operation_ids.length} registered {model.operation_ids.length === 1 ? "operation" : "operations"}</span></span>
-                  </button>
-                ))}
-                {loading && <div className="grid gap-2 p-4"><Skeleton className="h-12 w-full"/><Skeleton className="h-12 w-full"/><Skeleton className="h-12 w-full"/></div>}
-                {!loading && visibleModels.length === 0 && <div className="p-4 text-sm text-muted-foreground">{searchText || readinessFilter !== "all" ? "No registered methods match this search and filter." : "No methods are registered for this workspace."}</div>}
-              </nav>
+              <CardContent className="p-0">
+                <Table className="table-fixed">
+                  <TableHeader className="bg-muted/70">
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="w-[56%] sm:w-[46%] xl:w-[42%] 2xl:w-[34%]">Method</TableHead>
+                      <TableHead className="hidden sm:table-cell sm:w-[22%] xl:w-[22%] 2xl:w-[16%]">Specialty</TableHead>
+                      <TableHead className="w-[22%] sm:w-[16%] xl:w-[18%] 2xl:w-[20%]">Operation</TableHead>
+                      <TableHead className="w-[22%] sm:w-[16%] xl:w-[18%] 2xl:w-[14%]">Status</TableHead>
+                      <TableHead className="hidden 2xl:table-cell 2xl:w-[16%]">License</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {visibleModels.map((model) => {
+                      const selected = selectedModel?.id === model.id;
+                      return <TableRow key={model.id} data-state={selected ? "selected" : undefined} className={selected ? "bg-primary/5" : undefined}>
+                        <TableCell className="max-w-0 overflow-hidden">
+                          <button type="button" aria-pressed={selected} onClick={() => setSelectedModelId(model.id)} className="grid w-full min-w-0 gap-0.5 rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                            <span className="truncate font-medium text-foreground">{model.name}</span>
+                            <span className="truncate font-mono text-[10px] text-muted-foreground">{model.id}</span>
+                          </button>
+                        </TableCell>
+                        <TableCell className="hidden truncate text-xs text-muted-foreground sm:table-cell">{moduleLabels[model.module]}</TableCell>
+                        <TableCell className="overflow-hidden">
+                          <span className="block truncate font-mono text-[10px] text-muted-foreground" title={model.operation_ids.join(", ")}>{model.operation_ids.length === 1 ? model.operation_ids[0] : `${model.operation_ids[0] ?? "None"}${model.operation_ids.length > 1 ? ` +${model.operation_ids.length - 1}` : ""}`}</span>
+                        </TableCell>
+                        <TableCell className="overflow-hidden"><Badge variant={model.readiness === "ready" ? "secondary" : "outline"} className="max-w-full truncate font-normal">{model.readiness.replaceAll("-", " ")}</Badge></TableCell>
+                        <TableCell className="hidden max-w-0 overflow-hidden 2xl:table-cell"><span className="block truncate text-xs text-muted-foreground" title={model.source_license}>{model.source_license}</span></TableCell>
+                      </TableRow>;
+                    })}
+                    {loading && <TableRow><TableCell colSpan={5}><div className="grid gap-2 py-2"><Skeleton className="h-8 w-full"/><Skeleton className="h-8 w-full"/><Skeleton className="h-8 w-full"/></div></TableCell></TableRow>}
+                    {!loading && visibleModels.length === 0 && <TableRow><TableCell colSpan={5} className="h-24 whitespace-normal text-center text-sm text-muted-foreground">{searchText || readinessFilter !== "all" ? "No registered methods match this search and filter." : "No methods are registered for this workspace."}</TableCell></TableRow>}
+                  </TableBody>
+                </Table>
+              </CardContent>
             </Card>
-            {selectedModel ? <Card size="sm" className="min-w-0 overflow-hidden">
+            {selectedModel ? <aside aria-label="Selected method details" className="min-w-0 xl:sticky xl:top-4"><Card size="sm" className="min-w-0 overflow-hidden">
               <CardHeader className="gap-3 border-b border-border bg-muted/20 px-4 py-4 sm:px-5">
-                <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-xs font-medium uppercase tracking-wide text-primary">{moduleLabels[selectedModel.module]} · method record</span><Badge variant="outline" className={selectedModel.readiness === "ready" ? "border-primary/40 bg-primary/5 text-primary" : "border-warning/40 bg-warning/10 text-warning"}>{selectedModel.readiness.replaceAll("-", " ")}</Badge></div>
+                <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-xs font-medium text-primary">{moduleLabels[selectedModel.module]} · method record</span><Badge variant="outline" className={selectedModel.readiness === "ready" ? "border-primary/40 bg-primary/5 text-primary" : "border-warning/40 bg-warning/10 text-warning"}>{selectedModel.readiness.replaceAll("-", " ")}</Badge></div>
                 <div><CardTitle className="text-xl tracking-tight sm:text-2xl">{selectedModel.name}</CardTitle><CardDescription className="mt-2 max-w-3xl text-sm leading-6 text-foreground/80">{selectedModel.details}</CardDescription></div>
                 <div className="flex flex-wrap items-center gap-2 pt-1"><Link to={modelWorkspace} className={buttonVariants({variant:"outline",size:"sm"})}><Microscope data-icon="inline-start"/>Inspect source workspace</Link><a className="inline-flex min-h-8 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-primary underline-offset-4 hover:underline" href={selectedModel.upstream_url} target="_blank" rel="noreferrer">Upstream method <ExternalLink size={13}/></a></div>
               </CardHeader>
@@ -1401,7 +1423,7 @@ export function Models() {
                 <section aria-labelledby="method-operations-title"><h2 id="method-operations-title" className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Registered operations</h2><div className="flex flex-wrap gap-1.5">{selectedModel.operation_ids.map((operation) => <Badge variant="secondary" key={operation}>{operation}</Badge>)}</div></section>
                 <ModelValidationPanel key={selectedModel.id} model={selectedModel}/>
               </CardContent>
-            </Card> : <Card size="sm" className="min-h-64"><CardContent className="grid min-h-64 place-content-center text-center text-sm text-muted-foreground">{loading ? "Loading model registry…" : "No method is available for this filter."}</CardContent></Card>}
+            </Card></aside> : <Card size="sm" className="min-h-64"><CardContent className="grid min-h-64 place-content-center text-center text-sm text-muted-foreground">{loading ? "Loading model registry…" : "No method is available for this filter."}</CardContent></Card>}
           </div>
         </>
       )}

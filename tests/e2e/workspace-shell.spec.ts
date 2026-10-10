@@ -483,7 +483,7 @@ test('SurgiVision frame picker stays readable beside the professional sidebar at
 
   await page.goto('/studio/surgivision/cases/endoscapes%3Atest%3A162_6575')
   await expect(page.getByRole('heading', { name: 'SurgiVision surgical media review' })).toBeVisible()
-  await expect(page.getByText(/different procedure and recording from both annotated cholecystectomy frame sets/i)).toBeVisible()
+  await expect(page.getByText(/separate from the cholecystectomy samples/i)).toBeVisible()
   const nativePlayer = page.locator('video[aria-label="Appendix300 laparoscopic appendectomy source video"]')
   await expect(nativePlayer).toHaveAttribute('src', /appendix300%3Afixture-clip/)
   await expect.poll(() => nativePlayer.evaluate((video: HTMLVideoElement) => video.readyState)).toBeGreaterThanOrEqual(1)
@@ -555,6 +555,13 @@ test('model lab filters source-linked methods and explains an execution gate', a
     ]),
   }))
 
+  for (const viewport of [{ width: 1440, height: 900 }, { width: 1280, height: 800 }, { width: 768, height: 1024 }, { width: 390, height: 844 }]) {
+    await page.setViewportSize(viewport)
+    await page.goto('/studio/models')
+    await expect(page.getByRole('table')).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(viewport.width)
+  }
+  await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('/studio/models')
   await expect(page.getByText('2 source-linked methods')).toBeVisible()
   await page.getByRole('button', { name: 'Ready methods' }).click()
@@ -826,7 +833,8 @@ test('DoseTwin case picker opens a separately enabled case and its case-bound co
   await expect(page.getByText('Read-only source viewer', { exact: true })).toHaveCount(0)
   await expect(page.getByText('Source configured', { exact: true })).toBeVisible()
   await expect(page.getByRole('img', { name: /OpenKBP processed-array z-index plane/ })).toBeVisible()
-  await page.getByText('Compare a real dose prediction', { exact: true }).click()
+  await page.getByRole('tab', { name: 'Comparison' }).click()
+  await expect(page.getByText('Compare a real dose prediction', { exact: true })).toBeVisible()
   await expect(page.getByText('No compatible second array is installed.', { exact: true })).toBeVisible()
   await expect(page.getByLabel('Choose an authentic dose prediction CSV')).toBeVisible()
   expect(artifactRequests.some((url) => url.includes('/openkbp%3Apt_241/dose-artifacts'))).toBe(true)
