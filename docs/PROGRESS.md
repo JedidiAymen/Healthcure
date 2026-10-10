@@ -2,6 +2,11 @@
 
 Branch `upgrade/hackcure-compliance`. All numbers below come from runs on 2026-10-10 on the Windows demo PC.
 
+## Follow-up on the current local integration (2026-10-10)
+
+- The DoseTwin browser research-review gap listed below has since been closed on the current local integration. `npx playwright test tests/e2e/dosetwin-comparison-report.spec.ts --grep @source` passed (1 test, 15.4s) against an isolated local API profile and the authentic OpenKBP `pt_241` prediction. It verified educator sign-in, import and same-case comparison, voxel evidence, required rationale, persisted review provenance/source hash/audit hash, the research-only boundary, and the existing saved report. Desktop, tablet and phone captures are ignored under `.local-review/DOSETWIN-RESEARCH-REVIEW/`.
+- The check requires `MEDFORGE_E2E_RESEARCH_USERNAME` and `MEDFORGE_E2E_RESEARCH_PASSWORD` for a locally provisioned educator; keep `@source` tests out of ordinary CI unless CI provisions the source data and isolated profile. `npm run lint`, `npm run typecheck`, and `git diff --check` all passed for this follow-up.
+
 ## Check results
 
 | Check | Command | Result |
@@ -23,7 +28,7 @@ Branch `upgrade/hackcure-compliance`. All numbers below come from runs on 2026-1
 - Upstream `main` moved to `64bc4d6` (4 commits: Model Lab registry, case registry preview, chart docs, Academy paths). **Not merged into this branch yet.** Merge it, regenerate contracts (`npm run contracts:check`), and rerun the suite.
 - In Docker, SurgiVision shows "requires setup": the Endoscapes download is partial (about 3.4 GB on disk) and `MEDFORGE_ENDOSCAPES_ROOT` is not set in compose. Resume `scripts/acquire_endoscapes_full_release.py`.
 - The offline queue is covered by unit tests and the server-side degraded check above. No browser e2e of the offline mission flow yet.
-- No e2e test for the DoseTwin research review panel yet (API covered by 7 tests in `test_research_review.py`).
+- The original Windows handoff did not include a browser e2e for the DoseTwin research-review panel; the current local integration now has the source-backed check described above (API behavior remains covered by `test_research_review.py`).
 - Telemetry and research reads are anonymous on the local stack, like the existing research reads; students are scoped by middleware, and writes require educator or admin.
 - Not done: grading prefill to 3 steps (compliance row 20), Playwright step-count tests, French UI, model card, `docs/EXTRA_FEATURES.md`, FiSaV risk index (protocol frozen at v1.1, not run).
 
