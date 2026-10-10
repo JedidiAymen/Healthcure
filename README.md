@@ -29,7 +29,7 @@ Open `http://127.0.0.1:5173`. The API docs are at `http://127.0.0.1:8000/docs`. 
 
 Open the research navigator from the search button in the top bar or press `Ctrl+K` (`⌘K` on macOS). Search a source case ID, dataset, specialty or workspace. Results keep the dataset and source-case identity visible; broad matches open the case registry with the search preserved in the URL. The registry search also filters the local source cases directly.
 
-For a step-by-step offline demo launch, local account provisioning, source acquisition and preflight, follow [`RUN_LOCAL.md`](RUN_LOCAL.md).
+For profile access and local sign-in setup, follow [`docs/LOCAL_ACCESS_AND_PROFILES.md`](docs/LOCAL_ACCESS_AND_PROFILES.md). For a step-by-step offline demo launch, source acquisition and preflight, follow [`RUN_LOCAL.md`](RUN_LOCAL.md).
 
 The optional CVS-AdaptNet upstream source is pinned as a submodule. Clone with `git clone --recurse-submodules` (or run `git submodule update --init`) before using its worker or running tests that verify the prompt source. The model checkpoint is not included and its use remains gated; see [`docs/BLOCKERS.md`](docs/BLOCKERS.md).
 
@@ -41,12 +41,7 @@ SurgiVision displays checksum-verified CVS label coverage across the installed s
 
 Run `npm run lint` for ESLint and React Hooks checks, `npm run typecheck` for the TypeScript project, and `npm run build` for the production bundle.
 
-Provision a local learning account from the project root (the script prompts twice for a password and stores only its salted hash):
-
-```sh
-python scripts/create_local_learning_user.py --username educator --display-name "Local Educator" --role educator
-python scripts/create_local_learning_user.py --username learner --display-name "Local Student" --role student
-```
+The local sign-in profiles and safe account-provisioning steps are documented in [`docs/LOCAL_ACCESS_AND_PROFILES.md`](docs/LOCAL_ACCESS_AND_PROFILES.md). A fresh checkout has no default student or educator credentials.
 
 To re-acquire that exact case from the pinned public repository tree, run `python scripts/acquire_openkbp_pt201.py`. The script verifies every file against the pinned Git blob SHA before saving a local manifest. To configure a different local OpenKBP case, set `MEDFORGE_OPENKBP_CASE_DIR` in Terminal 1 to its absolute folder path and independently verify its provenance and use terms. MEDFORGE never downloads data from browser input or a third-party URL.
 

@@ -413,10 +413,10 @@ export function LessonEditorPage() {
   };
   return (
     <div className="lesson-editor-page" data-mobile-pane={mobilePane}>
-      <div className="workspace-context">
-        <Link to="/educator">Educator studio</Link>
-        <span>/</span>
-        <b>Lesson draft</b>
+      <div className="mb-5 flex items-center gap-2 text-xs text-muted-foreground">
+        <Link className="text-primary hover:underline" to="/educator">Educator studio</Link>
+        <span aria-hidden="true">/</span>
+        <b className="font-medium text-foreground">Lesson draft</b>
       </div>
       <div className="editor-title">
         <div>
@@ -446,7 +446,7 @@ export function LessonEditorPage() {
           <AlertDescription>{saveError}</AlertDescription>
         </Alert>
       )}
-      {published && <Alert className="mb-4"><ShieldCheck/><AlertTitle>Lesson version published</AlertTitle><AlertDescription>{published.title} · version {published.version}. This immutable learner version is ready to assign.</AlertDescription><Link to="/educator/assignments" className="text-link">Continue to assignments</Link></Alert>}
+      {published && <Alert className="mb-4"><ShieldCheck/><AlertTitle>Lesson version published</AlertTitle><AlertDescription>{published.title} · version {published.version}. This immutable learner version is ready to assign.</AlertDescription><Link to="/educator/assignments" className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline">Continue to assignments</Link></Alert>}
       {preview && !published && <Card className="mb-4"><CardHeader><div className="eyebrow">Student-safe preview</div><CardTitle>{preview.title}</CardTitle><CardDescription>{preview.case_label} · {preview.source_license} · {preview.reference_kind}</CardDescription></CardHeader><CardContent><p className="mb-4 text-sm text-muted-foreground">This preview includes learner-visible blocks. Reveal blocks and the educator rubric stay private.</p><div className="flex flex-col gap-3">{preview.blocks.map((block, index) => <Card size="sm" key={block.id}><CardHeader><div className="eyebrow">{block.type} · {String(index + 1).padStart(2, "0")}</div><CardTitle>{block.title}</CardTitle><CardDescription>{block.content || "No learner prompt entered."}</CardDescription></CardHeader></Card>)}</div><FieldGroup className="mt-5"><Field orientation="horizontal"><Checkbox id="source-confirmed" checked={sourceConfirmed} onCheckedChange={checked => setSourceConfirmed(checked === true)} disabled={preview.publication_review === "blocked"}/><FieldLabel htmlFor="source-confirmed">I reviewed the source terms and confirm this use follows the displayed license and attribution requirements.</FieldLabel></Field><Field><FieldLabel htmlFor="source-review-note">Source review note</FieldLabel><Textarea id="source-review-note" rows={3} minLength={10} value={reviewNote} onChange={e => setReviewNote(e.target.value)} placeholder="Record why this source and student use are appropriate."/></Field>{preview.publication_review === "blocked" && <Alert variant="destructive"><LockKeyhole/><AlertTitle>Publication is blocked for this source</AlertTitle><AlertDescription>Independent dataset permission has not been established. This source cannot be published to learners.</AlertDescription></Alert>}<div className="flex gap-2"><Button disabled={saving || preview.publication_review === "blocked" || !sourceConfirmed || reviewNote.trim().length < 10} onClick={() => void publish()}>{saving ? "Publishing…" : "Publish immutable version"}</Button><Button variant="outline" disabled={saving} onClick={() => setPreview(null)}>Close preview</Button></div></FieldGroup></CardContent></Card>}
       {draftLoading ? (
         <div

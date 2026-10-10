@@ -26,7 +26,7 @@ apps/api/.venv/bin/python scripts/acquire_fisav_sample.py --all-recordings
 
 These commands fetch research data from their pinned/official sources and verify the assets. They are not part of the offline launch. OpenKBP dataset permissions remain under review; Endoscapes is restricted to non-commercial scientific research under CC BY-NC-SA 4.0; FiSaV is CC BY 4.0. Keep the demo local, retain source attribution and do not redistribute raw assets. See [`docs/DEMO_ASSETS.md`](docs/DEMO_ASSETS.md) and [`docs/BLOCKERS.md`](docs/BLOCKERS.md).
 
-For an Academy/Educator demonstration, provision dedicated local accounts before the event. This prompts for a password twice; only a salted hash is stored. Use the same database path for provisioning and launch:
+For an Academy/Educator demonstration, provision dedicated local accounts before the event. This prompts for a password twice; only a salted hash is stored. See [`docs/LOCAL_ACCESS_AND_PROFILES.md`](docs/LOCAL_ACCESS_AND_PROFILES.md) for profile descriptions, sign-in steps and credential handling. Use the same database path for provisioning and launch:
 
 ```sh
 export MEDFORGE_DB_PATH="$PWD/data/jury-demo.sqlite3"

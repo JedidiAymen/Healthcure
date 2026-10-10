@@ -468,11 +468,6 @@
   padding: 0;
 }
 
-.academy-assigned .progress-label {
-  color: var(--academy-muted);
-  font-size: 12px;
-}
-
 .academy-assigned .academy-assigned-row {
   min-height: 70px;
 }
@@ -526,16 +521,6 @@
   padding: 0;
 }
 
-.academy-recognition .aside-stat {
-  margin: 8px 0;
-  padding: 10px 0;
-  border-color: #ddd2c5;
-}
-
-.academy-recognition .aside-stat span {
-  color: var(--academy-ink);
-}
-
 .academy-recognition .academy-earned-badge {
   width: 74px;
   min-height: 82px;
@@ -585,12 +570,6 @@
 .academy-recognition [role="listitem"] > p {
   margin: 0;
   line-height: 1.5;
-}
-
-.academy-recognition .text-link {
-  margin-top: 15px;
-  color: #3552d7;
-  font-size: 13px;
 }
 
 .academy-path-page {

@@ -1362,7 +1362,7 @@ export function Experiments() {
                     Save evidence report
                   </Button>
                   {report && (
-                    <Link className="text-link" to="/studio/reports">
+                    <Link className="inline-flex items-center gap-1.5 text-[13px] font-medium text-primary hover:underline" to="/studio/reports">
                       Report {report.id.slice(0, 16)} saved{" "}
                       <ArrowRight size={14} />
                     </Link>
@@ -1823,15 +1823,15 @@ export function Academy() {
         )}
       </section>
       <div className="academy-lower-grid">
-        <Card className="learning-panel academy-assigned">
-          <CardHeader className="panel-section-head">
+        <Card className="academy-assigned min-w-0">
+          <CardHeader className="flex items-end justify-between gap-3">
             <div>
               <div className="eyebrow">Released coursework</div>
               <CardTitle>
                 <h2>Assigned lessons</h2>
               </CardTitle>
             </div>
-            <span className="progress-label">{challenges.loading ? "Loading" : `${challenges.data.length} assigned`}</span>
+            <span className="text-xs text-muted-foreground">{challenges.loading ? "Loading" : `${challenges.data.length} assigned`}</span>
           </CardHeader>
           <CardContent>
             {challenges.error ? <Alert variant="destructive"><CircleAlert/><AlertTitle>Assignments could not load</AlertTitle><AlertDescription>{challenges.error}</AlertDescription></Alert> : challenges.data.length ? <div className="mt-4 divide-y border-t">{challenges.data.map((challenge) => {
@@ -1841,7 +1841,7 @@ export function Academy() {
             })}</div> : <Empty className="min-h-52 rounded-lg border border-dashed"><EmptyHeader><EmptyMedia variant="icon"><BookOpenCheck/></EmptyMedia><EmptyTitle>{challenges.loading ? "Loading assigned lessons" : "No lessons assigned yet"}</EmptyTitle><EmptyDescription>{challenges.loading ? "Checking your cohort assignments." : "Your educator’s published lessons will appear here when they assign them to your cohort."}</EmptyDescription></EmptyHeader></Empty>}
           </CardContent>
         </Card>
-        <Card className="learning-aside academy-recognition">
+        <Card className="academy-recognition min-w-0">
           <CardHeader>
             <div className="eyebrow">Your progress</div>
             <CardTitle>
@@ -1853,8 +1853,8 @@ export function Academy() {
           </CardHeader>
           <CardContent>
             {progress.error ? <Alert variant="destructive"><CircleAlert/><AlertTitle>Progress could not load</AlertTitle><AlertDescription>{progress.error}</AlertDescription></Alert> : <>
-            {progress.loading ? <Skeleton className="h-12"/> : progress.data.xp_enabled ? <PointsBadge size="sm" icon={Sparkles} name="Experience points" total={progress.data.xp} className="my-3 w-full justify-between border-0 bg-transparent px-0 py-1 shadow-none"/> : <div className="aside-stat"><span><Sparkles size={16}/>Experience points</span><b>Off</b></div>}
-            <div className="aside-stat"><span><ClipboardCheck size={16}/>Reviewed submissions</span><b>{progress.loading ? "—" : progress.data.graded_attempts}</b></div>
+            {progress.loading ? <Skeleton className="h-12"/> : progress.data.xp_enabled ? <PointsBadge size="sm" icon={Sparkles} name="Experience points" total={progress.data.xp} className="my-3 w-full justify-between border-0 bg-transparent px-0 py-1 shadow-none"/> : <div className="my-2 flex items-center justify-between gap-3 border-y border-border py-3"><span className="inline-flex items-center gap-2 text-sm text-foreground"><Sparkles className="size-4 text-muted-foreground"/>Experience points</span><b className="text-lg font-medium text-muted-foreground">Off</b></div>}
+            <div className="my-2 flex items-center justify-between gap-3 border-y border-border py-3"><span className="inline-flex items-center gap-2 text-sm text-foreground"><ClipboardCheck className="size-4 text-muted-foreground"/>Reviewed submissions</span><b className="text-lg font-medium tabular-nums text-foreground">{progress.loading ? "—" : progress.data.graded_attempts}</b></div>
             {progress.data.average_score !== null && <p className="text-muted-foreground">Average reviewed score: {progress.data.average_score.toFixed(1)}%</p>}
             <div className="mt-3 grid gap-2 border-t pt-3">
               <div className="flex items-center justify-between gap-3 text-sm"><span className="font-medium">Activity awards</span><span className="text-muted-foreground">{progress.loading ? "Loading" : progress.data.achievements_enabled ? "Opted in" : "Off"}</span></div>
@@ -1868,7 +1868,7 @@ export function Academy() {
               ) : progress.data.achievements_enabled ? <p className="text-xs leading-5 text-muted-foreground">No award yet. Recognition follows an educator-reviewed investigation.</p> : <p className="text-xs leading-5 text-muted-foreground">Private recognition stays off unless you opt in.</p>}
             </div>
             </>}
-            <Link to="/academy/progress" className="text-link">
+            <Link to="/academy/progress" className="inline-flex items-center gap-1.5 text-[13px] font-medium text-primary hover:underline">
               {progress.data.xp_enabled && !progress.error ? "View progress record" : "Progress and privacy settings"} <ArrowRight size={14} />
             </Link>
           </CardContent>
@@ -2089,7 +2089,7 @@ export function Progress() {
         /><ul className="grid gap-2 sm:grid-cols-2" aria-label="Earned activity award details">{achievements.map(achievement => <li key={achievement.key} className="rounded-lg border p-3"><p className="text-sm">{achievement.description}</p><p className="mt-1 text-xs text-muted-foreground">Earned {new Date(achievement.earned_at).toLocaleDateString()}</p></li>)}</ul></div> : <Empty className="min-h-28 rounded-lg border border-dashed"><EmptyHeader><EmptyTitle>No activity award yet</EmptyTitle><EmptyDescription>Complete a source-backed investigation and wait for an educator-reviewed submission before an award can be recorded.</EmptyDescription></EmptyHeader></Empty>}</CardContent></Card>
         <Card className="mt-4"><CardHeader><CardTitle>Participation record</CardTitle><CardDescription>Download a local summary of started and submitted lessons, including educator-reviewed scores. Free-text answers are not included.</CardDescription></CardHeader><CardContent className="flex flex-col items-start gap-3"><Button variant="outline" onClick={() => void exportParticipationRecord()} disabled={progress.loading || recordExporting}><Download data-icon="inline-start"/>{recordExporting ? "Preparing record…" : "Download participation record"}</Button>{recordExportError && <p role="alert" className="text-sm text-destructive">{recordExportError}</p>}</CardContent></Card>
       </>}
-      <div className="mt-4"><Link to="/academy" className="text-link">Return to assignments <ArrowRight size={14}/></Link></div>
+      <div className="mt-4"><Link to="/academy" className="inline-flex items-center gap-1.5 text-[13px] font-medium text-primary hover:underline">Return to assignments <ArrowRight size={14}/></Link></div>
     </>
   );
 }
@@ -2244,7 +2244,7 @@ export function Assignments() {
         <Card><CardHeader><CardTitle>Prepare a cohort</CardTitle><CardDescription>Create a local group and add provisioned student accounts.</CardDescription></CardHeader><CardContent><FieldGroup><Field><FieldLabel htmlFor="cohort-name">Cohort name</FieldLabel><Input id="cohort-name" value={cohortName} onChange={e => setCohortName(e.target.value)} placeholder="Spring evidence seminar"/></Field><Button disabled={saving || cohortName.trim().length < 2} onClick={() => void run(async () => { await api.createEducatorCohort(cohortName.trim()); setCohortName(""); })}>Create cohort</Button></FieldGroup><div className="mt-5 border-t pt-4"><FieldGroup><Field><FieldLabel htmlFor="cohort-select">Cohort</FieldLabel><Select items={cohorts.length ? cohorts.map(c => ({ label: `${c.name} · ${c.student_count} learners`, value: c.id })) : [{ label: "No cohorts available", value: "empty" }]} value={cohortId || null} onValueChange={value => setCohortId(value ?? "")}><SelectTrigger id="cohort-select"><SelectValue placeholder="Choose a cohort"/></SelectTrigger><SelectContent><SelectGroup>{cohorts.length ? cohorts.map(c => <SelectItem key={c.id} value={c.id}>{c.name} · {c.student_count} learners</SelectItem>) : <SelectItem value="empty" disabled>No cohorts available</SelectItem>}</SelectGroup></SelectContent></Select></Field><Field><FieldLabel htmlFor="student-select">Provisioned student account</FieldLabel><Select items={students.length ? students.map(s => ({ label: s.display_name, value: s.id })) : [{ label: "No student accounts available", value: "empty" }]} value={studentId || null} onValueChange={value => setStudentId(value ?? "")}><SelectTrigger id="student-select"><SelectValue placeholder="Choose a learner"/></SelectTrigger><SelectContent><SelectGroup>{students.length ? students.map(s => <SelectItem key={s.id} value={s.id}>{s.display_name}</SelectItem>) : <SelectItem value="empty" disabled>No student accounts available</SelectItem>}</SelectGroup></SelectContent></Select></Field><Button variant="outline" disabled={saving || !cohortId || !studentId} onClick={() => void run(() => api.addStudentToCohort(cohortId, studentId))}>Add learner to cohort</Button></FieldGroup></div></CardContent></Card>
         <Card><CardHeader><CardTitle>Assign a published lesson</CardTitle><CardDescription>Students receive only the immutable learner version attached to this assignment.</CardDescription></CardHeader><CardContent><FieldGroup><Field><FieldLabel htmlFor="version-select">Published lesson version</FieldLabel><Select items={versions.length ? versions.map(v => ({ label: `${v.title} · v${v.version}`, value: v.version_id })) : [{ label: "No published lessons available", value: "empty" }]} value={versionId || null} onValueChange={value => setVersionId(value ?? "")}><SelectTrigger id="version-select"><SelectValue placeholder="Choose a published lesson"/></SelectTrigger><SelectContent><SelectGroup>{versions.length ? versions.map(v => <SelectItem key={v.version_id} value={v.version_id}>{v.title} · v{v.version}</SelectItem>) : <SelectItem value="empty" disabled>No published lessons available</SelectItem>}</SelectGroup></SelectContent></Select></Field><Field><FieldLabel htmlFor="assignment-cohort">Cohort</FieldLabel><Select items={cohorts.length ? cohorts.map(c => ({ label: `${c.name} · ${c.student_count} learners`, value: c.id })) : [{ label: "No cohorts available", value: "empty" }]} value={cohortId || null} onValueChange={value => setCohortId(value ?? "")}><SelectTrigger id="assignment-cohort"><SelectValue placeholder="Choose a cohort"/></SelectTrigger><SelectContent><SelectGroup>{cohorts.length ? cohorts.map(c => <SelectItem key={c.id} value={c.id}>{c.name} · {c.student_count} learners</SelectItem>) : <SelectItem value="empty" disabled>No cohorts available</SelectItem>}</SelectGroup></SelectContent></Select></Field><Field><FieldLabel htmlFor="due-at">Due date (optional)</FieldLabel><Input id="due-at" type="datetime-local" value={dueAt} onChange={e => setDueAt(e.target.value)}/></Field><Button disabled={saving || !versionId || !cohortId} onClick={() => void run(() => api.createEducatorAssignment(versionId, cohortId, dueAt ? new Date(dueAt).toISOString() : null))}>Create assignment</Button></FieldGroup></CardContent></Card>
       </div>
-      <Card className="mt-4"><CardHeader><CardTitle>Assignments</CardTitle><CardDescription>Lessons currently delivered to educator-owned cohorts.</CardDescription></CardHeader><CardContent>{busy ? <Skeleton className="h-20"/> : assignments.length ? <div className="mission-rows">{assignments.map(a => <div className="mission-row" key={a.id}><span className="mission-num"><ClipboardList size={16}/></span><span><b>{a.lesson_title}</b><small>{cohorts.find(c => c.id === a.cohort_id)?.name ?? "Cohort"} · {a.student_count} learners{a.due_at ? ` · due ${new Date(a.due_at).toLocaleString()}` : " · no due date"}</small></span><Badge variant="outline">Assigned</Badge></div>)}</div> : <Empty className="min-h-40 rounded-lg border border-dashed"><EmptyHeader><EmptyMedia variant="icon"><ClipboardList/></EmptyMedia><EmptyTitle>{versions.length ? "No assignments yet" : "Publish a lesson to begin"}</EmptyTitle><EmptyDescription>{versions.length ? "Choose a lesson version and cohort above to create the first assignment." : "Save a lesson draft with a learner question, review its source terms and publish it before assigning."}</EmptyDescription></EmptyHeader></Empty>}</CardContent></Card>
+      <Card className="mt-4"><CardHeader><CardTitle>Assignments</CardTitle><CardDescription>Lessons currently delivered to educator-owned cohorts.</CardDescription></CardHeader><CardContent>{busy ? <Skeleton className="h-20"/> : assignments.length ? <div className="mt-4 border-t border-border">{assignments.map(a => <div className="flex min-h-[58px] items-center gap-3 border-b border-border py-3" key={a.id}><span className="grid size-7 shrink-0 place-items-center text-muted-foreground"><ClipboardList className="size-4"/></span><span className="grid min-w-0 flex-1 gap-1"><b className="break-words text-sm font-medium">{a.lesson_title}</b><small className="break-words text-xs leading-5 text-muted-foreground">{cohorts.find(c => c.id === a.cohort_id)?.name ?? "Cohort"} · {a.student_count} learners{a.due_at ? ` · due ${new Date(a.due_at).toLocaleString()}` : " · no due date"}</small></span><Badge variant="outline">Assigned</Badge></div>)}</div> : <Empty className="min-h-40 rounded-lg border border-dashed"><EmptyHeader><EmptyMedia variant="icon"><ClipboardList/></EmptyMedia><EmptyTitle>{versions.length ? "No assignments yet" : "Publish a lesson to begin"}</EmptyTitle><EmptyDescription>{versions.length ? "Choose a lesson version and cohort above to create the first assignment." : "Save a lesson draft with a learner question, review its source terms and publish it before assigning."}</EmptyDescription></EmptyHeader></Empty>}</CardContent></Card>
     </>
   );
 }
