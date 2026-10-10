@@ -1,6 +1,6 @@
 # Local demo release checklist
 
-Updated 2026-10-09. This is a local-demo checklist. MEDFORGE is **not v1.0 locked** and is not approved for public or clinical deployment.
+Updated 2026-10-10. This is a local-demo checklist. MEDFORGE is **not v1.0 locked** and is not approved for public or clinical deployment.
 
 ## Verified in this checkout
 
@@ -35,6 +35,7 @@ Updated 2026-10-09. This is a local-demo checklist. MEDFORGE is **not v1.0 locke
 - [x] API is loopback-only; current health response identifies it as a local reference harness and not public-deployment ready.
 - [x] No pretrained model output or fake clinical result is seeded.
 - [x] CVS-AdaptNet single-frame API adapter persists a source-bound run and is visibly blocked while checkpoint checksum and checkpoint-specific terms remain unresolved.
+- [x] Authentic OpenKBP-Opt `pt_241` report history reopens the matching archived prediction comparison with both full array hashes, all seven ROI measurements and source limitations; the `pt_201` no-prediction gate remains explicit. Focused real-data Playwright verification and desktop/tablet/phone visual review are recorded in [`PR-UX-18`](ui/PR-UX-18-dosetwin-comparison-report-history.md).
 
 ## Required before calling the local education pathway fully reviewed
 
