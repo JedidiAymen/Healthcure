@@ -36,7 +36,7 @@ export MEDFORGE_DB_PATH="$PWD/data/jury-demo.sqlite3"
 apps/api/.venv/bin/python scripts/seed_demo.py
 ```
 
-Keep `MEDFORGE_DB_PATH` set to this same path when launching. To create only custom accounts instead, use `scripts/create_local_learning_user.py`; it prompts for each password and does not seed a cohort or lesson drafts.
+Keep `MEDFORGE_DB_PATH` set to this same path when launching. To create only custom accounts instead, use `scripts/create_local_learning_user.py`; it prompts for each password and does not seed a cohort or lesson drafts. Supported local roles include `student`, `educator`, `clinical_reviewer`, and `admin`. The Clinical Reviewer designation is operator-assigned for DoseTwin research review only and does not verify credentials or permit patient-care decisions.
 
 Do not use these sample names on a shared or production service. The API has no general research-route RBAC or production identity system.
 

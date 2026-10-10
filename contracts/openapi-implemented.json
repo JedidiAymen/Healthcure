@@ -2488,6 +2488,7 @@
               "student",
               "educator",
               "researcher",
+              "clinical_reviewer",
               "admin"
             ],
             "title": "Role",
@@ -7010,7 +7011,7 @@
     }
   },
   "info": {
-    "description": "Loopback-only research and education API. Local educator/student access tokens are not production identity or public RBAC.",
+    "description": "Loopback-only research and education API. Local educator, student and Clinical Reviewer tokens are not production identity or verified medical credentials.",
     "title": "MEDFORGE local research API",
     "version": "0.1.0"
   },

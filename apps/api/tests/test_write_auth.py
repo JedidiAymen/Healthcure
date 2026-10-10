@@ -57,6 +57,12 @@ def test_student_research_write_is_rejected(client, method, path, body):
     assert _send(client, method, path, body, headers).status_code == 403
 
 
+@pytest.mark.parametrize('method,path,body', WRITE_ROUTES)
+def test_clinical_reviewer_cannot_use_general_research_write_routes(client, method, path, body):
+    headers = auth_headers(client, 'clinical-reviewer', 'clinical_reviewer')
+    assert _send(client, method, path, body, headers).status_code == 403
+
+
 @pytest.mark.parametrize('role', ['educator', 'admin'])
 @pytest.mark.parametrize('method,path,body', WRITE_ROUTES)
 def test_educator_and_admin_pass_the_write_gate(client, method, path, body, role):

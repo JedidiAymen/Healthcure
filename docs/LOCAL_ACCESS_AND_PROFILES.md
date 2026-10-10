@@ -1,6 +1,6 @@
 # Open MEDFORGE and use its profiles
 
-This guide is for the local review checkout. MEDFORGE is a research and education application, not clinical software. Keep its API on this computer (`127.0.0.1`); research routes do not have general account authorization.
+This guide is for the local review checkout. MEDFORGE is a research and education application, not clinical software. Keep its API on this computer (`127.0.0.1`); general research reads remain local-only and are not protected by a complete account policy.
 
 ## Start the app
 
@@ -21,10 +21,11 @@ Open <http://127.0.0.1:5173>. Leave the terminal running; press Ctrl+C there to 
 | Profile | Open | Sign-in | What it is for |
 | --- | --- | --- | --- |
 | Professional Studio | <http://127.0.0.1:5173/studio> | No account | Local research case registry and the SurgiVision, DoseTwin and FistulaGuard workspaces. Source availability and use limits are shown in each workspace. |
+| DoseTwin research reviewer | <http://127.0.0.1:5173/studio/dosetwin/cases/current> | Clinical Reviewer or admin account | Inspect voxels and record immutable, source-backed research reviews. The local reviewer designation does not verify clinical credentials. |
 | Student Academy | <http://127.0.0.1:5173/academy> | Student account | Assigned source-backed investigations, learner progress and optional private gamification. A lesson appears only after an educator publishes and assigns it. |
 | Educator Studio | <http://127.0.0.1:5173/educator> | Educator account | Author and review lessons, manage cohorts, publish learner-safe versions, assign work and grade submissions. |
 
-The app supports **Professional Studio** research browsing without sign-in and local **student** and **educator** accounts for learning workflows. Professional Studio is not a separate researcher login. There are no default or shared passwords in a fresh database. To prepare an isolated Academy/Educator demo, seed its database after installing the desired source data:
+The app supports **Professional Studio** research browsing without sign-in, a **Clinical Reviewer** account for DoseTwin research-review decisions, and local **student** and **educator** accounts for learning workflows. General research writes (imports, comparisons and reports) still require educator/admin; the Clinical Reviewer role is limited to DoseTwin review, export and personal audit routes. This operator-assigned local role does not verify a medical credential or qualification and does not authorize patient care. Professional Studio browsing is not a separate researcher login. There are no default or shared passwords in a fresh database. To prepare an isolated Academy/Educator demo, seed its database after installing the desired source data:
 
 ```sh
 export MEDFORGE_DB_PATH="$PWD/data/jury-demo.sqlite3"
@@ -69,6 +70,8 @@ apps/api/.venv/bin/python scripts/create_local_learning_user.py \
   --username educator --display-name "Local Educator" --role educator
 apps/api/.venv/bin/python scripts/create_local_learning_user.py \
   --username learner --display-name "Local Student" --role student
+apps/api/.venv/bin/python scripts/create_local_learning_user.py \
+  --username reviewer --display-name "Local Research Reviewer" --role clinical_reviewer
 ```
 
 The default launcher uses `data/local.sqlite3`, so these accounts will be available when you start it from this checkout. For a separate demo database, choose the database path **before provisioning and keep it the same when launching**:
@@ -79,16 +82,18 @@ apps/api/.venv/bin/python scripts/create_local_learning_user.py \
   --username educator --display-name "Review Educator" --role educator
 apps/api/.venv/bin/python scripts/create_local_learning_user.py \
   --username learner --display-name "Review Student" --role student
+apps/api/.venv/bin/python scripts/create_local_learning_user.py \
+  --username reviewer --display-name "Review Clinical Reviewer" --role clinical_reviewer
 ./scripts/start_local.sh
 ```
 
-Visit the Academy or Educator link and enter the exact username plus the password you chose during provisioning. Sessions are local and revocable. A student and educator must be separate accounts; a role cannot be switched from the sign-in form. Educators add provisioned students to a cohort before assigning a published lesson. A fresh database has no lessons, cohorts, assignments, or learner credentials until an educator/operator creates them.
+Visit the Academy, Educator, or DoseTwin review panel and enter the exact username plus the password you chose during provisioning. Sessions are local and revocable. Student, educator and Clinical Reviewer workflows should use separate accounts; entering another local account replaces the current browser session. Educators add provisioned students to a cohort before assigning a published lesson. A fresh database has no lessons, cohorts, assignments, or learner credentials until an educator/operator creates them.
 
 Passwords are not recoverable from the database. To replace a forgotten local password, provision a new username or remove the local demo database and create the accounts again; deleting the database also deletes its local lessons and learning records. Never commit a database, password, session token, or temporary QA account. Do not reuse these local credentials for another service.
 
 ## What these profiles do not mean
 
 - A Professional Studio page being open does not authenticate or authorize general research API requests. Keep the API bound to loopback; do not expose it to a LAN or public host.
-- Signing in as an educator or student grants only the implemented local education routes. It does not establish production identity, hospital access, SSO, or full API role-based access control.
+- Signing in as an educator, student or Clinical Reviewer grants only the implemented local routes for that role. It does not establish production identity, hospital access, SSO, credential verification, or full API role-based access control.
 - A local account is not a medical license or proof of clinical authority. The app is not approved for diagnosis, treatment decisions, clinical deployment, or public dataset hosting.
 - Endoscapes in SurgiVision is a 1 fps sampled-still sequence with annotations only on the source-labeled keyframes. A separate 38.1-second continuous Appendix300 clip is available under CC BY 4.0; it shows appendectomy, not cholecystectomy, and is not supplied with instrument masks. DoseTwin has two separately selectable local source configurations: `pt_201` and a full `pt_241` case with its authentic OpenKBP-Opt set_1 prediction. They are different patients and grids. The `pt_241` prediction cannot be compared with `pt_201`; do not claim published checkpoint provenance because none was supplied.

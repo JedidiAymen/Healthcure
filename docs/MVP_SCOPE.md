@@ -31,7 +31,7 @@ MEDFORGE is a local-first research and education workspace for three separate ev
 | Optional achievements | A separate private, off-by-default preference unlocks one activity badge after educator review | “First Evidence Investigation” describes completion of reviewed activity only. No leaderboard exists; instructor-approved skill achievements remain unavailable. |
 | Academy gamification UI | Official Trophy UI PointsBadge and AchievementBadge registry components render backend-owned XP and earned awards; Academy only | No hosted Trophy service, streak, rarity, or progress value is used. XP and activity awards remain private and off by default. |
 | Responsive/accessibility review | Academy/Educator flows were reviewed in isolation; latest Academy Progress state and global search were reviewed interactively; DoseTwin/FistulaGuard charts and FiSaV heatmap reviewed at laptop (1280px), tablet (768px) and phone (390px); DoseTwin DVH, FistulaGuard PSD and global case search respond to keyboard input | Current responsive/keyboard review of the new Progress recommendation, history chart and export control, SurgiVision annotation selection, and reduced-motion behavior across specialty viewers remains open. |
-| User identity | Operator-provisioned local educator/student accounts and scoped routes | Not production identity, SSO, LTI or complete research API RBAC. |
+| User identity | Operator-provisioned local student, educator, Clinical Reviewer and admin accounts with scoped local routes | Not production identity, credential verification, SSO, LTI or complete research API RBAC. |
 
 ## Future research scope retained in `PARITY.md`
 

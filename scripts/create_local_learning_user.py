@@ -1,4 +1,4 @@
-"""Provision one local educator, student or admin account using an interactive password prompt."""
+"""Provision a local learning or research-review account with an interactive password prompt."""
 from __future__ import annotations
 
 import argparse
@@ -16,8 +16,10 @@ def main() -> None:
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--username',required=True)
     parser.add_argument('--display-name',required=True)
-    parser.add_argument('--role',choices=('educator','student','admin'),required=True,
-        help='admin can save research evidence and use educator routes; it is not production identity')
+    parser.add_argument('--role',choices=('educator','student','clinical_reviewer','admin'),required=True,
+        help=('clinical_reviewer is operator-designated for local research review and does not verify '
+              'a medical credential or qualification; admin can save research evidence and use educator '
+              'routes, and is not production identity'))
     args=parser.parse_args()
     username=args.username.strip()
     if not re.fullmatch(r'[A-Za-z0-9._-]{3,64}',username):
