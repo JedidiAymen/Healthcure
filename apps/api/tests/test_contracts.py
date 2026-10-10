@@ -106,6 +106,11 @@ def test_dose_artifact_import_requires_real_reference_and_preserves_source_prove
     assert artifact['checkpoint_sha256']=='b'*64
     assert client.get(f'/api/v1/cases/{cid}/dose-artifacts').json()[0]['id']==artifact['id']
 
+    prediction_only_headers={key:value for key,value in headers.items() if key!='X-Dose-Checkpoint-SHA256'}
+    prediction_only=client.put(f'/api/v1/cases/{cid}/dose-artifacts?file_name=published-prediction.csv',content=payload,headers=prediction_only_headers)
+    assert prediction_only.status_code==200,prediction_only.text
+    assert prediction_only.json()['checkpoint_sha256'] is None
+
     comparison=client.get(f"/api/v1/cases/{cid}/dose-artifacts/{artifact['id']}/comparison")
     assert comparison.status_code==200,comparison.text
     brainstem=comparison.json()['roi_comparisons'][0]
@@ -792,7 +797,8 @@ def test_endoscapes_manifest_exposes_only_verified_sampled_frames(monkeypatch,tm
     cases=client.get('/api/v1/cases').json()
     assert len(cases)==2
     capability=next(item for item in client.get('/api/v1/modules').json() if item['id']=='surgivision')
-    assert '2 source-verified Endoscapes frames' in capability['detail']
+    assert '2 annotated Endoscapes frames' in capability['detail']
+    assert '1 fps sampled sequences' in capability['detail']
     response=client.get('/api/v1/surgivision/frames/13_46850')
     assert response.status_code==200
     assert response.json()['annotations'][0]['segmentation']=={'size':[480,854],'counts':'def'}

@@ -24,4 +24,4 @@ The Cobalt/Porcelain interface continues to compose the existing shadcn Base Nov
 - Trophy Grid: source is integrated and mapped to persisted server awards; opt-in and empty states are visually checked. Review actual earned-grid rendering when a genuine educator-reviewed award is available; do not seed a sample award.
 - Trophy Achievement Unlocked: defer until a persisted award can drive a one-time dialog without replaying on page load or creating a reward on its own.
 - React Flow: wait for actual persisted graph operations; keep current ordered state display accessible.
-- Video.js: require rights-cleared continuous footage with source-aligned annotations; retain keyframe-only mode until then.
+- Video.js: trialed against the separately licensed 38.1-second Appendix300 clip. Native HTML5 playback already provides the needed play, seek, and speed controls for this single-file preview; Video.js would add another player layer without improving the current task, so it remains uninstalled. It is not an Endoscapes-aligned video or basis for timeline claims.

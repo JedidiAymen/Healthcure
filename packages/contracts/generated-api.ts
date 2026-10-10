@@ -1139,7 +1139,7 @@ export interface components {
             /** Case Id */
             case_id: string;
             /** Checkpoint Sha256 */
-            checkpoint_sha256: string;
+            checkpoint_sha256?: string | null;
             /** Created At */
             created_at: string;
             /**

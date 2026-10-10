@@ -652,7 +652,7 @@ class DoseArtifact(StrictModel):
     dose_unit: Literal['Gy']
     origin: Literal['archived_model_prediction']
     model_revision: str
-    checkpoint_sha256: str = Field(pattern=r'^[0-9a-f]{64}$')
+    checkpoint_sha256: str | None = Field(default=None, pattern=r'^[0-9a-f]{64}$')
     rights_basis: str
     validation_status: Literal['grid-validated-local-only']
     size_bytes: int = Field(gt=0, le=67108864)

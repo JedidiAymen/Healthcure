@@ -243,9 +243,16 @@
             "type": "string"
           },
           "checkpoint_sha256": {
-            "pattern": "^[0-9a-f]{64}$",
-            "title": "Checkpoint Sha256",
-            "type": "string"
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checkpoint Sha256"
           },
           "created_at": {
             "title": "Created At",
@@ -354,7 +361,6 @@
           "dose_unit",
           "origin",
           "model_revision",
-          "checkpoint_sha256",
           "rights_basis",
           "validation_status",
           "size_bytes",

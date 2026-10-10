@@ -145,6 +145,36 @@ def init_db():
     with _db() as c:
         for migration in sorted(MIGRATIONS.glob('*.sql')):
             c.executescript(migration.read_text(encoding='utf8'))
+        dose_artifact_schema=c.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='dose_artifacts'").fetchone()
+        if dose_artifact_schema:
+            dose_artifact_columns={row[1] for row in c.execute('PRAGMA table_info(dose_artifacts)').fetchall()}
+            if 'checkpoint_sha256 TEXT NOT NULL' in dose_artifact_schema[0] or 'source_case_id' not in dose_artifact_columns:
+                c.execute('DROP TABLE IF EXISTS dose_artifacts_rebuilt')
+                c.execute('''CREATE TABLE dose_artifacts_rebuilt (
+                  id TEXT PRIMARY KEY, case_id TEXT NOT NULL, source_case_id TEXT NOT NULL,
+                  storage_key TEXT NOT NULL UNIQUE, source_file_name TEXT NOT NULL,
+                  source_file_sha256 TEXT NOT NULL CHECK(length(source_file_sha256)=64),
+                  source_revision TEXT NOT NULL, shape_json TEXT NOT NULL, spacing_json TEXT NOT NULL,
+                  index_convention TEXT NOT NULL CHECK(index_convention='x-major-y-middle-z-fastest'),
+                  dose_unit TEXT NOT NULL CHECK(dose_unit='Gy'),
+                  origin TEXT NOT NULL CHECK(origin='archived_model_prediction'), model_revision TEXT NOT NULL,
+                  checkpoint_sha256 TEXT CHECK(checkpoint_sha256 IS NULL OR length(checkpoint_sha256)=64),
+                  rights_basis TEXT NOT NULL,
+                  validation_status TEXT NOT NULL CHECK(validation_status='grid-validated-local-only'),
+                  size_bytes INTEGER NOT NULL CHECK(size_bytes>0 AND size_bytes<=67108864),
+                  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )''')
+                legacy_source_case='source_case_id' if 'source_case_id' in dose_artifact_columns else 'case_id'
+                c.execute(f'''INSERT INTO dose_artifacts_rebuilt
+                    (id,case_id,source_case_id,storage_key,source_file_name,source_file_sha256,source_revision,
+                     shape_json,spacing_json,index_convention,dose_unit,origin,model_revision,checkpoint_sha256,
+                     rights_basis,validation_status,size_bytes,created_at)
+                    SELECT id,case_id,{legacy_source_case},storage_key,source_file_name,source_file_sha256,source_revision,
+                     shape_json,spacing_json,index_convention,dose_unit,origin,model_revision,checkpoint_sha256,
+                     rights_basis,validation_status,size_bytes,created_at FROM dose_artifacts''')
+                c.execute('DROP TABLE dose_artifacts')
+                c.execute('ALTER TABLE dose_artifacts_rebuilt RENAME TO dose_artifacts')
+                c.execute('CREATE INDEX idx_dose_artifacts_case_time ON dose_artifacts(case_id,created_at DESC)')
         c.execute('''INSERT OR IGNORE INTO models(id,module,name,version,upstream_url,upstream_commit,adapter_id,
             input_schema_id,output_schema_id,license_label,requires_gpu,min_vram_mb,metadata_json)
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)''',
@@ -235,7 +265,7 @@ def _dose_artifact_record(row) -> DoseArtifact:
     return DoseArtifact(id=row[0],case_id=row[1],source_case_id=row[2],source_file_name=row[3],source_file_sha256=row[4],
         source_revision=row[5],shape=tuple(json.loads(row[6])),spacing_mm=tuple(json.loads(row[7])),
         index_convention=row[8],dose_unit=row[9],origin=row[10],model_revision=row[11],
-        checkpoint_sha256=row[12],rights_basis=row[13],validation_status=row[14],size_bytes=row[15],created_at=row[16])
+        checkpoint_sha256=row[12] or None,rights_basis=row[13],validation_status=row[14],size_bytes=row[15],created_at=row[16])
 
 def _stored_dose_artifact(artifact_id:str):
     if not re.fullmatch(r'dose_[0-9a-f]{32}',artifact_id):
@@ -842,8 +872,8 @@ def create_app() -> FastAPI:
                 raise ValueError('Prediction source case identity must exactly match the installed case ID')
             if not model_revision or len(model_revision)>200:
                 raise ValueError('Enter the prediction model revision or checkpoint identifier')
-            if not re.fullmatch(r'[0-9a-f]{64}',checkpoint_hash):
-                raise ValueError('A verified checkpoint SHA-256 is required')
+            if checkpoint_hash and not re.fullmatch(r'[0-9a-f]{64}',checkpoint_hash):
+                raise ValueError('Checkpoint SHA-256 must be 64 lowercase hexadecimal characters when published')
             if not source_revision or len(source_revision)>200:
                 raise ValueError('Enter the source revision associated with the prediction')
             if len(rights_basis)<10 or len(rights_basis)>1000:
@@ -889,7 +919,7 @@ def create_app() -> FastAPI:
                         source_revision,shape_json,spacing_json,index_convention,dose_unit,origin,model_revision,
                         checkpoint_sha256,rights_basis,validation_status,size_bytes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                         (artifact_id,case.id,source_case_id,target.name,safe_name,content_hash,source_revision,json.dumps(DOSE_SHAPE),
-                         json.dumps(spacing),INDEX_CONVENTION,'Gy',origin,model_revision,checkpoint_hash,rights_basis,
+                         json.dumps(spacing),INDEX_CONVENTION,'Gy',origin,model_revision,checkpoint_hash or None,rights_basis,
                          'grid-validated-local-only',len(payload)))
             except Exception:
                 target.unlink(missing_ok=True)

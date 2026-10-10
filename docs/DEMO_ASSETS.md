@@ -10,6 +10,14 @@ Updated 2026-10-10. This file records the sources present in this local checkout
 - **Permission status:** the repository's software license is not treated as a dataset license. The current policy is local research/education only; external demo display, redistribution and commercial use need a separate rights review. Student publication is blocked in the application.
 - **Demonstrated use:** orthogonal index-space slices, ROI overlay, linked voxel, source-derived cumulative DVH and source provenance. Physical orientation is not available and is not inferred.
 
+## DoseTwin — OpenKBP-Opt `pt_241` reference and archived prediction
+
+- **Installed asset:** separate complete 128³ case with CT, benchmark reference dose, possible-dose mask, seven nonempty source ROI masks and authentic `paper-predictions/set_1/pt_241.csv` output. Start it with `scripts/start_local_openkbp_pt241.sh`; the default profile remains `pt_201`.
+- **Integrity:** source manifest `data/openkbp-opt/pt_241/medforge-source-manifest.json` records the pinned OpenKBP Git blob SHA-1/size, matching OpenKBP-Opt ZIP member CRC32/size, SHA-256 hashes, archive ETag, spacing `[3.906, 3.906, 2.5] mm` and permission caveat. Reference dose SHA-256: `272f347a6981b9ec836638db7f3ea24f4e75fa45ab9990f5268984e1672689f3`; set_1 prediction SHA-256: `d9fc8da169b2a7e12c1dd417f60b8364888ab28e233db19e87ee3ea93c40a583`.
+- **Compatibility:** the official OpenKBP-Opt archive includes predictions for `pt_241`–`pt_340`, not `pt_201`. Compare set_1 only with its matching `pt_241` reference. Do not mix or resample this patient with `pt_201`.
+- **Checkpoint and rights:** the published archive does not provide a model checkpoint hash or separate clinical-array license. The local UI records the checkpoint hash as unpublished. Keep this user-authorized research copy local; no redistribution or public display rights are claimed.
+- **Visual review:** actual app captures with the imported prediction and same-slice comparison are in ignored `.local-review/openkbp-pt241/` at desktop 1440×900, tablet 768×1024 and phone 390×844.
+
 ## SurgiVision — Endoscapes sampled sequences and BBox201 annotations
 
 - **Installed asset:** the complete official 2023 ZIP release has 60,339 verified regular files and 99,646 safe relative aliases, including 58,585 sampled 1 fps images and split video annotations, plus all 1,933 BBox201 annotated stills and 2,248 compressed RLE segmentations. The release itself contains still frames, not continuous videos.
@@ -35,7 +43,7 @@ Updated 2026-10-10. This file records the sources present in this local checkout
 
 ## Shared use and prohibited claims
 
-- There are 1,993 primary registry records: one OpenKBP case, 1,933 Endoscapes annotated frames, and 59 FiSaV recordings. The Endoscapes sequence browser and Appendix300 video player expose additional media with distinct source identities. These are independent research datasets; they do not describe one patient or linked clinical pathway.
+- The default profile has 1,993 primary registry records: one OpenKBP case (`pt_201`), 1,933 Endoscapes annotated frames, and 59 FiSaV recordings. A separate isolated local launch profile adds `pt_241` for DoseTwin review. The Endoscapes sequence browser and Appendix300 video player expose additional media with distinct source identities. These are independent research datasets; they do not describe one patient or linked clinical pathway.
 - Do not add raw media, source datasets or checkpoints to Git. Keep source license, original IDs, hashes, units and provenance with derived results.
 - No installed model checkpoint is claimed as runnable. No prediction, diagnosis, clinical clearance, treatment plan, patient outcome or professional certification is fabricated.
 - External jury or public display remains gated where explicit data-use permission has not been recorded.

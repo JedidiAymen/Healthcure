@@ -618,18 +618,21 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px 14px;
+  margin: 0;
   padding-left: 18px;
   border-left: 2px solid #3552d7;
   font-size: 13px;
 }
 
-.academy-path-counts span:nth-child(odd) {
+.academy-path-counts dt {
   color: var(--academy-muted);
 }
 
-.academy-path-counts span:nth-child(even) {
+.academy-path-counts dd {
+  margin: 0;
   text-align: right;
   font-variant-numeric: tabular-nums;
+  font-weight: 600;
 }
 
 .academy-path-layout {
@@ -758,8 +761,12 @@
 }
 
 .academy-lesson-action {
-  min-height: 42px;
+  min-height: 44px;
   flex: none;
+}
+
+.academy-path-page [data-slot="button"] {
+  min-height: 44px;
 }
 
 .academy-path-notes {

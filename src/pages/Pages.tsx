@@ -867,6 +867,14 @@ export function DomainWorkspace({ module }: { module: ModuleId }) {
     Icon = m.icon,
     { caseId = "current" } = useParams();
   const cases = useApi(queryKeys.cases, api.cases, [] as CaseRecord[]);
+  const artifactCaseId = module === "dosetwin"
+    ? caseId === "current" ? cases.data.find((item) => item.module === "dosetwin")?.id : caseId
+    : undefined;
+  const doseArtifacts = useQuery({
+    queryKey: ["doseArtifacts", artifactCaseId],
+    queryFn: () => api.doseArtifacts(artifactCaseId!),
+    enabled: Boolean(artifactCaseId),
+  });
   const [directRecord,setDirectRecord]=useState<CaseRecord|null>(null)
   const [directRecordLoading,setDirectRecordLoading]=useState(false)
   const [surgicalClipAvailable,setSurgicalClipAvailable]=useState(false)
@@ -1042,12 +1050,18 @@ export function DomainWorkspace({ module }: { module: ModuleId }) {
                 </TableRow>
               );
             })}
-            {m.unavailableMethods.map(({ task, reason }) => (
-              <TableRow key={task}>
-                <TableCell className="whitespace-normal"><span className="mr-2 inline-block font-mono text-xs text-muted-foreground">—</span>{task}<p className="mb-0 mt-1 text-xs leading-5 text-muted-foreground">{reason}</p></TableCell>
-                <TableCell className="text-right"><Badge variant="outline">Blocked</Badge></TableCell>
-              </TableRow>
-            ))}
+            {m.unavailableMethods.map(({ task, reason }) => {
+              const comparisonInstalled = module === "dosetwin" && task === "Reference-versus-prediction comparison" && (doseArtifacts.data?.length ?? 0) > 0;
+              const currentReason = comparisonInstalled
+                ? "An authentic same-case prediction is imported and validated on this case's grid. This is a reference comparison, not inference or clinical evaluation."
+                : reason;
+              return (
+                <TableRow key={task}>
+                  <TableCell className="whitespace-normal"><span className="mr-2 inline-block font-mono text-xs text-muted-foreground">—</span>{task}<p className="mb-0 mt-1 text-xs leading-5 text-muted-foreground">{currentReason}</p></TableCell>
+                  <TableCell className="text-right"><Badge variant={comparisonInstalled ? "secondary" : "outline"}>{comparisonInstalled ? "Locally imported" : "Blocked"}</Badge></TableCell>
+                </TableRow>
+              );
+            })}
               </TableBody>
             </Table>
           </CardContent>
