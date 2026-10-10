@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQueries, useQuery, useQueryClient, type QueryKey } from "@tanstack/react-query";
 import {
   Activity,
@@ -870,9 +870,14 @@ export function DomainWorkspace({ module }: { module: ModuleId }) {
   const m = specialtyData[module],
     Icon = m.icon,
     { caseId = "current" } = useParams();
+  const navigate = useNavigate();
   const cases = useApi(queryKeys.cases, api.cases, [] as CaseRecord[]);
-  const artifactCaseId = module === "dosetwin"
-    ? caseId === "current" ? cases.data.find((item) => item.module === "dosetwin")?.id : caseId
+  const doseCases = module === "dosetwin" ? cases.data.filter((item) => item.module === "dosetwin") : [];
+  const selectedDoseCase = caseId === "current"
+    ? doseCases[0]
+    : doseCases.find((item) => item.id === caseId);
+  const artifactCaseId = module === "dosetwin" && selectedDoseCase?.status === "ready"
+    ? selectedDoseCase.id
     : undefined;
   const doseArtifacts = useQuery({
     queryKey: ["doseArtifacts", artifactCaseId],
@@ -948,10 +953,39 @@ export function DomainWorkspace({ module }: { module: ModuleId }) {
               ? `Source case ${record.source_case_id} · ${record.dataset_id} · ${record.reference_kind}`
               : "No source case has been selected for this workspace."}
           </p>
+          {module === "dosetwin" && doseCases.length > 1 && (
+            <Field className="mt-2 grid w-full max-w-xl gap-1.5">
+              <FieldLabel htmlFor="dosetwin-case-picker">DoseTwin source case</FieldLabel>
+              <Select
+                value={selectedDoseCase?.id ?? null}
+                onValueChange={(next) => {
+                  if (next) navigate(`/studio/dosetwin/cases/${encodeURIComponent(next)}`);
+                }}
+              >
+                <SelectTrigger id="dosetwin-case-picker" className="w-full">
+                  <SelectValue placeholder="Choose an installed DoseTwin case" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {doseCases.map((item) => (
+                      <SelectItem key={item.id} value={item.id}>
+                        {item.label} · {item.status === "blocked" ? "viewer only" : "analysis enabled"}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              <small className="text-xs leading-5 text-muted-foreground">
+                Each case opens by its own ID and keeps its own saved viewer settings.
+              </small>
+            </Field>
+          )}
         </div>
         <div className="flex w-full flex-wrap items-center gap-3 2xl:w-auto 2xl:justify-end">
-          <SourceBadge kind={record ? "ready" : "blocked"}>
-            {record ? "Source configured" : "Dataset required"}
+          <SourceBadge kind={record?.status === "ready" ? "ready" : "blocked"}>
+            {record?.status === "blocked" && module === "dosetwin"
+              ? "Viewer only · analysis and imports disabled"
+              : record ? "Source configured" : "Dataset required"}
           </SourceBadge>
           <span className="text-xs text-muted-foreground">For research and education</span>
         </div>
@@ -964,7 +998,7 @@ export function DomainWorkspace({ module }: { module: ModuleId }) {
             </div>
           }
         >
-          <DoseViewer key={record.id} caseId={record.id} />
+          <DoseViewer key={record.id} caseId={record.id} viewerOnly={record.status === "blocked"} />
         </Suspense>
       ) : record && module === "surgivision" ? (
         <Suspense
@@ -1046,11 +1080,17 @@ export function DomainWorkspace({ module }: { module: ModuleId }) {
               <TableHeader><TableRow className="hover:bg-transparent"><TableHead className="w-full whitespace-normal">Method or view</TableHead><TableHead className="w-28 text-right">Availability</TableHead></TableRow></TableHeader>
             <TableBody>
             {m.tasks.map((task, i) => {
-              const available = Boolean(record && record.status === "ready" && (task!=="Licensed Appendix300 video excerpt playback"||surgicalClipAvailable));
+              const doseViewerMethod = module === "dosetwin" && [
+                "CT, reference dose and ROI masks",
+                "Index-space linked slice views",
+                "Dose statistics and DVH",
+              ].includes(task);
+              const viewerOnlyAvailable = module === "dosetwin" && record?.status === "blocked" && doseViewerMethod;
+              const available = Boolean(record && (record.status === "ready" || viewerOnlyAvailable) && (task!=="Licensed Appendix300 video excerpt playback"||surgicalClipAvailable));
               return (
                 <TableRow key={task}>
                   <TableCell className="whitespace-normal"><span className="mr-2 inline-block font-mono text-xs text-muted-foreground">{String(i + 1).padStart(2, "0")}</span>{task}</TableCell>
-                  <TableCell className="text-right"><Badge variant={available ? "secondary" : "outline"}>{available ? "Source-backed" : "Awaiting source"}</Badge></TableCell>
+                  <TableCell className="text-right"><Badge variant={available ? "secondary" : "outline"}>{viewerOnlyAvailable ? "Viewer-only" : available ? "Source-backed" : "Awaiting source"}</Badge></TableCell>
                 </TableRow>
               );
             })}
@@ -1058,7 +1098,9 @@ export function DomainWorkspace({ module }: { module: ModuleId }) {
               const comparisonInstalled = module === "dosetwin" && task === "Reference-versus-prediction comparison" && (doseArtifacts.data?.length ?? 0) > 0;
               const currentReason = comparisonInstalled
                 ? "An authentic same-case prediction is imported and validated on this case's grid. This is a reference comparison, not inference or clinical evaluation."
-                : reason;
+                : module === "dosetwin" && record?.status === "blocked"
+                  ? "This installed source profile is viewer-only. Analysis, dose import, comparison, and report generation are disabled."
+                  : reason;
               return (
                 <TableRow key={task}>
                   <TableCell className="whitespace-normal"><span className="mr-2 inline-block font-mono text-xs text-muted-foreground">—</span>{task}<p className="mb-0 mt-1 text-xs leading-5 text-muted-foreground">{currentReason}</p></TableCell>

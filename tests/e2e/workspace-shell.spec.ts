@@ -545,6 +545,75 @@ test('DoseTwin reconstructs the selected sparse source mask and falls back at ph
   expect(errors).toEqual([])
 })
 
+test('DoseTwin case picker opens allowlisted cases in viewer-only mode without artifact requests', async ({ page }) => {
+  const readyCaseId = 'openkbp:pt_201'
+  const viewerOnlyCaseId = 'openkbp:pt_241'
+  const records = [
+    { id: readyCaseId, module: 'dosetwin', dataset_id: 'OpenKBP', source_case_id: 'pt_201', reference_kind: 'benchmark', status: 'ready', label: 'OpenKBP · pt_201' },
+    { id: viewerOnlyCaseId, module: 'dosetwin', dataset_id: 'OpenKBP', source_case_id: 'pt_241', reference_kind: 'benchmark', status: 'blocked', label: 'OpenKBP · pt_241 — viewer only; analysis/import/report disabled' },
+  ]
+  let blockedArtifactRequests = 0
+  page.on('request', (request) => {
+    if (request.url().includes('/dose-artifacts') && request.url().includes('pt_241')) blockedArtifactRequests += 1
+  })
+  await page.route('**/api/v1/cases', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify(records),
+  }))
+  await page.route('**/viewer/slice*', (route) => {
+    const url = new URL(route.request().url())
+    const caseId = url.pathname.includes('pt_241') ? viewerOnlyCaseId : readyCaseId
+    const layer = url.searchParams.get('layer')
+    const roi = url.searchParams.get('roi') ?? 'Brainstem'
+    const values = new Array(128 * 128).fill(layer === 'ct' ? 0.5 : 0)
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+      case_id: caseId, source_revision: `${caseId}-revision`, source_file: `${roi}.csv`, source_sha256: 'a'.repeat(64),
+      axis: Number(url.searchParams.get('axis') ?? 2), index: Number(url.searchParams.get('index') ?? 64), shape: [128, 128], values,
+      unit: layer === 'dose' ? 'Gy' : layer === 'roi' ? 'binary-mask' : 'benchmark-value', source_kind: 'synthetic-test',
+      origin: 'synthetic-test-fixture', coordinate_frame: 'openkbp-processed-voxel-grid',
+    }) })
+  })
+  await page.route('**/viewer/dvh*', (route) => {
+    const url = new URL(route.request().url())
+    const caseId = url.pathname.includes('pt_241') ? viewerOnlyCaseId : readyCaseId
+    const roi = url.searchParams.get('roi') ?? 'Brainstem'
+    const curve = Array.from({ length: 51 }, (_, index) => ({ dose_gy: index * 1.6, volume_percent: index < 25 ? 100 : 0 }))
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+      case_id: caseId, source_revision: `${caseId}-revision`, roi, dose_sha256: 'b'.repeat(64), roi_sha256: 'c'.repeat(64),
+      voxel_count: 2, mean_dose_gy: 55, dose_display_max_gy: 80, spacing_mm: [3.906, 3.906, 2.5], ct_display_range: [0, 1],
+      ct_display_note: 'Fixture window; not HU.',
+      official_metrics: { volume_cc: 1, dmean_gy: 55, dmax_voxel_gy: 70, d95_gy_interpolated: 40, d0_1cc_gy_openkbp: 70, d99_gy_openkbp: 40, d1_gy_openkbp: 70, v20gy_percent: 100, note: 'Fixture only.' },
+      curve, method: 'Fixture curve.', source_kind: 'synthetic-test', origin: 'computed-from-synthetic-test-fixture',
+    }) })
+  })
+  await page.route('**/dose-artifacts**', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }))
+
+  await page.goto('/studio/dosetwin/cases/current')
+  await expect(page.getByRole('heading', { name: 'Linked dose review' })).toBeVisible()
+  const primaryRoi = page.getByRole('combobox', { name: 'Primary structure' })
+  await primaryRoi.click()
+  await page.getByRole('option', { name: 'PTV70', exact: true }).click()
+  await page.getByLabel('DoseTwin source case').click()
+  await page.getByRole('option', { name: /pt_241.*viewer only/i }).click()
+
+  await expect(page).toHaveURL(/\/studio\/dosetwin\/cases\/openkbp%3Apt_241$/)
+  await expect(page.getByRole('heading', { name: 'Linked dose review' })).toBeVisible()
+  await expect(page.getByText('Read-only source viewer', { exact: true })).toBeVisible()
+  await expect(page.getByText(/analysis runs, dose imports, comparisons, and reports are disabled/i)).toBeVisible()
+  await expect(page.getByText('Viewer only · analysis and imports disabled')).toBeVisible()
+  await expect(page.getByRole('img', { name: /OpenKBP processed-array z-index plane/ })).toBeVisible()
+  await expect(page.getByText('Compare a real dose prediction', { exact: true })).toHaveCount(0)
+  await expect(primaryRoi).toContainText('Brainstem')
+  expect(blockedArtifactRequests).toBe(0)
+
+  await page.getByLabel('DoseTwin source case').click()
+  await page.getByRole('option', { name: /pt_201/ }).click()
+  await expect(page).toHaveURL(/\/studio\/dosetwin\/cases\/openkbp%3Apt_201$/)
+  await expect(page.getByRole('combobox', { name: 'Primary structure' })).toContainText('PTV70')
+  expect(blockedArtifactRequests).toBe(0)
+})
+
 test('global search keeps keyboard focus and returns it to the trigger on escape', async ({ page }) => {
   await page.goto('/studio/models')
   const trigger = page.getByRole('button', { name: 'Find a research case or workspace' })

@@ -38,6 +38,12 @@ if [ -z "${MEDFORGE_OPENKBP_CASE_DIR+x}" ]; then
   case_dir="$ROOT/data/openkbp/pt_201"
   if [ -f "$case_dir/dose.csv" ]; then export MEDFORGE_OPENKBP_CASE_DIR="$case_dir"; fi
 fi
+if [ -z "${MEDFORGE_OPENKBP_CASES_JSON+x}" ]; then
+  viewer_case_dir="$ROOT/data/openkbp-opt/pt_241"
+  if [ -f "$viewer_case_dir/dose.csv" ]; then
+    export MEDFORGE_OPENKBP_CASES_JSON="$("$PYTHON_BIN" -c 'import json,sys; print(json.dumps({"openkbp:pt_241":sys.argv[1]}))' "$viewer_case_dir")"
+  fi
+fi
 if [ -z "${MEDFORGE_ENDOSCAPES_ROOT+x}" ] && [ -d "$ROOT/data/endoscapes" ]; then
   export MEDFORGE_ENDOSCAPES_ROOT="$ROOT/data/endoscapes"
 fi

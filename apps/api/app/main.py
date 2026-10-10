@@ -100,6 +100,66 @@ def _case_root() -> Path | None:
     raw=os.environ.get('MEDFORGE_OPENKBP_CASE_DIR','').strip()
     return Path(raw).expanduser().resolve() if raw else None
 
+def _configured_case_roots() -> dict[str,Path]:
+    """Trusted, local operator allowlist for additional read-only OpenKBP cases.
+
+    MEDFORGE_OPENKBP_CASES_JSON is a JSON object mapping a stable case ID to a
+    local directory. Request values are only looked up as keys; they are never
+    interpreted as paths. The legacy MEDFORGE_OPENKBP_CASE_DIR remains the
+    default fully enabled case.
+    """
+    raw=os.environ.get('MEDFORGE_OPENKBP_CASES_JSON','').strip()
+    if not raw:
+        return {}
+    try:
+        configured=json.loads(raw)
+    except (TypeError,ValueError):
+        return {}
+    if not isinstance(configured,dict):
+        return {}
+    roots={}
+    default_root=_case_root()
+    for case_id,directory in configured.items():
+        if (not isinstance(case_id,str) or
+            not re.fullmatch(r'openkbp:[A-Za-z0-9][A-Za-z0-9_.-]{0,79}',case_id) or
+            not isinstance(directory,str) or not directory.strip()):
+            continue
+        try:
+            root=Path(directory).expanduser().resolve()
+        except (OSError,RuntimeError):
+            continue
+        # Avoid ambiguous identity if an allowlist aliases the legacy profile.
+        if default_root is not None and root==default_root:
+            continue
+        if root.is_dir() and all((root/name).is_file() for name in ('ct.csv','dose.csv','possible_dose_mask.csv','voxel_dimensions.csv')):
+            roots[case_id]=root
+    return roots
+
+def _case_entry(case_id:str) -> tuple[Path,str,bool] | None:
+    """Return (root, stable ID, fully_enabled) for a configured local case."""
+    legacy=_case_response()
+    if legacy is not None and legacy.id==case_id:
+        root=_case_root()
+        if root is not None:
+            return root,legacy.id,True
+    root=_configured_case_roots().get(case_id)
+    if root is not None:
+        return root,case_id,False
+    return None
+
+def _case_record(case_id:str,root:Path,*,fully_enabled:bool) -> Case:
+    status='ready' if fully_enabled else 'blocked'
+    suffix='' if fully_enabled else ' — viewer only; analysis/import/report operations disabled'
+    return Case(id=case_id,module='dosetwin',dataset_id='openkbp',source_case_id=root.name,
+                reference_kind=_source_kind(),status=status,label='OpenKBP '+root.name+suffix)
+
+def _expect_viewer_case(case_id:str) -> tuple[Case,Path]:
+    entry=_case_entry(case_id)
+    if entry is None:
+        raise HTTPException(status_code=404,detail={'code':'CASE_NOT_INSTALLED','message':'No installed case matching this ID','action':'Configure MEDFORGE_OPENKBP_CASE_DIR or the trusted MEDFORGE_OPENKBP_CASES_JSON allowlist'})
+    root,stable_id,fully_enabled=entry
+    return _case_record(stable_id,root,fully_enabled=fully_enabled),root
+
 def _source_kind() -> str:
     value=os.environ.get('MEDFORGE_SOURCE_KIND','benchmark')
     if value not in ('benchmark','synthetic-test'):
@@ -108,6 +168,9 @@ def _source_kind() -> str:
 
 def _source_revision() -> str:
     root=_case_root()
+    return _source_revision_for_root(root)
+
+def _source_revision_for_root(root:Path|None) -> str:
     manifest=(root/'medforge-source-manifest.json') if root else None
     if manifest and manifest.is_file():
         try:
@@ -455,13 +518,14 @@ def create_app() -> FastAPI:
         fistula_ready=bool(fistula_records)
         return [
             ModuleStatus(id='surgivision',capability_state='ready' if surgical_ready else 'requires-setup',detail=f'{len(surgical_cases)} annotated Endoscapes frames and 1 fps sampled sequences; {"a separately licensed Appendix300 excerpt is installed" if _appendix300.clip_record() else "no continuous surgical clip is installed"}' if surgical_ready else 'Set MEDFORGE_ENDOSCAPES_ROOT to a verified local research sample'),
-            ModuleStatus(id='dosetwin',capability_state='ready' if ready else 'requires-setup',detail='OpenKBP local case summary available' if ready else 'Set MEDFORGE_OPENKBP_CASE_DIR'),
+            ModuleStatus(id='dosetwin',capability_state='ready' if ready else 'requires-setup',detail=('OpenKBP local case summary available' if ready else 'Set MEDFORGE_OPENKBP_CASE_DIR') + (f'; {len(_configured_case_roots())} additional viewer-only case profile(s), analysis and imports disabled' if _configured_case_roots() else '')),
             ModuleStatus(id='fistulaguard',capability_state='ready' if fistula_ready else 'requires-setup',detail=f'Source-verified FiSaV CSV cohort available ({len(fistula_records)} recordings); no classifier is enabled' if fistula_ready else 'Set MEDFORGE_FISAV_ROOT to a verified local FiSaV research sample')]
 
     @app.get('/api/v1/cases',response_model=list[Case])
     def list_cases():
         case=_case_response()
         rows=[case] if case else []
+        rows.extend(_case_record(case_id,root,fully_enabled=False) for case_id,root in sorted(_configured_case_roots().items()))
         rows.extend(_endoscapes_cases())
         rows.extend(_fisav.installed_records())
         return rows
@@ -476,7 +540,11 @@ def create_app() -> FastAPI:
             case=next((item for item in _fisav.installed_records() if item.source_case_id==record_id),None)
             if case:
                 return case
-        return _expect_case(case_id)
+        entry=_case_entry(case_id)
+        if entry is not None:
+            root,stable_id,fully_enabled=entry
+            return _case_record(stable_id,root,fully_enabled=fully_enabled)
+        raise HTTPException(status_code=404,detail={'code':'CASE_NOT_INSTALLED','message':'No installed case matching this ID','action':'Configure MEDFORGE_OPENKBP_CASE_DIR or the trusted MEDFORGE_OPENKBP_CASES_JSON allowlist'})
 
     @app.get('/api/v1/cases/{case_id}/viewer-manifest',response_model=ViewerManifest)
     def manifest(case_id:str):
@@ -502,15 +570,15 @@ def create_app() -> FastAPI:
                     provenance_label='Measured research recording from the FiSaV AVF dataset; no stenosis classification',
                     source_url=summary.source_url,limitations=summary.limitations,
                 )
-        case=_expect_case(case_id)
+        case,case_root=_expect_viewer_case(case_id)
         shape=(128,128,128)
         # Manifest uses semantic storage keys, never a host path or public download URL.
-        spacing=np.loadtxt(_case_root()/'voxel_dimensions.csv').reshape(-1)
+        spacing=np.loadtxt(case_root/'voxel_dimensions.csv').reshape(-1)
         if len(spacing)!=3 or not np.all(np.isfinite(spacing)) or not np.all(spacing>0):
             raise HTTPException(422,detail={'code':'INVALID_SPACING','message':'Voxel spacing requires 3 positive finite mm values'})
         return ViewerManifest(case_id=case.id,modality='radiotherapy-volume',
             artifacts=[VoxelVolumeArtifact(asset_key=case.id+'/dose.csv',shape=shape,spacing_mm=tuple(float(v) for v in spacing))],
-            provenance_label='OpenKBP synthetic benchmark reference dose' if _source_kind()=='benchmark' else 'SYNTHETIC TEST ONLY',
+            provenance_label=('OpenKBP synthetic benchmark reference dose' if _source_kind()=='benchmark' else 'SYNTHETIC TEST ONLY') + ('; viewer-only profile' if case.status=='blocked' else ''),
             source_url=SOURCE_URL,limitations=['No original DICOM patient orientation/origin assumed','Slices are presented in benchmark array index space'])
 
     @app.get('/api/v1/surgivision/media',response_model=list[SurgicalMediaRecord])
@@ -775,50 +843,50 @@ def create_app() -> FastAPI:
     @app.get('/api/v1/cases/{case_id}/viewer/slice',response_model=VoxelSlice)
     def viewer_slice(case_id:str,axis:int=Query(2,ge=0,le=2),index:int=Query(64,ge=0,lt=128),
                      layer:str=Query('dose',pattern='^(ct|dose|roi)$'),roi:str=Query('Brainstem',pattern='^(Brainstem|SpinalCord|RightParotid|LeftParotid|Esophagus|Larynx|Mandible|PTV56|PTV63|PTV70)$')):
-        case=_expect_case(case_id)
+        case,case_root=_expect_viewer_case(case_id)
         file_name={'ct':'ct.csv','dose':'dose.csv','roi':f'{roi}.csv'}[layer]
-        path=_case_root()/file_name
+        path=case_root/file_name
         if not path.is_file():
             raise HTTPException(404,detail={'code':'ASSET_NOT_INSTALLED','message':f'Required source asset {file_name} is missing','action':'Install a complete permitted OpenKBP case'})
         try:
-            values,shape=_read_cached_slice(str(_case_root()),file_name,axis,index,path.stat().st_mtime_ns)
+            values,shape=_read_cached_slice(str(case_root),file_name,axis,index,path.stat().st_mtime_ns)
         except (ValueError,OSError) as e:
             raise HTTPException(422,detail={'code':'INVALID_RESEARCH_DATA','message':str(e)}) from e
-        return VoxelSlice(case_id=case.id,source_revision=_source_revision(),source_file=file_name,source_sha256=sha256(path),axis=axis,index=index,
+        return VoxelSlice(case_id=case.id,source_revision=_source_revision_for_root(case_root),source_file=file_name,source_sha256=sha256(path),axis=axis,index=index,
             shape=shape,values=values,unit={'ct':'benchmark-value','dose':'Gy','roi':'binary-mask'}[layer],source_kind=_source_kind(),
             origin='synthetic-test-fixture' if _source_kind()=='synthetic-test' else ('benchmark-reference' if layer=='dose' else 'computed-from-benchmark-array'),coordinate_frame='openkbp-processed-voxel-grid')
 
     @app.get('/api/v1/cases/{case_id}/viewer/roi-volume',response_model=RoiMaskVolume)
     def viewer_roi_volume(case_id:str,roi:str=Query('Brainstem',pattern='^(Brainstem|SpinalCord|RightParotid|LeftParotid|Esophagus|Larynx|Mandible|PTV56|PTV63|PTV70)$')):
         """Return a sparse, source-indexed ROI mask for the optional vtk.js surface viewer."""
-        case=_expect_case(case_id)
-        path=_case_root()/f'{roi}.csv'
+        case,case_root=_expect_viewer_case(case_id)
+        path=case_root/f'{roi}.csv'
         if not path.is_file():
             raise HTTPException(404,detail={'code':'ASSET_NOT_INSTALLED','message':f'Required source mask {roi}.csv is missing','action':'Install the complete permitted OpenKBP case'})
-        spacing_path=_case_root()/'voxel_dimensions.csv'
+        spacing_path=case_root/'voxel_dimensions.csv'
         try:
             spacing=np.loadtxt(spacing_path,dtype=np.float64).reshape(-1)
             if spacing.shape!=(3,) or not np.all(np.isfinite(spacing)) or not np.all(spacing>0):
                 raise ValueError('Voxel spacing requires 3 positive finite mm values')
-            mask=_read_cached_volume(str(_case_root()),path.name,path.stat().st_size,path.stat().st_mtime_ns).astype(bool,copy=False)
+            mask=_read_cached_volume(str(case_root),path.name,path.stat().st_size,path.stat().st_mtime_ns).astype(bool,copy=False)
             indices=np.flatnonzero(mask).astype(np.uint32,copy=False)
             if not indices.size:
                 raise ValueError(f'{roi} contains no voxels in this case')
         except (ValueError,OSError) as e:
             raise HTTPException(422,detail={'code':'INVALID_RESEARCH_DATA','message':str(e)}) from e
-        return RoiMaskVolume(case_id=case.id,source_revision=_source_revision(),source_file=path.name,source_sha256=sha256(path),
+        return RoiMaskVolume(case_id=case.id,source_revision=_source_revision_for_root(case_root),source_file=path.name,source_sha256=sha256(path),
             shape=(128,128,128),spacing_mm=tuple(float(value) for value in spacing),voxel_count=int(indices.size),voxel_indices_c_order=indices.tolist(),
             source_kind=_source_kind(),origin='computed-from-synthetic-test-fixture' if _source_kind()=='synthetic-test' else 'computed-from-benchmark-array',
             coordinate_frame='openkbp-processed-voxel-grid',index_convention='x-major-y-middle-z-fastest')
 
     @app.get('/api/v1/cases/{case_id}/viewer/dvh',response_model=DvhSummary)
     def viewer_dvh(case_id:str,roi:str=Query('Brainstem',pattern='^(Brainstem|SpinalCord|RightParotid|LeftParotid|Esophagus|Larynx|Mandible|PTV56|PTV63|PTV70)$')):
-        case=_expect_case(case_id)
-        dose_path=_case_root()/'dose.csv'; roi_path=_case_root()/f'{roi}.csv'; ct_path=_case_root()/'ct.csv'; spacing_path=_case_root()/'voxel_dimensions.csv'
+        case,case_root=_expect_viewer_case(case_id)
+        dose_path=case_root/'dose.csv'; roi_path=case_root/f'{roi}.csv'; ct_path=case_root/'ct.csv'; spacing_path=case_root/'voxel_dimensions.csv'
         if not dose_path.is_file() or not roi_path.is_file() or not ct_path.is_file() or not spacing_path.is_file():
             raise HTTPException(404,detail={'code':'ASSET_NOT_INSTALLED','message':f'Dose or ROI source for {roi} is missing','action':'Install the complete permitted OpenKBP case'})
         try:
-            case_dir=str(_case_root().resolve())
+            case_dir=str(case_root.resolve())
             dose=_read_cached_volume(case_dir,'dose.csv',dose_path.stat().st_size,dose_path.stat().st_mtime_ns)
             mask=_read_cached_volume(case_dir,roi_path.name,roi_path.stat().st_size,roi_path.stat().st_mtime_ns).astype(bool)
             ct=_read_cached_volume(case_dir,'ct.csv',ct_path.stat().st_size,ct_path.stat().st_mtime_ns)
@@ -841,7 +909,7 @@ def create_app() -> FastAPI:
             ct_range=np.array([ct_min,ct_max if ct_max>ct_min else ct_min+1.0])
         official_metrics=dose_statistics(dose,mask,spacing)
         official_metrics={key:official_metrics.get(key) for key in ('volume_cc','dmean_gy','dmax_voxel_gy','d95_gy_interpolated','d0_1cc_gy_openkbp','d99_gy_openkbp','d1_gy_openkbp','v20gy_percent','note')}
-        return DvhSummary(case_id=case.id,source_revision=_source_revision(),roi=roi,dose_sha256=sha256(dose_path),roi_sha256=sha256(roi_path),
+        return DvhSummary(case_id=case.id,source_revision=_source_revision_for_root(case_root),roi=roi,dose_sha256=sha256(dose_path),roi_sha256=sha256(roi_path),
             voxel_count=int(values.size),mean_dose_gy=float(np.mean(values)),dose_display_max_gy=display_max,spacing_mm=tuple(float(value) for value in spacing),
             ct_display_range=(float(ct_range[0]),float(ct_range[1])),ct_display_note='Global 2nd–98th percentile of this case’s processed CT benchmark values; not HU. Adjust locally for display.',
             official_metrics=DvhMetrics.model_validate(official_metrics),curve=curve,

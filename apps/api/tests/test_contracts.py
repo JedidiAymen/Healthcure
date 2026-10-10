@@ -732,6 +732,80 @@ def test_dvh_endpoint_calculates_fixture_curve_and_provenance(client):
     assert result['source_kind']=='synthetic-test'
 
 
+def test_trusted_allowlisted_dosetwin_case_is_viewer_only_and_root_isolation(monkeypatch,tmp_path):
+    """Alternating case requests never reuse another case's data or identity."""
+    case_a=tmp_path/'test-synthetic-case'
+    case_a.mkdir()
+    (case_a/'voxel_dimensions.csv').write_text('2.0\n2.0\n2.0\n',encoding='utf8')
+    _sparse(case_a/'ct.csv',[(0,100),(1,200)])
+    _sparse(case_a/'dose.csv',[(0,12),(1,22),(3,40)])
+    _sparse(case_a/'possible_dose_mask.csv',[(0,0),(1,0),(3,0)],binary=True)
+    _sparse(case_a/'Brainstem.csv',[(0,0),(1,0)],binary=True)
+    case_b=tmp_path/'case-b'
+    case_b.mkdir()
+    (case_b/'voxel_dimensions.csv').write_text('3.0\n3.0\n2.5\n',encoding='utf8')
+    _sparse(case_b/'ct.csv',[(0,700),(2,800)])
+    _sparse(case_b/'dose.csv',[(0,70),(2,90),(4,120)])
+    _sparse(case_b/'possible_dose_mask.csv',[(0,0),(2,0),(4,0)],binary=True)
+    _sparse(case_b/'Brainstem.csv',[(0,0),(2,0)],binary=True)
+    (case_a/'medforge-source-manifest.json').write_text(json.dumps({'upstream_commit':'1'*40}),encoding='utf8')
+    (case_b/'medforge-source-manifest.json').write_text(json.dumps({'upstream_commit':'2'*40}),encoding='utf8')
+    monkeypatch.setenv('MEDFORGE_OPENKBP_CASES_JSON',json.dumps({'openkbp:case-b':str(case_b)}))
+    monkeypatch.setenv('MEDFORGE_OPENKBP_CASE_DIR',str(case_a))
+    monkeypatch.setenv('MEDFORGE_DB_PATH',str(tmp_path/'case-registry.sqlite3'))
+    monkeypatch.setenv('MEDFORGE_SOURCE_KIND','synthetic-test')
+    api=TestClient(create_app())
+
+    cases={item['id']:item for item in api.get('/api/v1/cases').json() if item['module']=='dosetwin'}
+    id_a='openkbp:'+case_a.name
+    id_b='openkbp:case-b'
+    assert cases[id_a]['status']=='ready'
+    assert cases[id_b]['status']=='blocked'
+    assert 'viewer only' in cases[id_b]['label']
+    assert '1 additional viewer-only case profile' in next(item for item in api.get('/api/v1/modules').json() if item['id']=='dosetwin')['detail']
+
+    # Interleave all supported reads to exercise both decoded-volume and slice caches.
+    for cid,spacing,first_dose,source_revision in (
+        (id_a,[2.0,2.0,2.0],12.0,'1'*40),
+        (id_b,[3.0,3.0,2.5],70.0,'2'*40),
+        (id_a,[2.0,2.0,2.0],12.0,'1'*40),
+        (id_b,[3.0,3.0,2.5],70.0,'2'*40),
+    ):
+        listed=api.get(f'/api/v1/cases/{cid}')
+        assert listed.status_code==200 and listed.json()['id']==cid
+        manifest=api.get(f'/api/v1/cases/{cid}/viewer-manifest')
+        assert manifest.status_code==200 and manifest.json()['case_id']==cid
+        assert manifest.json()['artifacts'][0]['spacing_mm']==spacing
+        assert manifest.json()['artifacts'][0]['asset_key']==cid+'/dose.csv'
+        assert 'SYNTHETIC TEST ONLY' in manifest.json()['provenance_label']
+        slice_result=api.get(f'/api/v1/cases/{cid}/viewer/slice?axis=2&index=0&layer=dose').json()
+        assert slice_result['case_id']==cid and slice_result['source_revision']==source_revision
+        assert slice_result['values'][0]==first_dose
+        assert slice_result['source_kind']=='synthetic-test'
+        assert slice_result['origin']=='synthetic-test-fixture'
+        expected_dose_hash=hashlib.sha256(((case_a if cid==id_a else case_b)/'dose.csv').read_bytes()).hexdigest()
+        assert slice_result['source_sha256']==expected_dose_hash
+        roi=api.get(f'/api/v1/cases/{cid}/viewer/roi-volume?roi=Brainstem').json()
+        assert roi['case_id']==cid and roi['spacing_mm']==spacing
+        assert roi['voxel_indices_c_order']==([0,1] if cid==id_a else [0,2])
+        assert roi['source_kind']=='synthetic-test'
+        assert roi['origin']=='computed-from-synthetic-test-fixture'
+        dvh=api.get(f'/api/v1/cases/{cid}/viewer/dvh?roi=Brainstem').json()
+        assert dvh['case_id']==cid and dvh['source_revision']==source_revision
+        assert dvh['dose_sha256']==expected_dose_hash
+        assert dvh['spacing_mm']==spacing
+        assert dvh['mean_dose_gy']==(17.0 if cid==id_a else 80.0)
+        assert dvh['source_kind']=='synthetic-test'
+        assert dvh['origin']=='computed-from-synthetic-test-fixture'
+
+    unknown=api.get('/api/v1/cases/openkbp:unlisted/viewer-manifest')
+    assert unknown.status_code==404 and unknown.json()['detail']['code']=='CASE_NOT_INSTALLED'
+    unknown_case=api.get('/api/v1/cases/openkbp:unlisted')
+    assert unknown_case.status_code==404
+    blocked_run=api.post('/api/v1/runs',json={'case_id':id_b,'operation_id':'openkbp.case_summary'})
+    assert blocked_run.status_code==404
+
+
 def test_endoscapes_frame_requires_matching_local_hashes_and_keeps_identity(monkeypatch,tmp_path):
     root=tmp_path/'endoscapes'; split=root/'train'; split.mkdir(parents=True)
     image=b'\xff\xd8\xff\xd9'
