@@ -1,6 +1,28 @@
 {
   "components": {
     "schemas": {
+      "AccountEraseRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "confirm": {
+            "pattern": "^ERASE MY ACCOUNT$",
+            "title": "Confirm",
+            "type": "string"
+          },
+          "password": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "password",
+          "confirm"
+        ],
+        "title": "AccountEraseRequest",
+        "type": "object"
+      },
       "ApiError": {
         "additionalProperties": false,
         "properties": {
@@ -29,6 +51,271 @@
           "message"
         ],
         "title": "ApiError",
+        "type": "object"
+      },
+      "AuditEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "actor_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor Id"
+          },
+          "actor_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor Role"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "details": {
+            "additionalProperties": true,
+            "title": "Details",
+            "type": "object"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "owner_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Id"
+          },
+          "row_hash": {
+            "title": "Row Hash",
+            "type": "string"
+          },
+          "target_id": {
+            "title": "Target Id",
+            "type": "string"
+          },
+          "target_kind": {
+            "title": "Target Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "actor_id",
+          "actor_role",
+          "action",
+          "target_kind",
+          "target_id",
+          "owner_id",
+          "details",
+          "row_hash"
+        ],
+        "title": "AuditEntry",
+        "type": "object"
+      },
+      "AuditVerification": {
+        "additionalProperties": false,
+        "properties": {
+          "entries": {
+            "title": "Entries",
+            "type": "integer"
+          },
+          "first_broken_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Broken Id"
+          },
+          "head_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Head Hash"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "ok",
+          "entries",
+          "first_broken_id",
+          "reason"
+        ],
+        "title": "AuditVerification",
+        "type": "object"
+      },
+      "BeatAnalysis": {
+        "additionalProperties": false,
+        "properties": {
+          "beats": {
+            "items": {
+              "$ref": "#/components/schemas/BeatMeasurement"
+            },
+            "title": "Beats",
+            "type": "array"
+          },
+          "channel": {
+            "title": "Channel",
+            "type": "string"
+          },
+          "duration_sec": {
+            "title": "Duration Sec",
+            "type": "number"
+          },
+          "ensemble": {
+            "$ref": "#/components/schemas/EnsembleAverage"
+          },
+          "heart_rate_bpm": {
+            "$ref": "#/components/schemas/HeartRateSummary"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "occlusion_test": {
+            "$ref": "#/components/schemas/OcclusionTestMarker"
+          },
+          "r_peaks_sec": {
+            "items": {
+              "type": "number"
+            },
+            "title": "R Peaks Sec",
+            "type": "array"
+          },
+          "record_id": {
+            "title": "Record Id",
+            "type": "string"
+          },
+          "source_sha256": {
+            "title": "Source Sha256",
+            "type": "string"
+          },
+          "start_sec": {
+            "title": "Start Sec",
+            "type": "number"
+          }
+        },
+        "required": [
+          "record_id",
+          "channel",
+          "start_sec",
+          "duration_sec",
+          "source_sha256",
+          "r_peaks_sec",
+          "heart_rate_bpm",
+          "beats",
+          "ensemble",
+          "occlusion_test",
+          "method",
+          "limitations"
+        ],
+        "title": "BeatAnalysis",
+        "type": "object"
+      },
+      "BeatMeasurement": {
+        "additionalProperties": false,
+        "properties": {
+          "index": {
+            "title": "Index",
+            "type": "integer"
+          },
+          "peak_to_peak": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Peak To Peak"
+          },
+          "r_peak_sec": {
+            "title": "R Peak Sec",
+            "type": "number"
+          },
+          "rms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rms"
+          },
+          "rr_sec": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rr Sec"
+          }
+        },
+        "required": [
+          "index",
+          "r_peak_sec",
+          "rr_sec",
+          "peak_to_peak",
+          "rms"
+        ],
+        "title": "BeatMeasurement",
         "type": "object"
       },
       "Case": {
@@ -478,6 +765,178 @@
           "mean_one_frames"
         ],
         "title": "CvsCriterionCoverage",
+        "type": "object"
+      },
+      "CvsSelfCheckCommit": {
+        "additionalProperties": false,
+        "description": "A learner's own judgement of the three CVS criteria: 1 achieved, 0 not achieved.",
+        "properties": {
+          "judgements": {
+            "maxItems": 3,
+            "minItems": 3,
+            "prefixItems": [
+              {
+                "enum": [
+                  0,
+                  1
+                ],
+                "type": "integer"
+              },
+              {
+                "enum": [
+                  0,
+                  1
+                ],
+                "type": "integer"
+              },
+              {
+                "enum": [
+                  0,
+                  1
+                ],
+                "type": "integer"
+              }
+            ],
+            "title": "Judgements",
+            "type": "array"
+          }
+        },
+        "required": [
+          "judgements"
+        ],
+        "title": "CvsSelfCheckCommit",
+        "type": "object"
+      },
+      "CvsSelfCheckCriterion": {
+        "additionalProperties": false,
+        "properties": {
+          "annotator_mean": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Annotator Mean",
+            "type": "number"
+          },
+          "annotators_disagreed": {
+            "title": "Annotators Disagreed",
+            "type": "boolean"
+          },
+          "criterion_id": {
+            "enum": [
+              "two_structures",
+              "hepatocystic_triangle",
+              "cystic_plate"
+            ],
+            "title": "Criterion Id",
+            "type": "string"
+          },
+          "judgement": {
+            "enum": [
+              0,
+              1
+            ],
+            "title": "Judgement",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "matches_majority": {
+            "title": "Matches Majority",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "criterion_id",
+          "label",
+          "judgement",
+          "annotator_mean",
+          "annotators_disagreed",
+          "matches_majority"
+        ],
+        "title": "CvsSelfCheckCriterion",
+        "type": "object"
+      },
+      "CvsSelfCheckResult": {
+        "additionalProperties": false,
+        "properties": {
+          "block_id": {
+            "title": "Block Id",
+            "type": "string"
+          },
+          "committed_at": {
+            "title": "Committed At",
+            "type": "string"
+          },
+          "criteria": {
+            "items": {
+              "$ref": "#/components/schemas/CvsSelfCheckCriterion"
+            },
+            "title": "Criteria",
+            "type": "array"
+          },
+          "frame_id": {
+            "title": "Frame Id",
+            "type": "string"
+          },
+          "judgements": {
+            "maxItems": 3,
+            "minItems": 3,
+            "prefixItems": [
+              {
+                "enum": [
+                  0,
+                  1
+                ],
+                "type": "integer"
+              },
+              {
+                "enum": [
+                  0,
+                  1
+                ],
+                "type": "integer"
+              },
+              {
+                "enum": [
+                  0,
+                  1
+                ],
+                "type": "integer"
+              }
+            ],
+            "title": "Judgements",
+            "type": "array"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
+          },
+          "matches": {
+            "maximum": 3.0,
+            "minimum": 0.0,
+            "title": "Matches",
+            "type": "integer"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "block_id",
+          "frame_id",
+          "judgements",
+          "criteria",
+          "matches",
+          "committed_at",
+          "source",
+          "limitations"
+        ],
+        "title": "CvsSelfCheckResult",
         "type": "object"
       },
       "DoseArtifact": {
@@ -1256,6 +1715,13 @@
             "title": "Criterion Scores",
             "type": "array"
           },
+          "cvs_self_checks": {
+            "items": {
+              "$ref": "#/components/schemas/CvsSelfCheckResult"
+            },
+            "title": "Cvs Self Checks",
+            "type": "array"
+          },
           "observations": {
             "items": {
               "$ref": "#/components/schemas/StudentObservationInput"
@@ -1690,7 +2156,8 @@
               "Observation",
               "Measurement",
               "Question",
-              "Reveal"
+              "Reveal",
+              "CVS self-check"
             ],
             "title": "Type",
             "type": "string"
@@ -1774,6 +2241,44 @@
         "title": "EducatorStudent",
         "type": "object"
       },
+      "EnsembleAverage": {
+        "additionalProperties": false,
+        "properties": {
+          "beats_used": {
+            "title": "Beats Used",
+            "type": "integer"
+          },
+          "mean": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Mean",
+            "type": "array"
+          },
+          "sd": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Sd",
+            "type": "array"
+          },
+          "time_sec": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Time Sec",
+            "type": "array"
+          }
+        },
+        "required": [
+          "time_sec",
+          "mean",
+          "sd",
+          "beats_used"
+        ],
+        "title": "EnsembleAverage",
+        "type": "object"
+      },
       "GradedRubricCriterion": {
         "additionalProperties": false,
         "properties": {
@@ -1855,9 +2360,63 @@
             "default": "ok",
             "title": "Status",
             "type": "string"
+          },
+          "storage_encryption": {
+            "default": "none",
+            "enum": [
+              "sqlcipher-aes-256",
+              "none"
+            ],
+            "title": "Storage Encryption",
+            "type": "string"
           }
         },
         "title": "Health",
+        "type": "object"
+      },
+      "HeartRateSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "max": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max"
+          },
+          "mean": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean"
+          },
+          "min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min"
+          }
+        },
+        "required": [
+          "mean",
+          "min",
+          "max"
+        ],
+        "title": "HeartRateSummary",
         "type": "object"
       },
       "LocalLoginRequest": {
@@ -2093,6 +2652,36 @@
         "title": "ModuleStatus",
         "type": "object"
       },
+      "OcclusionTestMarker": {
+        "additionalProperties": false,
+        "properties": {
+          "intervals": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "title": "Intervals",
+            "type": "array"
+          },
+          "meaning": {
+            "title": "Meaning",
+            "type": "string"
+          },
+          "overlaps_window": {
+            "title": "Overlaps Window",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "intervals",
+          "overlaps_window",
+          "meaning"
+        ],
+        "title": "OcclusionTestMarker",
+        "type": "object"
+      },
       "PublishedLessonVersion": {
         "additionalProperties": false,
         "properties": {
@@ -2151,6 +2740,35 @@
           "published_at"
         ],
         "title": "PublishedLessonVersion",
+        "type": "object"
+      },
+      "QualityCheck": {
+        "additionalProperties": false,
+        "properties": {
+          "measured": {
+            "title": "Measured",
+            "type": "number"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "passed": {
+            "title": "Passed",
+            "type": "boolean"
+          },
+          "threshold": {
+            "title": "Threshold",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "measured",
+          "threshold",
+          "passed"
+        ],
+        "title": "QualityCheck",
         "type": "object"
       },
       "ReportCreateRequest": {
@@ -2227,6 +2845,375 @@
           "document"
         ],
         "title": "ReportRecord",
+        "type": "object"
+      },
+      "ResearchReview": {
+        "additionalProperties": false,
+        "properties": {
+          "artifact_id": {
+            "title": "Artifact Id",
+            "type": "string"
+          },
+          "audit_row_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audit Row Hash"
+          },
+          "boundary": {
+            "default": "For further expert review, not for patient treatment.",
+            "title": "Boundary",
+            "type": "string"
+          },
+          "case_id": {
+            "title": "Case Id",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "decision": {
+            "enum": [
+              "accept_for_further_expert_assessment",
+              "request_revision",
+              "reject_research_candidate"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "decision_label": {
+            "title": "Decision Label",
+            "type": "string"
+          },
+          "does_not_mean": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Does Not Mean",
+            "type": "array"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/ResearchReviewEvidence"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/ResearchReviewProvenance"
+          },
+          "rationale": {
+            "title": "Rationale",
+            "type": "string"
+          },
+          "reviewer_id": {
+            "title": "Reviewer Id",
+            "type": "string"
+          },
+          "reviewer_name": {
+            "title": "Reviewer Name",
+            "type": "string"
+          },
+          "reviewer_role": {
+            "title": "Reviewer Role",
+            "type": "string"
+          },
+          "supersedes_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Id"
+          }
+        },
+        "required": [
+          "id",
+          "case_id",
+          "artifact_id",
+          "decision",
+          "decision_label",
+          "rationale",
+          "reviewer_id",
+          "reviewer_name",
+          "reviewer_role",
+          "supersedes_id",
+          "created_at",
+          "evidence",
+          "provenance"
+        ],
+        "title": "ResearchReview",
+        "type": "object"
+      },
+      "ResearchReviewCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "artifact_id": {
+            "pattern": "^dose_[0-9a-f]{32}$",
+            "title": "Artifact Id",
+            "type": "string"
+          },
+          "axis": {
+            "default": 2,
+            "maximum": 2.0,
+            "minimum": 0.0,
+            "title": "Axis",
+            "type": "integer"
+          },
+          "case_id": {
+            "maxLength": 180,
+            "minLength": 1,
+            "title": "Case Id",
+            "type": "string"
+          },
+          "decision": {
+            "enum": [
+              "accept_for_further_expert_assessment",
+              "request_revision",
+              "reject_research_candidate"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "index": {
+            "default": 64,
+            "exclusiveMaximum": 128.0,
+            "minimum": 0.0,
+            "title": "Index",
+            "type": "integer"
+          },
+          "rationale": {
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Rationale",
+            "type": "string"
+          },
+          "roi": {
+            "enum": [
+              "Brainstem",
+              "SpinalCord",
+              "RightParotid",
+              "LeftParotid",
+              "Esophagus",
+              "Larynx",
+              "Mandible",
+              "PTV56",
+              "PTV63",
+              "PTV70"
+            ],
+            "title": "Roi",
+            "type": "string"
+          },
+          "supersedes_id": {
+            "anyOf": [
+              {
+                "pattern": "^rev_[0-9a-f]{32}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Id"
+          },
+          "voxel": {
+            "anyOf": [
+              {
+                "maxItems": 3,
+                "minItems": 3,
+                "prefixItems": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "integer"
+                  }
+                ],
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Voxel"
+          }
+        },
+        "required": [
+          "case_id",
+          "artifact_id",
+          "roi",
+          "decision",
+          "rationale"
+        ],
+        "title": "ResearchReviewCreate",
+        "type": "object"
+      },
+      "ResearchReviewEvidence": {
+        "additionalProperties": false,
+        "properties": {
+          "maximum_absolute_delta_gy": {
+            "title": "Maximum Absolute Delta Gy",
+            "type": "number"
+          },
+          "mean_absolute_delta_gy": {
+            "title": "Mean Absolute Delta Gy",
+            "type": "number"
+          },
+          "mean_delta_gy": {
+            "title": "Mean Delta Gy",
+            "type": "number"
+          },
+          "prediction_mean_gy": {
+            "title": "Prediction Mean Gy",
+            "type": "number"
+          },
+          "prediction_metrics": {
+            "additionalProperties": true,
+            "title": "Prediction Metrics",
+            "type": "object"
+          },
+          "reference_mean_gy": {
+            "title": "Reference Mean Gy",
+            "type": "number"
+          },
+          "reference_metrics": {
+            "additionalProperties": true,
+            "title": "Reference Metrics",
+            "type": "object"
+          },
+          "roi": {
+            "title": "Roi",
+            "type": "string"
+          },
+          "view": {
+            "additionalProperties": true,
+            "title": "View",
+            "type": "object"
+          },
+          "voxel": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VoxelDifference"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "voxel_count": {
+            "title": "Voxel Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "roi",
+          "voxel_count",
+          "reference_mean_gy",
+          "prediction_mean_gy",
+          "mean_delta_gy",
+          "mean_absolute_delta_gy",
+          "maximum_absolute_delta_gy",
+          "reference_metrics",
+          "prediction_metrics",
+          "voxel",
+          "view"
+        ],
+        "title": "ResearchReviewEvidence",
+        "type": "object"
+      },
+      "ResearchReviewProvenance": {
+        "additionalProperties": false,
+        "properties": {
+          "case_source_revision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Case Source Revision"
+          },
+          "method_code_sha256": {
+            "title": "Method Code Sha256",
+            "type": "string"
+          },
+          "method_version": {
+            "title": "Method Version",
+            "type": "string"
+          },
+          "prediction_checkpoint_sha256": {
+            "title": "Prediction Checkpoint Sha256",
+            "type": "string"
+          },
+          "prediction_file_name": {
+            "title": "Prediction File Name",
+            "type": "string"
+          },
+          "prediction_model_revision": {
+            "title": "Prediction Model Revision",
+            "type": "string"
+          },
+          "prediction_rights_basis": {
+            "title": "Prediction Rights Basis",
+            "type": "string"
+          },
+          "prediction_sha256": {
+            "title": "Prediction Sha256",
+            "type": "string"
+          },
+          "provenance_kind": {
+            "enum": [
+              "SOURCE_BENCHMARK",
+              "ARCHIVED_PREDICTION",
+              "RULE_BASED_METHOD",
+              "IN_APP_MODEL_INFERENCE"
+            ],
+            "title": "Provenance Kind",
+            "type": "string"
+          },
+          "reference_dose_sha256": {
+            "title": "Reference Dose Sha256",
+            "type": "string"
+          },
+          "reference_kind": {
+            "enum": [
+              "SOURCE_BENCHMARK",
+              "ARCHIVED_PREDICTION",
+              "RULE_BASED_METHOD",
+              "IN_APP_MODEL_INFERENCE"
+            ],
+            "title": "Reference Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provenance_kind",
+          "reference_kind",
+          "case_source_revision",
+          "reference_dose_sha256",
+          "prediction_file_name",
+          "prediction_sha256",
+          "prediction_model_revision",
+          "prediction_checkpoint_sha256",
+          "prediction_rights_basis",
+          "method_version",
+          "method_code_sha256"
+        ],
+        "title": "ResearchReviewProvenance",
         "type": "object"
       },
       "RoiMaskVolume": {
@@ -2484,6 +3471,106 @@
         "title": "RunRecord",
         "type": "object"
       },
+      "SignalAnnotation": {
+        "additionalProperties": false,
+        "properties": {
+          "channel": {
+            "pattern": "^(ECG|raw PZT1|raw PZT2|raw PZT3|raw PZT4)$",
+            "title": "Channel",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "end_sec": {
+            "exclusiveMinimum": 0.0,
+            "title": "End Sec",
+            "type": "number"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "maxLength": 2000,
+            "title": "Note",
+            "type": "string"
+          },
+          "record_id": {
+            "title": "Record Id",
+            "type": "string"
+          },
+          "source_sha256": {
+            "title": "Source Sha256",
+            "type": "string"
+          },
+          "start_sec": {
+            "minimum": 0.0,
+            "title": "Start Sec",
+            "type": "number"
+          }
+        },
+        "required": [
+          "channel",
+          "start_sec",
+          "end_sec",
+          "label",
+          "id",
+          "record_id",
+          "source_sha256",
+          "created_at"
+        ],
+        "title": "SignalAnnotation",
+        "type": "object"
+      },
+      "SignalAnnotationCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "channel": {
+            "pattern": "^(ECG|raw PZT1|raw PZT2|raw PZT3|raw PZT4)$",
+            "title": "Channel",
+            "type": "string"
+          },
+          "end_sec": {
+            "exclusiveMinimum": 0.0,
+            "title": "End Sec",
+            "type": "number"
+          },
+          "label": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "maxLength": 2000,
+            "title": "Note",
+            "type": "string"
+          },
+          "start_sec": {
+            "minimum": 0.0,
+            "title": "Start Sec",
+            "type": "number"
+          }
+        },
+        "required": [
+          "channel",
+          "start_sec",
+          "end_sec",
+          "label"
+        ],
+        "title": "SignalAnnotationCreate",
+        "type": "object"
+      },
       "SignalArtifact": {
         "additionalProperties": false,
         "properties": {
@@ -2695,6 +3782,211 @@
           "method"
         ],
         "title": "SignalFeatures",
+        "type": "object"
+      },
+      "SignalFilterParameters": {
+        "additionalProperties": false,
+        "properties": {
+          "high_hz": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "High Hz"
+          },
+          "low_hz": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Low Hz"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "bandpass",
+              "notch"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "notch_hz": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notch Hz"
+          },
+          "order": {
+            "title": "Order",
+            "type": "integer"
+          },
+          "q": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Q"
+          }
+        },
+        "required": [
+          "mode",
+          "low_hz",
+          "high_hz",
+          "notch_hz",
+          "q",
+          "order",
+          "method"
+        ],
+        "title": "SignalFilterParameters",
+        "type": "object"
+      },
+      "SignalFilterResult": {
+        "additionalProperties": false,
+        "properties": {
+          "channel": {
+            "title": "Channel",
+            "type": "string"
+          },
+          "duration_sec": {
+            "title": "Duration Sec",
+            "type": "number"
+          },
+          "filter": {
+            "$ref": "#/components/schemas/SignalFilterParameters"
+          },
+          "filtered": {
+            "$ref": "#/components/schemas/SignalTrace"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
+          },
+          "raw": {
+            "$ref": "#/components/schemas/SignalTrace"
+          },
+          "record_id": {
+            "title": "Record Id",
+            "type": "string"
+          },
+          "sample_rate_hz": {
+            "title": "Sample Rate Hz",
+            "type": "number"
+          },
+          "source_sha256": {
+            "title": "Source Sha256",
+            "type": "string"
+          },
+          "start_sec": {
+            "title": "Start Sec",
+            "type": "number"
+          }
+        },
+        "required": [
+          "record_id",
+          "channel",
+          "start_sec",
+          "duration_sec",
+          "sample_rate_hz",
+          "source_sha256",
+          "filter",
+          "raw",
+          "filtered",
+          "limitations"
+        ],
+        "title": "SignalFilterResult",
+        "type": "object"
+      },
+      "SignalQuality": {
+        "additionalProperties": false,
+        "properties": {
+          "channel": {
+            "title": "Channel",
+            "type": "string"
+          },
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/QualityCheck"
+            },
+            "title": "Checks",
+            "type": "array"
+          },
+          "duration_sec": {
+            "title": "Duration Sec",
+            "type": "number"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
+          },
+          "provenance_kind": {
+            "const": "RULE_BASED_METHOD",
+            "default": "RULE_BASED_METHOD",
+            "title": "Provenance Kind",
+            "type": "string"
+          },
+          "record_id": {
+            "title": "Record Id",
+            "type": "string"
+          },
+          "source_sha256": {
+            "title": "Source Sha256",
+            "type": "string"
+          },
+          "start_sec": {
+            "title": "Start Sec",
+            "type": "number"
+          },
+          "status": {
+            "enum": [
+              "usable",
+              "insufficient quality, not scored"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "usable": {
+            "title": "Usable",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "record_id",
+          "channel",
+          "start_sec",
+          "duration_sec",
+          "source_sha256",
+          "usable",
+          "status",
+          "checks",
+          "limitations"
+        ],
+        "title": "SignalQuality",
         "type": "object"
       },
       "SignalRecord": {
@@ -2970,6 +4262,31 @@
           "method"
         ],
         "title": "SignalSpectrum",
+        "type": "object"
+      },
+      "SignalTrace": {
+        "additionalProperties": false,
+        "properties": {
+          "time_sec": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Time Sec",
+            "type": "array"
+          },
+          "values": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Values",
+            "type": "array"
+          }
+        },
+        "required": [
+          "time_sec",
+          "values"
+        ],
+        "title": "SignalTrace",
         "type": "object"
       },
       "SignalWindow": {
@@ -4521,6 +5838,75 @@
         "title": "SurgicalFrameArtifact",
         "type": "object"
       },
+      "SurgicalFrameBrowse": {
+        "additionalProperties": false,
+        "properties": {
+          "facets": {
+            "$ref": "#/components/schemas/SurgicalFrameFacets"
+          },
+          "frames": {
+            "items": {
+              "$ref": "#/components/schemas/SurgicalFrameSummary"
+            },
+            "title": "Frames",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "limit",
+          "offset",
+          "frames",
+          "facets",
+          "limitations"
+        ],
+        "title": "SurgicalFrameBrowse",
+        "type": "object"
+      },
+      "SurgicalFrameFacets": {
+        "additionalProperties": false,
+        "properties": {
+          "categories": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "splits": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Splits",
+            "type": "object"
+          }
+        },
+        "required": [
+          "categories",
+          "splits"
+        ],
+        "title": "SurgicalFrameFacets",
+        "type": "object"
+      },
       "SurgicalFrameRecord": {
         "additionalProperties": false,
         "properties": {
@@ -4634,6 +6020,78 @@
           "show_annotations"
         ],
         "title": "SurgicalFrameReportCreateRequest",
+        "type": "object"
+      },
+      "SurgicalFrameSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "agreement": {
+            "enum": [
+              "unanimous",
+              "disputed",
+              "unlabelled"
+            ],
+            "title": "Agreement",
+            "type": "string"
+          },
+          "annotation_count": {
+            "title": "Annotation Count",
+            "type": "integer"
+          },
+          "categories": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "cvs_criteria": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Cvs Criteria",
+            "type": "array"
+          },
+          "disputed_criteria": {
+            "maximum": 3.0,
+            "minimum": 0.0,
+            "title": "Disputed Criteria",
+            "type": "integer"
+          },
+          "frame_number": {
+            "title": "Frame Number",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "split": {
+            "enum": [
+              "train",
+              "val",
+              "test"
+            ],
+            "title": "Split",
+            "type": "string"
+          },
+          "video_id": {
+            "title": "Video Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "split",
+          "video_id",
+          "frame_number",
+          "cvs_criteria",
+          "categories",
+          "annotation_count",
+          "disputed_criteria",
+          "agreement"
+        ],
+        "title": "SurgicalFrameSummary",
         "type": "object"
       },
       "SurgicalMediaRecord": {
@@ -4897,8 +6355,213 @@
         "title": "SurgicalSequenceFrame",
         "type": "object"
       },
+      "TelemetryDevice": {
+        "additionalProperties": false,
+        "properties": {
+          "device_id": {
+            "title": "Device Id",
+            "type": "string"
+          },
+          "integrity": {
+            "$ref": "#/components/schemas/TelemetryIntegrity"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "last_seen": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seen"
+          },
+          "sample_rate_hz": {
+            "title": "Sample Rate Hz",
+            "type": "integer"
+          },
+          "simulated": {
+            "title": "Simulated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "device_id",
+          "simulated",
+          "label",
+          "sample_rate_hz",
+          "last_seen",
+          "integrity"
+        ],
+        "title": "TelemetryDevice",
+        "type": "object"
+      },
+      "TelemetryIntegrity": {
+        "additionalProperties": false,
+        "properties": {
+          "crc_failures": {
+            "title": "Crc Failures",
+            "type": "integer"
+          },
+          "frames_received": {
+            "title": "Frames Received",
+            "type": "integer"
+          },
+          "integrity_ok": {
+            "title": "Integrity Ok",
+            "type": "boolean"
+          },
+          "malformed": {
+            "title": "Malformed",
+            "type": "integer"
+          },
+          "missing_frames": {
+            "title": "Missing Frames",
+            "type": "integer"
+          },
+          "out_of_order": {
+            "title": "Out Of Order",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "frames_received",
+          "crc_failures",
+          "malformed",
+          "missing_frames",
+          "out_of_order",
+          "integrity_ok"
+        ],
+        "title": "TelemetryIntegrity",
+        "type": "object"
+      },
+      "TelemetryStatus": {
+        "additionalProperties": false,
+        "properties": {
+          "broker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Broker"
+          },
+          "connected": {
+            "title": "Connected",
+            "type": "boolean"
+          },
+          "devices": {
+            "items": {
+              "$ref": "#/components/schemas/TelemetryDevice"
+            },
+            "title": "Devices",
+            "type": "array"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "broker",
+          "connected",
+          "devices",
+          "label"
+        ],
+        "title": "TelemetryStatus",
+        "type": "object"
+      },
+      "TelemetryWindow": {
+        "additionalProperties": false,
+        "properties": {
+          "channels": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Channels",
+            "type": "array"
+          },
+          "device_id": {
+            "title": "Device Id",
+            "type": "string"
+          },
+          "heart_rate_bpm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heart Rate Bpm"
+          },
+          "heart_rate_method": {
+            "title": "Heart Rate Method",
+            "type": "string"
+          },
+          "integrity": {
+            "$ref": "#/components/schemas/TelemetryIntegrity"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "seconds": {
+            "title": "Seconds",
+            "type": "number"
+          },
+          "time_sec": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "title": "Time Sec",
+            "type": "array"
+          },
+          "values": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "title": "Values",
+            "type": "array"
+          }
+        },
+        "required": [
+          "device_id",
+          "label",
+          "channels",
+          "time_sec",
+          "values",
+          "seconds",
+          "heart_rate_bpm",
+          "heart_rate_method",
+          "integrity"
+        ],
+        "title": "TelemetryWindow",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
           "loc": {
             "items": {
               "anyOf": [
@@ -5075,6 +6738,93 @@
           "limitations"
         ],
         "title": "ViewerManifest",
+        "type": "object"
+      },
+      "VoxelDifference": {
+        "additionalProperties": false,
+        "properties": {
+          "artifact_id": {
+            "title": "Artifact Id",
+            "type": "string"
+          },
+          "case_id": {
+            "title": "Case Id",
+            "type": "string"
+          },
+          "coordinate_frame": {
+            "default": "openkbp-processed-voxel-grid",
+            "title": "Coordinate Frame",
+            "type": "string"
+          },
+          "delta_gy": {
+            "description": "prediction minus reference",
+            "title": "Delta Gy",
+            "type": "number"
+          },
+          "prediction_gy": {
+            "title": "Prediction Gy",
+            "type": "number"
+          },
+          "prediction_sha256": {
+            "title": "Prediction Sha256",
+            "type": "string"
+          },
+          "provenance_kind": {
+            "default": "ARCHIVED_PREDICTION",
+            "enum": [
+              "SOURCE_BENCHMARK",
+              "ARCHIVED_PREDICTION",
+              "RULE_BASED_METHOD",
+              "IN_APP_MODEL_INFERENCE"
+            ],
+            "title": "Provenance Kind",
+            "type": "string"
+          },
+          "reference_dose_sha256": {
+            "title": "Reference Dose Sha256",
+            "type": "string"
+          },
+          "reference_gy": {
+            "title": "Reference Gy",
+            "type": "number"
+          },
+          "roi_memberships": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Roi Memberships",
+            "type": "array"
+          },
+          "voxel": {
+            "maxItems": 3,
+            "minItems": 3,
+            "prefixItems": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "title": "Voxel",
+            "type": "array"
+          }
+        },
+        "required": [
+          "case_id",
+          "artifact_id",
+          "voxel",
+          "reference_gy",
+          "prediction_gy",
+          "delta_gy",
+          "roi_memberships",
+          "reference_dose_sha256",
+          "prediction_sha256"
+        ],
+        "title": "VoxelDifference",
         "type": "object"
       },
       "VoxelSlice": {
@@ -5375,6 +7125,142 @@
           }
         },
         "summary": "Student Attempt Get"
+      }
+    },
+    "/api/v1/academy/attempts/{attempt_id}/cvs-self-check/{block_id}": {
+      "get": {
+        "operationId": "cvs_self_check_get_api_v1_academy_attempts__attempt_id__cvs_self_check__block_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attempt_id",
+            "required": true,
+            "schema": {
+              "title": "Attempt Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "block_id",
+            "required": true,
+            "schema": {
+              "title": "Block Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CvsSelfCheckResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cvs Self Check Get"
+      },
+      "post": {
+        "operationId": "cvs_self_check_commit_api_v1_academy_attempts__attempt_id__cvs_self_check__block_id__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "attempt_id",
+            "required": true,
+            "schema": {
+              "title": "Attempt Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "block_id",
+            "required": true,
+            "schema": {
+              "title": "Block Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CvsSelfCheckCommit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CvsSelfCheckResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cvs Self Check Commit"
       }
     },
     "/api/v1/academy/attempts/{attempt_id}/debrief": {
@@ -5878,6 +7764,213 @@
         "summary": "Student Progress Export"
       }
     },
+    "/api/v1/account/erase": {
+      "post": {
+        "operationId": "account_erase_api_v1_account_erase_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountEraseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Account Erase"
+      }
+    },
+    "/api/v1/account/export": {
+      "get": {
+        "operationId": "account_export_api_v1_account_export_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Account Export"
+      }
+    },
+    "/api/v1/audit/mine": {
+      "get": {
+        "description": "Entries this account performed, plus actions on content it owns (for example submissions to its lessons).",
+        "operationId": "audit_mine_api_v1_audit_mine_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AuditEntry"
+                  },
+                  "title": "Response Audit Mine Api V1 Audit Mine Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Audit Mine"
+      }
+    },
+    "/api/v1/audit/verify": {
+      "get": {
+        "operationId": "audit_verify_api_v1_audit_verify_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditVerification"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Audit Verify"
+      }
+    },
     "/api/v1/auth/local-login": {
       "post": {
         "operationId": "local_login_api_v1_auth_local_login_post",
@@ -6158,6 +8251,22 @@
               "title": "File Name",
               "type": "string"
             }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
           }
         ],
         "responses": {
@@ -6375,6 +8484,103 @@
           }
         },
         "summary": "Dose Artifact Slice"
+      }
+    },
+    "/api/v1/cases/{case_id}/dose-artifacts/{artifact_id}/voxel": {
+      "get": {
+        "operationId": "dose_voxel_difference_api_v1_cases__case_id__dose_artifacts__artifact_id__voxel_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "title": "Case Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "artifact_id",
+            "required": true,
+            "schema": {
+              "title": "Artifact Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "x",
+            "required": true,
+            "schema": {
+              "exclusiveMaximum": 128,
+              "minimum": 0,
+              "title": "X",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "y",
+            "required": true,
+            "schema": {
+              "exclusiveMaximum": 128,
+              "minimum": 0,
+              "title": "Y",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "z",
+            "required": true,
+            "schema": {
+              "exclusiveMaximum": 128,
+              "minimum": 0,
+              "title": "Z",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoxelDifference"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dose Voxel Difference"
       }
     },
     "/api/v1/cases/{case_id}/viewer-manifest": {
@@ -6677,6 +8883,24 @@
       },
       "post": {
         "operationId": "create_signal_comparison_api_v1_comparisons_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -7667,6 +9891,54 @@
         "summary": "Educator Published Versions"
       }
     },
+    "/api/v1/fistulaguard/annotations/{annotation_id}": {
+      "delete": {
+        "operationId": "fistulaguard_annotation_delete_api_v1_fistulaguard_annotations__annotation_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "annotation_id",
+            "required": true,
+            "schema": {
+              "title": "Annotation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Fistulaguard Annotation Delete"
+      }
+    },
     "/api/v1/fistulaguard/records/{record_id}": {
       "get": {
         "operationId": "fistulaguard_record_api_v1_fistulaguard_records__record_id__get",
@@ -7704,6 +9976,201 @@
           }
         },
         "summary": "Fistulaguard Record"
+      }
+    },
+    "/api/v1/fistulaguard/records/{record_id}/annotations": {
+      "get": {
+        "operationId": "fistulaguard_annotations_api_v1_fistulaguard_records__record_id__annotations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "title": "Record Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SignalAnnotation"
+                  },
+                  "title": "Response Fistulaguard Annotations Api V1 Fistulaguard Records  Record Id  Annotations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Fistulaguard Annotations"
+      },
+      "post": {
+        "operationId": "fistulaguard_annotation_create_api_v1_fistulaguard_records__record_id__annotations_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "title": "Record Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignalAnnotationCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignalAnnotation"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Fistulaguard Annotation Create"
+      }
+    },
+    "/api/v1/fistulaguard/records/{record_id}/beats": {
+      "get": {
+        "operationId": "fistulaguard_beats_api_v1_fistulaguard_records__record_id__beats_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "title": "Record Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "channel",
+            "required": false,
+            "schema": {
+              "default": "raw PZT1",
+              "pattern": "^(ECG|raw PZT1|raw PZT2|raw PZT3|raw PZT4)$",
+              "title": "Channel",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start_sec",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Start Sec",
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "duration_sec",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "maximum": 30,
+              "minimum": 2,
+              "title": "Duration Sec",
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BeatAnalysis"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Fistulaguard Beats"
       }
     },
     "/api/v1/fistulaguard/records/{record_id}/features": {
@@ -7777,6 +10244,229 @@
           }
         },
         "summary": "Fistulaguard Features"
+      }
+    },
+    "/api/v1/fistulaguard/records/{record_id}/filtered": {
+      "get": {
+        "operationId": "fistulaguard_filtered_api_v1_fistulaguard_records__record_id__filtered_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "title": "Record Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "channel",
+            "required": false,
+            "schema": {
+              "default": "raw PZT1",
+              "pattern": "^(ECG|raw PZT1|raw PZT2|raw PZT3|raw PZT4)$",
+              "title": "Channel",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start_sec",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Start Sec",
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "duration_sec",
+            "required": false,
+            "schema": {
+              "default": 2,
+              "exclusiveMinimum": 0,
+              "maximum": 20,
+              "title": "Duration Sec",
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "mode",
+            "required": false,
+            "schema": {
+              "default": "bandpass",
+              "enum": [
+                "bandpass",
+                "notch"
+              ],
+              "title": "Mode",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "low_hz",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Low Hz"
+            }
+          },
+          {
+            "in": "query",
+            "name": "high_hz",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "High Hz"
+            }
+          },
+          {
+            "in": "query",
+            "name": "notch_hz",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Notch Hz"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "exclusiveMinimum": 0,
+              "maximum": 200,
+              "title": "Q",
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignalFilterResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Fistulaguard Filtered"
+      }
+    },
+    "/api/v1/fistulaguard/records/{record_id}/quality": {
+      "get": {
+        "operationId": "fistulaguard_quality_api_v1_fistulaguard_records__record_id__quality_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "title": "Record Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "channel",
+            "required": false,
+            "schema": {
+              "default": "raw PZT1",
+              "pattern": "^(ECG|raw PZT1|raw PZT2|raw PZT3|raw PZT4)$",
+              "title": "Channel",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start_sec",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Start Sec",
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "duration_sec",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "maximum": 30,
+              "minimum": 2,
+              "title": "Duration Sec",
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignalQuality"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Fistulaguard Quality"
       }
     },
     "/api/v1/fistulaguard/records/{record_id}/spectrogram": {
@@ -8032,6 +10722,22 @@
               "title": "Model Id",
               "type": "string"
             }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
           }
         ],
         "requestBody": {
@@ -8114,6 +10820,24 @@
       },
       "post": {
         "operationId": "create_report_api_v1_reports_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -8162,6 +10886,24 @@
     "/api/v1/reports/dosetwin-comparison": {
       "post": {
         "operationId": "create_dose_comparison_report_api_v1_reports_dosetwin_comparison_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -8210,6 +10952,24 @@
     "/api/v1/reports/surgivision-frame": {
       "post": {
         "operationId": "create_surgical_frame_report_api_v1_reports_surgivision_frame_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -8304,6 +11064,305 @@
         "summary": "Get Report"
       }
     },
+    "/api/v1/research-reviews": {
+      "get": {
+        "operationId": "research_review_list_api_v1_research_reviews_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "case_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Case Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "artifact_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Artifact Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ResearchReview"
+                  },
+                  "title": "Response Research Review List Api V1 Research Reviews Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Research Review List"
+      },
+      "post": {
+        "operationId": "research_review_create_api_v1_research_reviews_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResearchReviewCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResearchReview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Research Review Create"
+      }
+    },
+    "/api/v1/research-reviews/{review_id}": {
+      "get": {
+        "operationId": "research_review_get_api_v1_research_reviews__review_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "review_id",
+            "required": true,
+            "schema": {
+              "title": "Review Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResearchReview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Research Review Get"
+      }
+    },
+    "/api/v1/research-reviews/{review_id}/export": {
+      "get": {
+        "description": "Auditable JSON report: the frozen review, its provenance, and the audit-chain entry that recorded it.",
+        "operationId": "research_review_export_api_v1_research_reviews__review_id__export_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "review_id",
+            "required": true,
+            "schema": {
+              "title": "Review Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Research Review Export"
+      }
+    },
+    "/api/v1/research-reviews/{review_id}/fhir": {
+      "get": {
+        "description": "Minimal FHIR R4 Bundle of one review, tagged educational and test data (not a clinical record).",
+        "operationId": "research_review_fhir_api_v1_research_reviews__review_id__fhir_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "review_id",
+            "required": true,
+            "schema": {
+              "title": "Review Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Research Review Fhir"
+      }
+    },
     "/api/v1/runs": {
       "get": {
         "operationId": "list_runs_api_v1_runs_get",
@@ -8327,6 +11386,24 @@
       },
       "post": {
         "operationId": "create_run_api_v1_runs_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -8692,6 +11769,174 @@
         "summary": "Surgivision Cvs Coverage"
       }
     },
+    "/api/v1/surgivision/frames": {
+      "get": {
+        "operationId": "surgical_frame_browse_api_v1_surgivision_frames_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "split",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "train",
+                    "val",
+                    "test"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Split"
+            }
+          },
+          {
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 120,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category"
+            }
+          },
+          {
+            "in": "query",
+            "name": "criterion",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "two_structures",
+                    "hepatocystic_triangle",
+                    "cystic_plate"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Criterion"
+            }
+          },
+          {
+            "in": "query",
+            "name": "min_value",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1,
+                  "minimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Min Value"
+            }
+          },
+          {
+            "in": "query",
+            "name": "max_value",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1,
+                  "minimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Max Value"
+            }
+          },
+          {
+            "in": "query",
+            "name": "agreement",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "unanimous",
+                    "disputed"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Agreement"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SurgicalFrameBrowse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Surgical Frame Browse"
+      }
+    },
     "/api/v1/surgivision/frames/{frame_id}": {
       "get": {
         "operationId": "surgical_frame_api_v1_surgivision_frames__frame_id__get",
@@ -8887,6 +12132,75 @@
           }
         },
         "summary": "Surgivision Sampled Frames"
+      }
+    },
+    "/api/v1/telemetry/devices": {
+      "get": {
+        "operationId": "telemetry_devices_api_v1_telemetry_devices_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelemetryStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Telemetry Devices"
+      }
+    },
+    "/api/v1/telemetry/devices/{device_id}/window": {
+      "get": {
+        "operationId": "telemetry_window_api_v1_telemetry_devices__device_id__window_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "device_id",
+            "required": true,
+            "schema": {
+              "title": "Device Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "seconds",
+            "required": false,
+            "schema": {
+              "default": 5,
+              "exclusiveMinimum": 0,
+              "maximum": 30,
+              "title": "Seconds",
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelemetryWindow"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Telemetry Window"
       }
     },
     "/healthz": {

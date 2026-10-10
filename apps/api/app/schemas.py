@@ -87,7 +87,7 @@ class StudentLearningPath(StrictModel):
     lessons: list[StudentPathLesson] = Field(default_factory=list)
     source_attribution: list[str] = Field(default_factory=list)
 
-LessonBlockType = Literal['Instruction','Evidence view','Observation','Measurement','Question','Reveal']
+LessonBlockType = Literal['Instruction','Evidence view','Observation','Measurement','Question','Reveal','CVS self-check']
 
 class EducatorLessonBlock(StrictModel):
     id: str = Field(min_length=1, max_length=100)
@@ -266,6 +266,53 @@ class EducatorAssignedCase(StrictModel):
     case_id: str
     case_label: str
 
+CvsCriterionId = Literal['two_structures','hepatocystic_triangle','cystic_plate']
+
+class CvsSelfCheckCommit(StrictModel):
+    """A learner's own judgement of the three CVS criteria: 1 achieved, 0 not achieved."""
+    judgements: tuple[Literal[0,1], Literal[0,1], Literal[0,1]]
+
+class CvsSelfCheckCriterion(StrictModel):
+    criterion_id: CvsCriterionId
+    label: str
+    judgement: Literal[0,1]
+    annotator_mean: float = Field(ge=0, le=1)
+    annotators_disagreed: bool
+    matches_majority: bool
+
+class CvsSelfCheckResult(StrictModel):
+    block_id: str
+    frame_id: str
+    judgements: tuple[Literal[0,1], Literal[0,1], Literal[0,1]]
+    criteria: list[CvsSelfCheckCriterion]
+    matches: int = Field(ge=0, le=3)
+    committed_at: str
+    source: str
+    limitations: list[str]
+
+class SurgicalFrameSummary(StrictModel):
+    id: str
+    split: Literal['train','val','test']
+    video_id: int
+    frame_number: int
+    cvs_criteria: tuple[float,...]
+    categories: list[str]
+    annotation_count: int
+    disputed_criteria: int = Field(ge=0, le=3)
+    agreement: Literal['unanimous','disputed','unlabelled']
+
+class SurgicalFrameFacets(StrictModel):
+    categories: list[str]
+    splits: dict[str,int]
+
+class SurgicalFrameBrowse(StrictModel):
+    total: int
+    limit: int
+    offset: int
+    frames: list[SurgicalFrameSummary]
+    facets: SurgicalFrameFacets
+    limitations: list[str]
+
 class EducatorAttemptReview(StrictModel):
     attempt_id: str
     student_id: str
@@ -278,6 +325,7 @@ class EducatorAttemptReview(StrictModel):
     criterion_scores: list[GradedRubricCriterion] = Field(default_factory=list)
     viewer_evidence: StudentViewerEvidence | None = None
     assigned_case: EducatorAssignedCase | None = None
+    cvs_self_checks: list[CvsSelfCheckResult] = Field(default_factory=list)
 
 class StudentDebrief(StrictModel):
     attempt_id: str
@@ -865,3 +913,5 @@ class Health(StrictModel):
     status: Literal['ok'] = 'ok'
     reference_harness: bool = True
     public_deployment_ready: bool = False
+    # Whether the app database file is encrypted at rest. Research datasets are never covered.
+    storage_encryption: Literal['sqlcipher-aes-256','none'] = 'none'

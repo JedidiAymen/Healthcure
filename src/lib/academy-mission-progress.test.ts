@@ -36,4 +36,13 @@ describe("student mission progression", () => {
     expect(reviewed.reviewed).toBe(true);
     expect(canSubmitMission(submitted, true)).toBe(false);
   });
+  it("requires every CVS self-check to be committed, and allows a self-check-only mission", () => {
+    const pending = getMissionProgress("started", true, ["q1"], { q1: "Answer" }, ["cvs"], {});
+    expect(pending.questionsComplete).toBe(false);
+    expect(canSubmitMission(pending, true)).toBe(false);
+    const committed = getMissionProgress("started", true, ["q1"], { q1: "Answer" }, ["cvs"], { cvs: true });
+    expect(canSubmitMission(committed, true)).toBe(true);
+    const selfCheckOnly = getMissionProgress("started", true, [], {}, ["cvs"], { cvs: true });
+    expect(selfCheckOnly.questionsComplete).toBe(true);
+  });
 });

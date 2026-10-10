@@ -1,0 +1,3 @@
+# Reviewed exceptions for scripts/check_claims.py: path | phrase | reason
+docs/HACKCURE_COMPLIANCE.md | Diagnosis | Listed under "Must NOT claim" and in the label fact-check table header context, not a claim
+src/pages/Pages.tsx | full-rate video | Refers to the installed Cholec80 source video; the code does not claim model analysis

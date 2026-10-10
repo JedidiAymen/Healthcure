@@ -1,0 +1,26 @@
+{
+  "id": "surgivision-cvs-basics",
+  "title": "DRAFT: Critical View of Safety basics",
+  "module": "surgivision",
+  "preferred_case_id": null,
+  "review_status": "DRAFT pending review by a domain expert",
+  "learning_objectives": [
+    "Name the three Critical View of Safety (CVS) criteria.",
+    "Judge each criterion on a laparoscopic cholecystectomy frame and explain why.",
+    "Compare your judgement with expert annotations and explain any difference."
+  ],
+  "rubric": "DRAFT rubric pending review by a domain expert. Reward clear reasoning about visible anatomy. The self-check result is formative and is not a competency score.",
+  "rubric_criteria": [
+    {"id": "criteria", "title": "Knows the criteria", "description": "Names the three CVS criteria accurately.", "max_points": 30},
+    {"id": "reasoning", "title": "Visual reasoning", "description": "Links each judgement to what is visible in the frame.", "max_points": 50},
+    {"id": "limits", "title": "Limits", "description": "Notes that one still frame cannot establish safety during a real operation.", "max_points": 20}
+  ],
+  "blocks": [
+    {"id": "objectives", "type": "Instruction", "title": "Learning objectives", "content": "Name the three CVS criteria, judge each on this frame, and compare your judgement with the expert annotations."},
+    {"id": "criteria", "type": "Instruction", "title": "The three criteria", "content": "1. Two, and only two, structures are seen entering the gallbladder. 2. The hepatocystic triangle is cleared of fat and fibrous tissue. 3. The lower part of the gallbladder is separated from the liver bed (cystic plate visible)."},
+    {"id": "evidence", "type": "Evidence view", "title": "Open the frame", "content": "Study the frame before you answer. Zoom in where you need to."},
+    {"id": "cvs", "type": "CVS self-check", "title": "Judge the three criteria", "content": "For each criterion, decide whether it is achieved in this frame. You will see the annotator values only after you commit."},
+    {"id": "why", "type": "Question", "title": "Explain one judgement", "content": "Pick one criterion and explain what in the frame made you decide."},
+    {"id": "limits", "type": "Question", "title": "State a limit", "content": "Why can a single still frame not show that it is safe to proceed in a real operation?"}
+  ]
+}

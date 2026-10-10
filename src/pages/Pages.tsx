@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQueries, useQuery, useQueryClient, type QueryKey } from "@tanstack/react-query";
@@ -105,6 +105,9 @@ import { queryKeys } from "@/lib/query-client";
 import { renderDoseSlicePixels } from "@/lib/dose-visualization";
 import { filterModelCatalog, type ModelReadinessFilter } from "@/lib/model-catalog";
 import { canSubmitMission, getMissionProgress } from "@/lib/academy-mission-progress";
+import { offlineStore } from "@/lib/mission-offline";
+import { clearDraft, enqueueSubmit, isNetworkError, loadDraft, saveDraft } from "@/lib/offline-queue";
+import { CvsSelfCheck, CvsSelfCheckSummary } from "@/features/surgivision/CvsSelfCheck";
 import clinicalTeamImage from "../assets/clinical-team.jpg";
 import radiologyReviewImage from "../assets/radiology-team.jpg";
 
@@ -1450,14 +1453,17 @@ function ModelValidationPanel({model}:{model:ModelRecord}){
     :(compatibleCases.find(item=>model.id==='cvs-adaptnet'&&item.dataset_id==='Endoscapes-BBox201')??compatibleCases[0])?.id??''
   const selectedOperationId=model.operation_ids.includes(operationId)?operationId:model.operation_ids[0]??''
   useEffect(()=>{
-    let live=true
     setValidation(null)
     setValidationError('')
-    if(!caseId||!selectedOperationId){setValidationLoading(false);return()=>{live=false}}
-    setValidationLoading(true)
-    api.validateModel(model.id,caseId,selectedOperationId).then(result=>{if(live)setValidation(result)}).catch(error=>{if(live)setValidationError(error instanceof Error?error.message:'The source-specific execution gate could not be checked')}).finally(()=>{if(live)setValidationLoading(false)})
-    return()=>{live=false}
+    setValidationLoading(false)
   },[model.id,caseId,selectedOperationId])
+  const checkExecutionGate=async()=>{
+    if(!caseId||!selectedOperationId||validationLoading)return
+    setValidationLoading(true);setValidationError('')
+    try{setValidation(await api.validateModel(model.id,caseId,selectedOperationId))}
+    catch(error){setValidationError(error instanceof Error?error.message:'The source-specific execution gate could not be checked')}
+    finally{setValidationLoading(false)}
+  }
   const validationCase=compatibleCases.find(item=>item.id===caseId)
   return <section aria-labelledby="model-source-validation-title" className="grid gap-3 rounded-lg border border-border bg-muted/20 p-3 sm:p-4">
     <div><h2 id="model-source-validation-title" className="m-0 text-sm font-semibold">Validate this operation on a source case</h2><p className="mb-0 mt-1 text-xs leading-5 text-muted-foreground">The catalog describes the method generally. This check asks the API about the selected case, operation, installed adapter and current execution gates.</p></div>
@@ -1465,6 +1471,7 @@ function ModelValidationPanel({model}:{model:ModelRecord}){
       <ResearchCasePicker id="model-validation-case" label="Installed source case" cases={compatibleCases} value={caseId} onValueChange={setSelectedCaseId} loading={caseQuery.isLoading} error={caseQuery.error instanceof Error?caseQuery.error.message:''} placeholder="Choose a compatible source case"/>
       {model.operation_ids.length>1?<Field className="grid min-w-0 gap-1.5"><FieldLabel htmlFor="model-validation-operation">Registered operation</FieldLabel><Select items={model.operation_ids.map(operation=>({label:operation,value:operation}))} value={selectedOperationId||null} onValueChange={next=>{if(typeof next==='string')setOperationId(next)}}><SelectTrigger id="model-validation-operation" className="w-full"><SelectValue placeholder="Choose an operation"/></SelectTrigger><SelectContent><SelectGroup>{model.operation_ids.map(operation=><SelectItem key={operation} value={operation}>{operation}</SelectItem>)}</SelectGroup></SelectContent></Select></Field>:<div className="grid content-start gap-1.5"><span className="text-sm font-medium">Registered operation</span><Badge variant="secondary" className="w-fit font-mono">{selectedOperationId}</Badge></div>}
     </div>
+    <Button variant="outline" size="sm" className="w-fit" disabled={!caseId||!selectedOperationId||validationLoading} onClick={()=>void checkExecutionGate()}>{validationLoading?<><LoaderCircle data-icon="inline-start" className="animate-spin"/>Checking gate…</>:'Check source-specific gate'}</Button>
     {validationLoading&&<div className="flex items-center gap-2 text-sm text-muted-foreground" role="status"><LoaderCircle className="size-4 animate-spin"/>Checking the selected case with the execution gate…</div>}
     {validationError&&<Alert variant="destructive"><CircleAlert/><AlertTitle>Case-specific validation failed</AlertTitle><AlertDescription>{validationError}</AlertDescription></Alert>}
     {validation&&<Alert className={validation.executable?'border-primary/30 bg-primary/5':'border-warning/35 bg-warning/5'} role={validation.executable?'status':'alert'}><LockKeyhole/><AlertTitle>{validation.executable?'Operation gate passed for this case':'Operation is blocked for this case'}</AlertTitle><AlertDescription><span className="block">{validationCase?`${validationCase.label} · ${validationCase.dataset_id}`:'Selected installed source'} · {selectedOperationId}</span>{validation.blockers.length>0?<ul className="mt-2 grid gap-1 pl-4">{validation.blockers.map((blocker,index)=><li key={`${index}:${blocker}`}>{blocker}</li>)}</ul>:<p className="mb-0 mt-2">The API reports no current execution blockers for this source and operation.</p>}</AlertDescription></Alert>}
@@ -2285,10 +2292,18 @@ export function Mission() {
   const [attempt, setAttempt] = useState<StudentAttempt | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [viewerEvidence, setViewerEvidence] = useState<StudentViewerEvidence | null>(null);
+  const [committedSelfChecks, setCommittedSelfChecks] = useState<Record<string, boolean>>({});
+  const markSelfCheckCommitted = useCallback((blockId: string) => setCommittedSelfChecks(current => current[blockId] ? current : { ...current, [blockId]: true }), []);
   const [debrief, setDebrief] = useState<StudentDebrief | null>(null);
   const [busy, setBusy] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [offlineNotice, setOfflineNotice] = useState("");
+  useEffect(() => {
+    if (!attempt || attempt.state !== "started") return;
+    const timer = window.setTimeout(() => { void saveDraft(offlineStore(), attempt.attempt_id, answers).catch(() => undefined); }, 600);
+    return () => window.clearTimeout(timer);
+  }, [attempt, answers]);
   useEffect(() => {
     if (!missionId) return;
     let live = true;
@@ -2296,12 +2311,18 @@ export function Mission() {
     setAttempt(null);
     setAnswers({});
     setViewerEvidence(null);
+    setCommittedSelfChecks({});
     setDebrief(null);
     setError("");
     api.studentStartAttempt(missionId).then(value => {
       if (!live) return;
       setAttempt(value);
-      setAnswers(Object.fromEntries(value.observations.map(item => [item.block_id, item.response])));
+      const serverAnswers = Object.fromEntries(value.observations.map(item => [item.block_id, item.response]));
+      setAnswers(serverAnswers);
+      // Degraded mode: restore answers typed on this device that never reached the server.
+      if (value.state === "started") void loadDraft(offlineStore(), value.attempt_id).then(draft => {
+        if (live && draft) { setAnswers({ ...serverAnswers, ...Object.fromEntries(Object.entries(draft.answers).filter(([, text]) => text.trim())) }); setOfflineNotice("Restored unsaved answers from this device."); }
+      }).catch(() => undefined);
       setViewerEvidence(value.viewer_evidence);
     }).catch(e => { if (live) setError(e instanceof Error ? e.message : "The assigned lesson could not be opened"); }).finally(() => { if (live) setBusy(false); });
     return () => { live = false; };
@@ -2324,13 +2345,26 @@ export function Mission() {
     finally { setSaving(false); }
   };
   const submit = async () => {
-    const updated = await save();
-    if (!updated) return;
-    setSaving(true);
+    if (!attempt) return;
+    const idempotencyKey = crypto.randomUUID();
+    const queue = async () => {
+      // Offline: keep the submit with its key; it is replayed automatically when the connection returns.
+      await enqueueSubmit(offlineStore(), { attemptId: attempt.attempt_id, revision: attempt.revision, idempotencyKey, answers, viewerEvidence });
+      setError(""); setOfflineNotice("You are offline. Your submission is queued on this device and will be sent automatically.");
+    };
+    if (!navigator.onLine) { await queue(); return; }
+    setSaving(true); setError("");
     try {
-      await api.submitStudentAttempt(updated.attempt_id, updated.revision, crypto.randomUUID());
+      const updated = await api.saveStudentAttempt(attempt.attempt_id, attempt.revision, Object.entries(answers).map(([block_id, response]) => ({ block_id, response })), viewerEvidence);
+      setAttempt(updated);
+      await api.submitStudentAttempt(updated.attempt_id, updated.revision, idempotencyKey);
+      await clearDraft(offlineStore(), updated.attempt_id).catch(() => undefined);
+      setOfflineNotice("");
       setAttempt(await api.studentAttempt(updated.attempt_id));
-    } catch (e) { setError(e instanceof Error ? e.message : "Submission could not be sent"); }
+    } catch (e) {
+      if (isNetworkError(e)) await queue();
+      else setError(e instanceof Error ? e.message : "Submission could not be sent");
+    }
     finally { setSaving(false); }
   };
   if (busy) return <Card><CardHeader><CardTitle>Opening your assignment…</CardTitle><CardDescription>Loading the student-safe lesson version.</CardDescription></CardHeader><CardContent><Skeleton className="h-24"/></CardContent></Card>;
@@ -2338,7 +2372,8 @@ export function Mission() {
   const locked = attempt.state !== "started";
   const sourceId = attempt.challenge.case_id.split(":").at(-1) ?? attempt.challenge.case_id;
   const questionBlocks = attempt.challenge.blocks.filter(block => block.type === "Question");
-  const missionProgress = getMissionProgress(attempt.state, Boolean(viewerEvidence), questionBlocks.map(block => block.id), answers);
+  const selfCheckIds = attempt.challenge.blocks.filter(block => block.type === "CVS self-check").map(block => block.id);
+  const missionProgress = getMissionProgress(attempt.state, Boolean(viewerEvidence), questionBlocks.map(block => block.id), answers, selfCheckIds, committedSelfChecks);
   const evidenceSummary = viewerEvidence?.kind === "dosetwin"
     ? `OpenKBP voxel x ${viewerEvidence.voxel[0]} · y ${viewerEvidence.voxel[1]} · z ${viewerEvidence.voxel[2]} · ${viewerEvidence.roi}`
     : viewerEvidence?.kind === "surgivision"
@@ -2356,13 +2391,15 @@ export function Mission() {
       <AcademyAchievementAnnouncement studentId={user?.id} enabled={progress.data.achievements_enabled} achievements={progress.data.achievements}/>
       <StudentMissionStepper progress={missionProgress}/>
       {error && <Alert variant="destructive"><CircleAlert/><AlertTitle>Action could not be completed</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
+      {offlineNotice && <Alert role="status"><CircleAlert/><AlertTitle>Saved on this device</AlertTitle><AlertDescription>{offlineNotice}</AlertDescription></Alert>}
       <Card id="mission-explore" className="mb-4"><CardHeader><div className="eyebrow">Explore evidence</div><CardTitle>{attempt.challenge.case_label}</CardTitle><CardDescription>The scientific viewer is limited to the case attached to this assignment. Reference labels {debrief?.reference_evidence ? "are now available after educator review." : "remain hidden until educator review."}</CardDescription></CardHeader><CardContent><Suspense fallback={<Skeleton className="h-72"/>}>{attempt.challenge.module === "dosetwin" ? <DoseViewer key={attempt.challenge.case_id} caseId={attempt.challenge.case_id} guided onEvidenceChange={setViewerEvidence} viewerEvidence={viewerEvidence?.kind === "dosetwin" ? viewerEvidence : null} locked={locked}/> : attempt.challenge.module === "surgivision" ? <SurgiViewer key={attempt.challenge.case_id} frameId={attempt.challenge.case_id} availableFrameIds={[attempt.challenge.case_id]} guided releasedReference={debrief?.reference_evidence} viewerEvidence={viewerEvidence} onEvidenceChange={setViewerEvidence} locked={locked}/> : <FistulaViewer key={sourceId} recordId={sourceId} availableRecordIds={[sourceId]} guided viewerEvidence={viewerEvidence?.kind === "fistulaguard" ? viewerEvidence : null} onEvidenceChange={setViewerEvidence} locked={locked}/>}</Suspense><div id="mission-observe" className="mt-4 rounded-lg border bg-muted/20 px-3 py-2 text-sm"><b>{viewerEvidence ? "Evidence selected" : "Select evidence to submit"}</b><span className="ml-2 text-muted-foreground">{evidenceSummary}</span></div></CardContent></Card>
-      <div id="mission-explain" className="flex flex-col gap-4">{attempt.challenge.blocks.map((block, index) => <Card key={block.id}><CardHeader><div className="eyebrow">{block.type} · {String(index+1).padStart(2,"0")}</div><CardTitle>{block.title}</CardTitle><CardDescription>{block.content}</CardDescription></CardHeader>{block.type === "Question" && <CardContent><FieldGroup><Field><FieldLabel htmlFor={`answer-${block.id}`}>Your observation</FieldLabel><Textarea id={`answer-${block.id}`} value={answers[block.id] ?? ""} disabled={locked} onChange={event => setAnswers(previous => ({...previous, [block.id]: event.target.value}))} placeholder="Describe what the evidence supports and what remains uncertain." rows={5}/></Field></FieldGroup></CardContent>}</Card>)}</div>
+      <div id="mission-explain" className="flex flex-col gap-4">{attempt.challenge.blocks.map((block, index) => <Card key={block.id}><CardHeader><div className="eyebrow">{block.type} · {String(index+1).padStart(2,"0")}</div><CardTitle>{block.title}</CardTitle><CardDescription>{block.content}</CardDescription></CardHeader>{block.type === "Question" && <CardContent><FieldGroup><Field><FieldLabel htmlFor={`answer-${block.id}`}>Your observation</FieldLabel><Textarea id={`answer-${block.id}`} value={answers[block.id] ?? ""} disabled={locked} onChange={event => setAnswers(previous => ({...previous, [block.id]: event.target.value}))} placeholder="Describe what the evidence supports and what remains uncertain." rows={5}/></Field></FieldGroup></CardContent>}{block.type === "CVS self-check" && <CardContent><CvsSelfCheck attemptId={attempt.attempt_id} blockId={block.id} locked={locked} onCommitted={markSelfCheckCommitted}/></CardContent>}</Card>)}</div>
       <div id="mission-submit" className="mt-4 flex flex-col gap-4">
         {attempt.state === "review_required" && <Card><CardHeader><CardTitle>Submission received</CardTitle><CardDescription>Your educator will review your observations before releasing feedback and reference material.</CardDescription></CardHeader></Card>}
         {debrief && <Card><CardHeader><CardTitle>Educator debrief</CardTitle><CardDescription>{debrief.score}/{debrief.max_score} · {debrief.xp_awarded} XP</CardDescription></CardHeader><CardContent><p>{debrief.feedback}</p><div className="mt-4 border-t pt-4"><b>Scored criteria</b><div className="mt-3 flex flex-col gap-3">{debrief.criterion_scores.map(criterion => <div className="rounded-lg border bg-muted/20 p-3" key={criterion.id}><div className="flex flex-wrap justify-between gap-2"><b>{criterion.title}</b><b>{criterion.earned_points}/{criterion.max_points}</b></div><p className="text-sm text-muted-foreground">{criterion.description}</p>{criterion.note && <p className="mt-2 whitespace-pre-wrap">{criterion.note}</p>}</div>)}</div><b className="mt-4 block">Rubric notes</b><p>{debrief.rubric}</p></div>{debrief.reveal_blocks.length > 0 && <div className="mt-4 flex flex-col gap-3 border-t pt-4"><b>Educator reference</b>{debrief.reveal_blocks.map(block => <section key={block.id}><h3 className="font-medium">{block.title}</h3><p className="whitespace-pre-wrap text-muted-foreground">{block.content}</p></section>)}</div>}</CardContent></Card>}
         {!locked && <div className="flex flex-wrap gap-2"><Button variant="outline" disabled={saving} onClick={() => void save()}>{saving ? "Saving…" : "Save draft"}</Button><Button disabled={saving || !canSubmitMission(missionProgress, Boolean(viewerEvidence))} onClick={() => void submit()}>{saving ? "Submitting…" : "Submit for educator review"}</Button></div>}
         {!locked && !missionProgress.questionsComplete && questionBlocks.length > 0 && <p className="text-sm text-muted-foreground">Answer all {questionBlocks.length} lesson {questionBlocks.length === 1 ? "question" : "questions"} and select evidence before submitting.</p>}
+        {!locked && selfCheckIds.some(id => !committedSelfChecks[id]) && <p className="text-sm text-muted-foreground">Commit your CVS self-check before submitting.</p>}
       </div>
     </>
   );
@@ -2761,6 +2798,7 @@ export function Submissions() {
               <div className="grid min-w-0 gap-4 xl:grid-cols-2 xl:items-start">
                 <div className="grid min-w-0 gap-4">
                   {attempt.observations.map(observation => <div className="rounded-lg border bg-muted/30 p-3" key={observation.block_id}><div className="eyebrow">Learner response</div><p className="whitespace-pre-wrap">{observation.response || "No response provided."}</p></div>)}
+                  {attempt.cvs_self_checks?.map(result => <CvsSelfCheckSummary key={result.block_id} result={result}/>)}
                   <EducatorEvidencePreview attempt={attempt}/>
                 </div>
                 <div className="grid min-w-0 gap-4">

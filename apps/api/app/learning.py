@@ -12,6 +12,9 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 
 from .auth import require_role
 from .endoscapes import installed_frame
+from .db_driver import INTEGRITY_ERRORS
+from . import audit
+from .surgivision_review import SELF_CHECK_TYPE, committed_self_checks, self_check_block_ids
 from . import fisav
 from .schemas import (
     EducatorAssignment,
@@ -324,7 +327,7 @@ def register_learning_routes(app: FastAPI, db: Callable, list_cases: Callable[[]
                     "INSERT INTO learning_cohorts(id,name,created_by) VALUES (?,?,?)",
                     (cohort_id, name, user["id"]),
                 )
-            except sqlite3.IntegrityError:
+            except INTEGRITY_ERRORS:
                 raise HTTPException(409, detail={"code": "COHORT_NAME_EXISTS", "message": "You already have a cohort with this name"})
         return EducatorCohort(id=cohort_id, name=name, student_count=0)
 
@@ -394,9 +397,11 @@ def register_learning_routes(app: FastAPI, db: Callable, list_cases: Callable[[]
             criteria = content.get("rubric_criteria", [])
             if len(criteria) < 2 or sum(item["max_points"] for item in criteria) != 100:
                 raise HTTPException(422, detail={"code": "RUBRIC_INVALID", "message": "Add at least two rubric criteria whose maximum points total 100"})
-            questions = [b for b in content["blocks"] if b["type"] == "Question" and b["content"].strip()]
+            questions = [b for b in content["blocks"] if b["type"] in ("Question", SELF_CHECK_TYPE) and b["content"].strip()]
             if not questions:
                 raise HTTPException(422, detail={"code": "QUESTION_REQUIRED", "message": "Add at least one learner question with a prompt"})
+            if self_check_block_ids(content["blocks"]) and case.module != "surgivision":
+                raise HTTPException(422, detail={"code": "CVS_SELF_CHECK_MODULE", "message": "CVS self-check blocks need an Endoscapes SurgiVision frame"})
             if not any(b["content"].strip() for b in content["blocks"] if b["type"] != "Reveal"):
                 raise HTTPException(422, detail={"code": "LEARNER_CONTENT_REQUIRED", "message": "Add learner-visible instructions or questions"})
             mapping = conn.execute(
@@ -446,6 +451,8 @@ def register_learning_routes(app: FastAPI, db: Callable, list_cases: Callable[[]
                 "INSERT INTO educator_published_revisions(draft_id,revision,lesson_version_id) VALUES (?,?,?)",
                 (draft_id, draft[5], version_id),
             )
+            audit.append(conn, action="lesson.publish", target_kind="lesson_version", target_id=version_id, actor=user,
+                         owner_id=user["id"], details={"draft_id": draft_id, "case_id": case.id, "version": version})
             return PublishedLessonVersion(
                 version_id=version_id, lesson_id=lesson_id, version=version,
                 title=draft[3], module=draft[6], case_id=case.id,
@@ -505,6 +512,8 @@ def register_learning_routes(app: FastAPI, db: Callable, list_cases: Callable[[]
                 (assignment_id, version[0], cohort[0], request.due_at.isoformat() if request.due_at else None, user["id"]),
             )
             count = conn.execute("SELECT COUNT(*) FROM learning_cohort_memberships WHERE cohort_id=?", (cohort[0],)).fetchone()[0]
+            audit.append(conn, action="assignment.create", target_kind="assignment", target_id=assignment_id, actor=user,
+                         owner_id=user["id"], details={"lesson_version_id": version[0], "cohort_id": cohort[0]})
         return EducatorAssignment(
             id=assignment_id, lesson_version_id=version[0],
             lesson_title=_project_manifest(version[1])["title"], cohort_id=cohort[0],
@@ -642,8 +651,12 @@ def register_learning_routes(app: FastAPI, db: Callable, list_cases: Callable[[]
             answers = {item[0]: json.loads(item[1]) for item in conn.execute(
                 "SELECT block_id,response_json FROM observations WHERE attempt_id=?", (attempt_id,)
             ).fetchall()}
-            if not questions or any(not str(answers.get(block_id, "")).strip() for block_id in questions):
+            self_checks = self_check_block_ids(manifest["blocks"])
+            if not (questions or self_checks) or any(not str(answers.get(block_id, "")).strip() for block_id in questions):
                 raise HTTPException(422, detail={"code": "QUESTION_RESPONSE_REQUIRED", "message": "Answer every question block before submitting"})
+            committed = {item.block_id for item in committed_self_checks(conn, attempt_id)}
+            if any(block_id not in committed for block_id in self_checks):
+                raise HTTPException(422, detail={"code": "CVS_SELF_CHECK_REQUIRED", "message": "Commit every CVS self-check before submitting"})
             evidence_row = conn.execute(
                 "SELECT evidence_json FROM attempt_viewer_evidence WHERE attempt_id=?", (attempt_id,)
             ).fetchone()
@@ -657,6 +670,8 @@ def register_learning_routes(app: FastAPI, db: Callable, list_cases: Callable[[]
                 "INSERT INTO learning_submission_receipts(attempt_id,idempotency_key,response_json) VALUES (?,?,?)",
                 (attempt_id, idempotency_key, result.model_dump_json()),
             )
+            audit.append(conn, action="attempt.submit", target_kind="attempt", target_id=attempt_id, actor=user,
+                         owner_id=audit.lesson_owner_for_attempt(conn, attempt_id))
             return result
 
     @app.get("/api/v1/educator/assignments/{assignment_id}/attempts", response_model=list[EducatorAttemptReview])
@@ -696,6 +711,7 @@ def register_learning_routes(app: FastAPI, db: Callable, list_cases: Callable[[]
                     rubric_criteria=secret.get("rubric_criteria", []), criterion_scores=saved_scores,
                     viewer_evidence=json.loads(evidence_row[0]) if evidence_row else None,
                     assigned_case=_assigned_case(row[7]),
+                    cvs_self_checks=committed_self_checks(conn, row[0]),
                 ))
         return result
 
@@ -787,6 +803,9 @@ def register_learning_routes(app: FastAPI, db: Callable, list_cases: Callable[[]
                 "INSERT INTO learning_grade_receipts(attempt_id,idempotency_key,request_sha256,response_json) VALUES (?,?,?,?)",
                 (attempt_id, idempotency_key, request_digest, response.model_dump_json()),
             )
+            # Grading releases the debrief to the learner, so one entry covers both.
+            audit.append(conn, action="attempt.grade_release", target_kind="attempt", target_id=attempt_id, actor=user,
+                         owner_id=audit.lesson_owner_for_attempt(conn, attempt_id), details={"score": total_score, "grade_event_id": event_id})
             return response
 
     @app.get("/api/v1/academy/attempts/{attempt_id}/debrief", response_model=StudentDebrief)

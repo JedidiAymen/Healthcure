@@ -62,3 +62,33 @@ def test_clip_endpoint_hides_missing_or_unverified_source(tmp_path, monkeypatch)
         response = client.get("/api/v1/surgivision/clips/appendix300-center1-014/video")
         assert response.status_code == 404
         assert response.json()["detail"]["code"] == "SURGICAL_CLIP_NOT_INSTALLED"
+
+
+def test_clip_without_verified_duration_is_hidden_instead_of_failing(tmp_path, monkeypatch):
+    """A manifest written without ffprobe has a null duration; the API must not return 500."""
+    root = tmp_path / "appendix300"
+    clip = root / "Video_Snippets" / "Center1" / "Center1_014.mp4"
+    clip.parent.mkdir(parents=True)
+    content = b"synthetic-test-mp4"
+    clip.write_bytes(content)
+    (root / "medforge-source-manifest.json").write_text(json.dumps({
+        "schema": "medforge.source-manifest.appendix300-single-clip.v1",
+        "dataset": "Appendix300",
+        "license_url": "https://creativecommons.org/licenses/by/4.0/",
+        "clip_id": "appendix300-center1-014",
+        "procedure_label": "Laparoscopic appendectomy",
+        "citation": "Appendix300 citation",
+        "video_relative_path": "Video_Snippets/Center1/Center1_014.mp4",
+        "video_size_bytes": len(content),
+        "video_sha256": hashlib.sha256(content).hexdigest(),
+        "video_duration_seconds": None,
+    }))
+    monkeypatch.setenv("MEDFORGE_APPENDIX300_ROOT", str(root))
+    monkeypatch.setenv("MEDFORGE_CHOLECT80_ROOT", str(tmp_path / "no-cholect80"))
+    monkeypatch.setenv("MEDFORGE_DB_PATH", str(tmp_path / "duration.sqlite3"))
+    monkeypatch.setenv("MEDFORGE_SOURCE_KIND", "synthetic-test")
+
+    with TestClient(create_app()) as client:
+        response = client.get("/api/v1/surgivision/clips")
+        assert response.status_code == 200
+        assert response.json() == []

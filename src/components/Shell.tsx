@@ -1,4 +1,5 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { OfflineBanner } from '@/components/OfflineBanner'
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Activity, AudioLines, BookOpenCheck, Boxes, ClipboardCheck, FileText, FlaskConical, GraduationCap, Layers3, Microscope, Radio, ScanLine, Search, ShieldCheck, Stethoscope, Trophy } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
@@ -159,7 +160,12 @@ export function Shell() {
         title="Find a research case or workspace"
         description="Search specialty workspaces and verified source cases by dataset or case ID."
       >
-        <Command shouldFilter={false} loop>
+        <Command shouldFilter={false} loop onKeyDownCapture={(event) => {
+          if (event.key !== 'Escape') return
+          event.preventDefault()
+          event.stopPropagation()
+          closeSearch()
+        }}>
           <CommandInput
             autoFocus
             aria-label="Search cases, datasets, specialties, and workspaces"
@@ -210,6 +216,7 @@ export function Shell() {
           <span className="hidden shrink-0 sm:inline"><kbd className="rounded border border-border px-1">↑</kbd> <kbd className="rounded border border-border px-1">↓</kbd> move <kbd className="ml-2 rounded border border-border px-1">Enter</kbd> open <kbd className="ml-2 rounded border border-border px-1">Esc</kbd> close</span>
         </div>
       </CommandDialog>
+      <OfflineBanner />
       <div className={`medforge-content mx-auto flex w-full flex-1 flex-col px-4 py-5 pb-12 sm:px-6 lg:px-8 ${workspace === 'professional' ? 'max-w-none' : 'max-w-[1160px]'} xl:py-7`}><Suspense fallback={<div className="grid gap-4" role="status" aria-label="Loading workspace"><Skeleton className="h-4 w-28"/><Skeleton className="h-9 w-64"/><Skeleton className="h-4 w-96 max-w-full"/><div className="mt-4 grid gap-3 md:grid-cols-3"><Skeleton className="h-40"/><Skeleton className="h-40"/><Skeleton className="h-40"/></div></div>}><Outlet /></Suspense></div>
       <footer className="flex flex-wrap items-center gap-2 border-t border-sidebar-border px-4 py-3 text-xs leading-5 text-muted-foreground sm:px-6 lg:px-8"><ShieldCheck aria-hidden="true" className="size-4 text-primary"/> MEDFORGE is for research and education. It is not for patient diagnosis or treatment decisions.</footer>
     </SidebarInset>

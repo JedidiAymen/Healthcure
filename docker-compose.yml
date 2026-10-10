@@ -1,0 +1,121 @@
+# MEDFORGE local stack. Build once while online (docker compose build), then it runs fully offline.
+# Layers: proxy (single entry) -> web (static app) and api (business logic) -> medforge-state volume (database);
+# worker (inference) runs on demand in its own container: docker compose run --rm worker ...
+name: medforge
+
+x-datasets: &datasets
+  # Research datasets stay on the host and are mounted read-only. Missing folders show "requires setup".
+  type: bind
+  source: ./data
+  target: /datasets
+  read_only: true
+
+services:
+  proxy:
+    image: caddy:2.10.2-alpine
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_started
+    ports:
+      # Bound to this machine only. Change deliberately if another device must reach it.
+      - "127.0.0.1:${MEDFORGE_HTTPS_PORT:-8443}:443"
+      - "127.0.0.1:${MEDFORGE_HTTP_PORT:-8080}:80"
+    environment:
+      MEDFORGE_HTTPS_PORT: ${MEDFORGE_HTTPS_PORT:-8443}
+    volumes:
+      - type: bind
+        source: ./docker/Caddyfile.proxy
+        target: /etc/caddy/Caddyfile
+        read_only: true
+      # Keeps the local CA and certificates stable across restarts.
+      - caddy-data:/data
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+    image: medforge-web:local
+    expose: ["8080"]
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    image: medforge-api:local
+    expose: ["8000"]
+    environment:
+      MEDFORGE_DB_PATH: /var/lib/medforge/db/medforge.sqlite3
+      MEDFORGE_LOCAL_DB_DIR: /var/lib/medforge/db
+      MEDFORGE_DOSE_ARTIFACT_DIR: /var/lib/medforge/dose-artifacts
+      MEDFORGE_OPENKBP_CASE_DIR: /datasets/openkbp/pt_201
+      MEDFORGE_FISAV_ROOT: /datasets/fisav
+      MEDFORGE_ENDOSCAPES_ROOT: /datasets/endoscapes
+      MEDFORGE_APPENDIX300_ROOT: /datasets/appendix300
+      MEDFORGE_CHOLECT50_VALIDATION_ROOT: /datasets/cholect50/challenge-validation
+      MEDFORGE_ARTIFACTS_DIR: /artifacts
+      MEDFORGE_MQTT_HOST: mqtt
+      # SQLCipher key from a Docker secret: the database file is AES-256 encrypted at rest.
+      MEDFORGE_DB_KEY_FILE: /run/secrets/db_key
+    secrets:
+      - db_key
+    volumes:
+      - *datasets
+      - medforge-state:/var/lib/medforge
+      - type: volume
+        source: medforge-artifacts
+        target: /artifacts
+        read_only: true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz',timeout=3).status==200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    restart: unless-stopped
+
+  mqtt:
+    # Broker for the SIMULATED device. Private network only; nothing is published to the host.
+    image: eclipse-mosquitto:2.0.20
+    expose: ["1883"]
+    volumes:
+      - type: bind
+        source: ./docker/mosquitto.conf
+        target: /mosquitto/config/mosquitto.conf
+        read_only: true
+    restart: unless-stopped
+
+  sim-device:
+    # Opt in with: docker compose --profile device up -d sim-device
+    profiles: ["device"]
+    build:
+      context: .
+      dockerfile: docker/sim-device.Dockerfile
+    image: medforge-sim-device:local
+    depends_on: [mqtt]
+    command: ["--host", "mqtt", "--device-id", "sim-wrist-01"]
+    restart: unless-stopped
+
+  worker:
+    profiles: ["tools"]
+    build:
+      context: .
+      dockerfile: docker/worker.Dockerfile
+    image: medforge-worker:local
+    network_mode: none
+    volumes:
+      - *datasets
+      - medforge-artifacts:/artifacts
+
+volumes:
+  medforge-state:
+  medforge-artifacts:
+  caddy-data:
+
+secrets:
+  db_key:
+    # Created by: node scripts/docker-secrets.mjs (git-ignored).
+    file: ./docker/secrets/db_key

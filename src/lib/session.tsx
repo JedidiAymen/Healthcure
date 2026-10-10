@@ -1,6 +1,8 @@
-import { createContext, useContext, useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { LockKeyhole, LogOut } from 'lucide-react'
 import { api, setApiSessionToken } from './api'
+import { setResearchSignInPrompt } from './research-write-auth'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -22,8 +24,19 @@ export function SessionProvider({children}:{children:ReactNode}){
   const logout=async()=>{
     try{await api.localLogout()}finally{setApiSessionToken(null);setUser(null)}
   }
+  const [pendingSignIn,setPendingSignIn]=useState<((signedIn:boolean)=>void)|null>(null)
+  useEffect(()=>{
+    setResearchSignInPrompt(()=>new Promise<boolean>(resolve=>setPendingSignIn(()=>resolve)))
+    return ()=>setResearchSignInPrompt(null)
+  },[])
+  const finishSignIn=(signedIn:boolean)=>{pendingSignIn?.(signedIn);setPendingSignIn(null)}
   const value=useMemo(()=>({user,login,logout}),[user])
-  return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
+  return <SessionContext.Provider value={value}>{children}{pendingSignIn&&<ResearchSignInDialog login={login} onDone={finishSignIn}/>}</SessionContext.Provider>
+}
+
+function ResearchSignInDialog({login,onDone}:{login:SessionContextValue['login'];onDone:(signedIn:boolean)=>void}){
+  const [username,setUsername]=useState(''),[password,setPassword]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false)
+  return <Dialog open onOpenChange={open=>{if(!open)onDone(false)}}><DialogContent><DialogHeader><DialogTitle>Sign in to save research evidence</DialogTitle><DialogDescription>Browsing stays open on this computer. Saving reports, comparisons, runs and dose imports needs a locally provisioned educator or admin account.</DialogDescription></DialogHeader><form className="role-gate-form" onSubmit={async(event:FormEvent<HTMLFormElement>)=>{event.preventDefault();setBusy(true);setError('');try{await login(username,password);onDone(true)}catch(e){setError(e instanceof Error?e.message:'Sign in failed')}finally{setBusy(false)}}}><FieldGroup><Field><FieldLabel htmlFor="research-username">Username</FieldLabel><Input id="research-username" autoComplete="username" value={username} onChange={event=>setUsername(event.target.value)} required/></Field><Field><FieldLabel htmlFor="research-password">Password</FieldLabel><Input id="research-password" type="password" autoComplete="current-password" value={password} onChange={event=>setPassword(event.target.value)} required/></Field>{error&&<Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}</FieldGroup><DialogFooter><Button type="button" variant="outline" onClick={()=>onDone(false)}>Cancel</Button><Button type="submit" disabled={busy}>{busy?'Signing in...':'Sign in and save'}</Button></DialogFooter></form></DialogContent></Dialog>
 }
 
 export function useSession(){

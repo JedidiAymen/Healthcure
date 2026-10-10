@@ -17,8 +17,12 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def command_output(args: list[str], timeout: int = 8) -> str | None:
+    # Resolve through PATH so Windows finds .cmd shims such as npm.cmd.
+    executable = shutil.which(args[0])
+    if executable is None:
+        return None
     try:
-        result = subprocess.run(args, check=False, capture_output=True, text=True, timeout=timeout)
+        result = subprocess.run([executable, *args[1:]], check=False, capture_output=True, text=True, timeout=timeout)
         return result.stdout.strip() if result.returncode == 0 else None
     except (OSError, subprocess.TimeoutExpired):
         return None
@@ -162,7 +166,8 @@ def build_report() -> dict[str, object]:
     packages = json.loads((ROOT / "package-lock.json").read_text(encoding="utf8"))
     locked = packages.get("packages", {})
     node_packages = ("react", "vite", "typescript", "tailwindcss", "recharts", "uplot", "@base-ui/react")
-    worker_python = ROOT / "workers/.venvs/cvs-adaptnet/bin/python"
+    worker_venv = ROOT / "workers/.venvs/cvs-adaptnet"
+    worker_python = worker_venv / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
     checkpoint = ROOT / "data/models/cvs-adaptnet/CVSAdaptNet.pth"
     vram = command_output(["nvidia-smi", "--query-gpu=gpu_name,memory.total", "--format=csv,noheader,nounits"])
     return {

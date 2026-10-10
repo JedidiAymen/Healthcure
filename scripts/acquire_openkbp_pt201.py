@@ -7,6 +7,7 @@ install models, access CodaLab accounts, or upload/redistribute data.
 """
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 from pathlib import Path
@@ -32,6 +33,7 @@ def git_blob_sha(data: bytes) -> str:
 
 
 def main() -> int:
+    argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter).parse_args()
     api = f"https://api.github.com/repos/ababier/open-kbp/git/trees/{COMMIT}?recursive=1"
     tree = json.loads(request(api))
     prefix = CASE_PATH + "/"
@@ -74,7 +76,7 @@ def main() -> int:
         "upstream_repository": "https://github.com/ababier/open-kbp",
         "upstream_commit": COMMIT,
         "upstream_path": CASE_PATH,
-        "case_directory": str(DEST),
+        "case_directory": f"{DEST.relative_to(ROOT).as_posix()} (local-only; excluded from Git)",
         "acquired_at_utc": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat(),
         "asset_rights": "The upstream data tree is publicly accessible at this pinned revision. The repository's MIT license is not treated as a separate dataset license. Retain source citation; local research/education use only; no redistribution. Confirm use/display terms before any external publication or commercial use.",
         "reference_kind": "OpenKBP benchmark reference dose; not a delivered clinical plan",

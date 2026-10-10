@@ -18,6 +18,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { parseSurgicalViewPreferences, type SurgicalViewPreferences } from '@/lib/workspace-preferences'
 import { buildSurgicalFrameReport } from '@/lib/surgical-evidence'
 import { searchSurgicalFrames, type SurgicalFrameOption } from '@/lib/source-picker'
+import { SurgicalFrameTools } from '@/features/surgivision/SurgicalFrameTools'
+import { describeAnnotatorMean } from '@/lib/cvs-self-check'
 import { CholecT50Review } from '@/components/surgivision/CholecT50Review'
 import { NeutralVideoSkin, Video, VideoPlayer } from '@videojs/react/video'
 import '@videojs/react/video/neutral-skin.css'
@@ -74,7 +76,9 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
   const publicVideoRegionRef=useRef<HTMLDivElement>(null)
   const [publicClipCurrentSecond,setPublicClipCurrentSecond]=useState(0)
   const [pendingClipSeek,setPendingClipSeek]=useState(false)
-  const [mediaMode,setMediaMode]=useState(guided?'annotated-frames':'native-video')
+  // Shared frame-comparison or filter links open on the annotated stills.
+  const [mediaMode,setMediaMode]=useState(()=>guided||searchParams.has('compare')||[...searchParams.keys()].some(key=>key.startsWith('frames_'))?'annotated-frames':'native-video')
+  const [frameEvidenceMode,setFrameEvidenceMode]=useState<'labels'|'model'>('labels')
   const sampledMediaId=sourceMedia?.media_id
   const sampledMediaCount=sourceMedia?.sampled_frame_count
   const publicClipAnnotation=publicClip?.source_annotation
@@ -145,7 +149,7 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
   },[guided])
   useEffect(()=>{
     setCvsValidation(null);setCvsRun(null);setCvsError('')
-    if(guided)return
+    if(guided||frameEvidenceMode!=='model')return
     let live=true
     api.validateModel('cvs-adaptnet',activeFrameId,'cvs.inference')
       .then(value=>{if(live)setCvsValidation(value)})
@@ -154,7 +158,7 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
       if(live)setCvsRun(records.find((item):item is CvsInferenceRunRecord=>item.operation_id==='cvs.inference'&&item.case_id===activeFrameId)??null)
     }).catch(()=>{})
     return()=>{live=false}
-  },[activeFrameId,guided])
+  },[activeFrameId,guided,frameEvidenceMode])
   useEffect(()=>{let live=true;const saved=guided||reportId?null:readSurgicalViewPreferences(activeFrameId);setLoading(true);setFrame(null);setSelected(saved?.selected_annotation_id??null);setShowBoxes(saved?.show_boxes??true);setShowMasks(true);setScale(saved?.zoom??1);setPan({x:0,y:0});api.surgicalFrame(activeFrameId).then(value=>{if(live){setFrame(value);setError('')}}).catch(e=>{if(live)setError(e instanceof Error?e.message:'Unable to load local frame')}).finally(()=>{if(live)setLoading(false)});return()=>{live=false}},[activeFrameId,guided,reportId])
   useEffect(()=>{let live=true;let objectUrl='';setImageUrl('');setImageSize(null);setImageError('');api.surgicalImage(activeFrameId).then(url=>{objectUrl=url;if(live)setImageUrl(url);else URL.revokeObjectURL(url)}).catch(e=>{if(live)setImageError(e instanceof Error?e.message:'Unable to load the assigned source image')});return()=>{live=false;if(objectUrl)URL.revokeObjectURL(objectUrl)}},[activeFrameId])
   useEffect(()=>{
@@ -382,7 +386,7 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
           <CardContent className="grid gap-2"><dl className="m-0 grid">{[['Source split',frame.split],['Video / frame',`${frame.video_id} / ${frame.frame_number}`]].map(([label,value])=><div className="flex items-start justify-between gap-3 border-t py-2" key={label}><dt className="text-xs text-muted-foreground">{label}</dt><dd className="m-0 max-w-[68%] text-right text-sm font-medium">{value}</dd></div>)}{[['Image SHA-256',frame.image_sha256],['COCO SHA-256',frame.annotation_sha256]].map(([label,value])=><div className="flex items-start justify-between gap-3 border-t py-2" key={label}><dt className="text-xs text-muted-foreground">{label}</dt><dd className="m-0 max-w-[68%] break-all text-right font-mono text-[10px] leading-relaxed text-muted-foreground">{value}</dd></div>)}</dl><a className="mt-1 inline-flex text-xs text-primary hover:underline" href="https://github.com/CAMMA-public/Endoscapes" target="_blank" rel="noreferrer">Official Endoscapes source ↗</a><p className="text-xs text-muted-foreground">Murali et al. (2023), arXiv:2312.12429</p></CardContent>
         </Card>
       </aside>
-      <Tabs defaultValue="labels" className="col-span-full min-w-0 flex-col">
+      <Tabs value={frameEvidenceMode} onValueChange={value=>{if(value==='labels'||value==='model')setFrameEvidenceMode(value)}} className="col-span-full min-w-0 flex-col">
         <TabsList aria-label="Surgical frame evidence sections"><TabsTrigger value="labels">CVS source labels</TabsTrigger>{!guided&&<TabsTrigger value="model">Model evidence</TabsTrigger>}</TabsList>
         <TabsContent value="labels" className="mt-3 grid gap-4 lg:grid-cols-2">
         {!guided&&<Card><CardHeader><CardDescription>Dataset-level reference</CardDescription><CardTitle>CVS label coverage</CardTitle><CardDescription>Image-level label availability across the checksum-verified Endoscapes-BBox201 splits.</CardDescription></CardHeader><CardContent>
@@ -395,12 +399,13 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
           <Badge variant={cvsValidation?.executable?'secondary':'outline'}>{cvsValidation?.executable?'Ready for local research run':cvsValidation?'Blocked':'Checking model gate'}</Badge>
           {cvsValidation&&!cvsValidation.executable&&<ul className="mt-3 grid gap-1.5 pl-4 text-xs leading-relaxed text-muted-foreground">{cvsValidation.blockers.map(item=><li key={item}>{item}</li>)}</ul>}
           {cvsError&&<p className="mt-2.5 text-xs leading-relaxed text-destructive" role="alert">{cvsError}</p>}
-          {cvsRun?.results&&<div className="mt-3 grid" aria-label="CVS-AdaptNet frame scores">{cvsCriteria.map((criterion,index)=><div className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 border-b py-2.5 first:border-t" key={criterion}><span className="text-xs leading-relaxed">{criterion}</span><b className="text-sm tabular-nums">{cvsRun.results!.scores[index]?.toFixed(3)??'—'}</b><small className="col-span-full text-xs text-muted-foreground">Source label: {frame.cvs_criteria[index]?.toFixed(0)??'—'}</small></div>)}</div>}
+          {cvsRun?.results&&<div className="mt-3 grid" aria-label="CVS-AdaptNet frame scores">{cvsCriteria.map((criterion,index)=><div className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 border-b py-2.5 first:border-t" key={criterion}><span className="text-xs leading-relaxed">{criterion}</span><b className="text-sm tabular-nums">{cvsRun.results!.scores[index]?.toFixed(3)??'—'}</b><small className="col-span-full text-xs text-muted-foreground">Expert reference: {frame.cvs_criteria[index]===undefined?'no label':`${describeAnnotatorMean(frame.cvs_criteria[index])} (mean ${frame.cvs_criteria[index].toFixed(2)})`}</small></div>)}</div>}
           {cvsRun?.status==='failed'&&<p className="mt-2.5 text-xs leading-relaxed text-destructive">The saved worker run failed ({cvsRun.failure_code??'unknown error'}); no scores were produced.</p>}
         </CardContent><CardFooter className="flex flex-wrap items-start justify-between gap-3 text-xs text-muted-foreground"><span>{cvsRun?`Saved run ${cvsRun.id}`:'Results are saved with frame, annotation, prompt and model hashes.'}</span><Button variant="outline" size="sm" onClick={runCvsModel} disabled={!cvsValidation?.executable||cvsLoading}>{cvsLoading?<LoaderCircle data-icon="inline-start" className="animate-spin"/>:<FlaskConical data-icon="inline-start"/>}{cvsLoading?'Running…':'Run on this frame'}</Button></CardFooter></Card>
         </TabsContent>}
       </Tabs>
     </div>
+    {!guided&&<SurgicalFrameTools currentFrameId={activeFrameId}/>}
     <div className="mt-3 flex items-start gap-2 text-xs leading-relaxed text-muted-foreground"><AlertCircle className="mt-0.5 size-4 shrink-0"/><span>Local non-commercial research sample · CC BY-NC-SA 4.0 · do not redistribute this frame or annotations.</span></div>
       </TabsContent>
     </Tabs>

@@ -22,6 +22,7 @@ The CholecT50 instrument/action annotations remain on their source-matched 1 fps
 - Generated OpenAPI and frontend contracts describe the two dataset IDs, fps and frame-indexed phase intervals.
 - SurgiVision provides a source picker with readable dataset labels, frame-accurate phase display and a link to source/license information.
 - Specialty capability rows distinguish the installed Cholec80 and Appendix300 sources and state that neither is linked to Endoscapes stills.
+- Protected model readiness checks now run only after an explicit request in Model Lab or Model evidence, so opening a research viewer does not trigger a sign-in prompt.
 - No medical dataset files or new npm dependencies are committed. The existing React integration package `@videojs/react` 10.0.1 (Apache-2.0) provides the player.
 
 ## Files changed
@@ -30,7 +31,7 @@ The CholecT50 instrument/action annotations remain on their source-matched 1 fps
 - `apps/api/app/cholect80_video.py`
 - `apps/api/app/main.py`, `apps/api/app/schemas.py`
 - `apps/api/tests/test_cholect80_video.py`, `apps/api/tests/test_appendix300.py`
-- `src/pages/SurgiViewer.tsx`, `src/pages/Pages.tsx`
+- `src/pages/SurgiViewer.tsx`, `src/pages/Pages.tsx`, `src/components/Shell.tsx`
 - `tests/e2e/surgivision-cholect80-video.spec.ts`
 - `tests/e2e/cholect50-sampled-review.spec.ts`
 - `tests/e2e/surgivision-appendix300-source-annotation.spec.ts`
@@ -42,11 +43,12 @@ The CholecT50 instrument/action annotations remain on their source-matched 1 fps
 
 - `npm run typecheck` — passed.
 - `npm run lint` — passed.
-- `npm run test -- --run` — 44 passed.
-- `npm run build` — passed. Vite reports the existing large DoseTwin viewer chunk and a React Compiler directive warning.
-- `python3 -m pytest -q apps/api/tests` — 45 passed.
+- `npm run test -- --run` — 67 passed.
+- `npm run build` — passed. Vite reports the existing large DoseTwin viewer chunk.
+- `apps/api/.venv/bin/python -m pytest -q apps/api/tests` — 142 passed, 2 skipped.
 - `npm run contracts:check` — passed.
-- Focused live-source/browser review across Cholec80, Appendix300, CholecT50 and workspace routes — 18 passed using installed sources. The CholecT50 sampled-review flow also passed separately in fixture mode.
+- Focused live-source/browser review across Cholec80, Appendix300, CholecT50, Model Lab and workspace routes — 18 passed using installed sources; viewport checks cover desktop, tablet and phone sizes.
+- `apps/api/.venv/bin/python scripts/check_claims.py` — passed.
 - Captures from the running local application: `.local-review/CHOLECT80-VIDEO/cholec80-1440x900.png`, `cholec80-768x1024.png`, and `cholec80-390x844.png`. Captures are local-only because they visibly contain licensed surgical footage.
 
 ## Local review
