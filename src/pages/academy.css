@@ -560,6 +560,22 @@
   color: #684e12;
 }
 
+.academy-achievement-grid > [role="listitem"] {
+  border-color: #e3c876;
+  background: #fff8ed;
+  padding: 0.75rem;
+}
+
+.academy-achievement-grid > [role="listitem"] [aria-hidden="true"] {
+  background: #f3c961;
+  color: #684e12;
+}
+
+.academy-achievement-grid > [role="listitem"] > span {
+  color: var(--foreground);
+  font-size: 0.75rem;
+}
+
 .academy-recognition [role="listitem"] {
   display: flex;
   align-items: center;
