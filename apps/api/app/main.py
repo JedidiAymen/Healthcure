@@ -40,6 +40,9 @@ from .schemas import (LocalLoginRequest, LocalSession, LocalUser, EducatorEviden
 from .auth import password_digest, issue_session, verify_password, current_user as _current_user, require_role, require_any_role
 from .learning import register_learning_routes
 from .surgivision_review import register_surgivision_review_routes, self_check_block_ids
+from . import db_driver
+from . import audit
+from .audit import register_audit_routes
 from .fistulaguard_tools import register_fistulaguard_tool_routes
 from .openkbp import dose_statistics, sha256, validate_case
 from .dose_artifacts import (INDEX_CONVENTION, MAX_UPLOAD_BYTES, SHAPE as DOSE_SHAPE,
@@ -226,7 +229,7 @@ def _db():
     raw=os.environ.get('MEDFORGE_DB_PATH')
     path=Path(raw).expanduser().resolve() if raw else ROOT/'data'/'reference.sqlite3'
     path.parent.mkdir(parents=True,exist_ok=True)
-    conn=sqlite3.connect(path)
+    conn=db_driver.connect(path)
     conn.execute('PRAGMA foreign_keys=ON')
     try:
         yield conn
@@ -426,7 +429,7 @@ def create_app() -> FastAPI:
             'message':'Student research access is limited to cases attached to your published cohort assignments.'}})
 
     @app.get('/healthz',response_model=Health)
-    def health() -> Health:return Health()
+    def health() -> Health:return Health(storage_encryption=db_driver.storage_encryption())
 
     @app.post('/api/v1/auth/local-login',response_model=LocalSession)
     def local_login(request:LocalLoginRequest):
@@ -434,12 +437,18 @@ def create_app() -> FastAPI:
             row=c.execute('''SELECT u.id,u.display_name,lc.salt,lc.password_hash
                 FROM local_credentials lc JOIN users u ON u.id=lc.user_id
                 WHERE lc.username=? COLLATE NOCASE''',(request.username,)).fetchone()
-            if row is None or not verify_password(request.password,bytes(row[2]),bytes(row[3])):
-                raise HTTPException(401,detail={'code':'INVALID_CREDENTIALS','message':'The username or password is incorrect'})
+            failed=row is None or not verify_password(request.password,bytes(row[2]),bytes(row[3]))
+        if failed:
+            # Recorded in its own transaction: the request itself fails.
+            with _db() as c:
+                audit.append(c,action='auth.login_failed',target_kind='username',target_id=request.username[:120])
+            raise HTTPException(401,detail={'code':'INVALID_CREDENTIALS','message':'The username or password is incorrect'})
+        with _db() as c:
             role=c.execute("SELECT role FROM role_grants WHERE user_id=? AND scope='platform' ORDER BY CASE role WHEN 'educator' THEN 1 WHEN 'student' THEN 2 ELSE 3 END LIMIT 1",(row[0],)).fetchone()
             if role is None:
                 raise HTTPException(403,detail={'code':'ROLE_NOT_CONFIGURED','message':'This account has no local platform role'})
             token,expires_at=issue_session(c,row[0])
+            audit.append(c,action='auth.login',target_kind='user',target_id=row[0],actor={'id':row[0],'role':role[0]},owner_id=row[0])
         user=LocalUser(id=row[0],display_name=row[1],role=role[0])
         return LocalSession(access_token=token,expires_at=expires_at,user=user)
 
@@ -461,6 +470,7 @@ def create_app() -> FastAPI:
             user=_current_user(c,authorization)
             if user is None:raise HTTPException(401,detail={'code':'AUTH_REQUIRED','message':'No active local session'})
             c.execute('UPDATE local_sessions SET revoked_at=CURRENT_TIMESTAMP WHERE token_hash=?',(hashlib.sha256(token.encode()).hexdigest(),))
+            audit.append(c,action='auth.logout',target_kind='user',target_id=user['id'],actor=user,owner_id=user['id'])
         return {'status':'signed-out'}
 
     @app.get('/api/v1/educator/evidence',response_model=list[EducatorEvidenceItem])
@@ -888,6 +898,7 @@ def create_app() -> FastAPI:
                 limitations=['Same-record, same-channel descriptive comparison only.','Physical sensor units and calibration are unspecified.','Differences do not indicate signal adequacy, improvement, disease severity or clinical significance.'],
                 created_at=saved[1])
             conn.execute('UPDATE signal_comparisons SET result_json=? WHERE id=?',(result.model_dump_json(),saved[0]))
+            audit.append(conn,action='comparison.save',target_kind='signal_comparison',target_id=result.id,actor=_writer,owner_id=_writer['id'],details={'case_id':result.case_id})
             return result
 
     @app.get('/api/v1/comparisons',response_model=list[SignalWindowComparison])
@@ -1059,6 +1070,7 @@ def create_app() -> FastAPI:
                         (artifact_id,case.id,source_case_id,target.name,safe_name,content_hash,source_revision,json.dumps(DOSE_SHAPE),
                          json.dumps(spacing),INDEX_CONVENTION,'Gy',origin,model_revision,checkpoint_hash or None,rights_basis,
                          'grid-validated-local-only',len(payload)))
+                    audit.append(conn,action='dose_prediction.import',target_kind='dose_artifact',target_id=artifact_id,actor=_writer,owner_id=_writer['id'],details={'case_id':case.id,'file_sha256':content_hash})
             except Exception:
                 target.unlink(missing_ok=True)
                 raise
@@ -1353,6 +1365,7 @@ def create_app() -> FastAPI:
             created=c.execute('SELECT created_at FROM reports WHERE id=?',(report_id,)).fetchone()[0]
             document['generated_at_utc']=created
             c.execute('UPDATE reports SET provenance_json=? WHERE id=?',(json.dumps(document,sort_keys=True),report_id))
+            audit.append(c,action='report.save',target_kind='report',target_id=report_id,actor=_writer,owner_id=_writer['id'],details={'kind':'run-report','case_id':case.id})
             return ReportRecord(id=report_id,run_id=run.id,case_id=case.id,status='generated',created_at=created,document=document)
 
     @app.post('/api/v1/reports/dosetwin-comparison',response_model=ReportRecord,
@@ -1390,6 +1403,7 @@ def create_app() -> FastAPI:
             created=conn.execute('SELECT created_at FROM reports WHERE id=?',(report_id,)).fetchone()[0]
             document['generated_at_utc']=created
             conn.execute('UPDATE reports SET provenance_json=? WHERE id=?',(json.dumps(document,sort_keys=True),report_id))
+            audit.append(conn,action='report.save',target_kind='report',target_id=report_id,actor=_writer,owner_id=_writer['id'],details={'kind':'dosetwin-comparison','case_id':case.id})
             return ReportRecord(id=report_id,run_id=None,case_id=case.id,status='generated',created_at=created,document=document)
 
     @app.post('/api/v1/reports/surgivision-frame',response_model=ReportRecord,responses={404:{'model':ApiError},422:{'model':ApiError}})
@@ -1436,6 +1450,7 @@ def create_app() -> FastAPI:
             created=c.execute('SELECT created_at FROM reports WHERE id=?',(report_id,)).fetchone()[0]
             document['generated_at_utc']=created.replace(' ','T')+'Z'
             c.execute('UPDATE reports SET provenance_json=? WHERE id=?',(json.dumps(document,sort_keys=True),report_id))
+            audit.append(c,action='report.save',target_kind='report',target_id=report_id,actor=_writer,owner_id=_writer['id'],details={'kind':'surgivision-frame','case_id':case.id})
             return ReportRecord(id=report_id,run_id=None,case_id=case.id,status='generated',created_at=created,document=document)
 
     @app.get('/api/v1/reports/{report_id}',response_model=ReportRecord,responses={404:{'model':ApiError}})
@@ -1448,6 +1463,7 @@ def create_app() -> FastAPI:
     register_learning_routes(app, _db, list_cases)
     register_surgivision_review_routes(app, _db)
     register_fistulaguard_tool_routes(app, _db)
+    register_audit_routes(app, _db)
     return app
 
 app=create_app()

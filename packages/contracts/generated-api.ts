@@ -209,6 +209,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/audit/mine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Audit Mine
+         * @description Entries this account performed, plus actions on content it owns (for example submissions to its lessons).
+         */
+        get: operations["audit_mine_api_v1_audit_mine_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/audit/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Audit Verify */
+        get: operations["audit_verify_api_v1_audit_verify_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/local-login": {
         parameters: {
             query?: never;
@@ -1229,6 +1266,44 @@ export interface components {
             /** Message */
             message: string;
         };
+        /** AuditEntry */
+        AuditEntry: {
+            /** Action */
+            action: string;
+            /** Actor Id */
+            actor_id: string | null;
+            /** Actor Role */
+            actor_role: string | null;
+            /** Created At */
+            created_at: string;
+            /** Details */
+            details: {
+                [key: string]: unknown;
+            };
+            /** Id */
+            id: number;
+            /** Owner Id */
+            owner_id: string | null;
+            /** Row Hash */
+            row_hash: string;
+            /** Target Id */
+            target_id: string;
+            /** Target Kind */
+            target_kind: string;
+        };
+        /** AuditVerification */
+        AuditVerification: {
+            /** Entries */
+            entries: number;
+            /** First Broken Id */
+            first_broken_id: number | null;
+            /** Head Hash */
+            head_hash?: string | null;
+            /** Ok */
+            ok: boolean;
+            /** Reason */
+            reason: string | null;
+        };
         /** BeatAnalysis */
         BeatAnalysis: {
             /** Beats */
@@ -1987,6 +2062,12 @@ export interface components {
              * @constant
              */
             status: "ok";
+            /**
+             * Storage Encryption
+             * @default none
+             * @enum {string}
+             */
+            storage_encryption: "sqlcipher-aes-256" | "none";
         };
         /** HeartRateSummary */
         HeartRateSummary: {
@@ -3814,6 +3895,70 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StudentParticipationRecord"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    audit_mine_api_v1_audit_mine_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditEntry"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    audit_verify_api_v1_audit_verify_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditVerification"];
                 };
             };
             /** @description Validation Error */

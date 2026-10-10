@@ -12,6 +12,8 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 
 from .auth import require_role
 from .endoscapes import installed_frame
+from .db_driver import INTEGRITY_ERRORS
+from . import audit
 from .surgivision_review import SELF_CHECK_TYPE, committed_self_checks, self_check_block_ids
 from . import fisav
 from .schemas import (
@@ -325,7 +327,7 @@ def register_learning_routes(app: FastAPI, db: Callable, list_cases: Callable[[]
                     "INSERT INTO learning_cohorts(id,name,created_by) VALUES (?,?,?)",
                     (cohort_id, name, user["id"]),
                 )
-            except sqlite3.IntegrityError:
+            except INTEGRITY_ERRORS:
                 raise HTTPException(409, detail={"code": "COHORT_NAME_EXISTS", "message": "You already have a cohort with this name"})
         return EducatorCohort(id=cohort_id, name=name, student_count=0)
 
@@ -449,6 +451,8 @@ def register_learning_routes(app: FastAPI, db: Callable, list_cases: Callable[[]
                 "INSERT INTO educator_published_revisions(draft_id,revision,lesson_version_id) VALUES (?,?,?)",
                 (draft_id, draft[5], version_id),
             )
+            audit.append(conn, action="lesson.publish", target_kind="lesson_version", target_id=version_id, actor=user,
+                         owner_id=user["id"], details={"draft_id": draft_id, "case_id": case.id, "version": version})
             return PublishedLessonVersion(
                 version_id=version_id, lesson_id=lesson_id, version=version,
                 title=draft[3], module=draft[6], case_id=case.id,
@@ -508,6 +512,8 @@ def register_learning_routes(app: FastAPI, db: Callable, list_cases: Callable[[]
                 (assignment_id, version[0], cohort[0], request.due_at.isoformat() if request.due_at else None, user["id"]),
             )
             count = conn.execute("SELECT COUNT(*) FROM learning_cohort_memberships WHERE cohort_id=?", (cohort[0],)).fetchone()[0]
+            audit.append(conn, action="assignment.create", target_kind="assignment", target_id=assignment_id, actor=user,
+                         owner_id=user["id"], details={"lesson_version_id": version[0], "cohort_id": cohort[0]})
         return EducatorAssignment(
             id=assignment_id, lesson_version_id=version[0],
             lesson_title=_project_manifest(version[1])["title"], cohort_id=cohort[0],
@@ -664,6 +670,8 @@ def register_learning_routes(app: FastAPI, db: Callable, list_cases: Callable[[]
                 "INSERT INTO learning_submission_receipts(attempt_id,idempotency_key,response_json) VALUES (?,?,?)",
                 (attempt_id, idempotency_key, result.model_dump_json()),
             )
+            audit.append(conn, action="attempt.submit", target_kind="attempt", target_id=attempt_id, actor=user,
+                         owner_id=audit.lesson_owner_for_attempt(conn, attempt_id))
             return result
 
     @app.get("/api/v1/educator/assignments/{assignment_id}/attempts", response_model=list[EducatorAttemptReview])
@@ -795,6 +803,9 @@ def register_learning_routes(app: FastAPI, db: Callable, list_cases: Callable[[]
                 "INSERT INTO learning_grade_receipts(attempt_id,idempotency_key,request_sha256,response_json) VALUES (?,?,?,?)",
                 (attempt_id, idempotency_key, request_digest, response.model_dump_json()),
             )
+            # Grading releases the debrief to the learner, so one entry covers both.
+            audit.append(conn, action="attempt.grade_release", target_kind="attempt", target_id=attempt_id, actor=user,
+                         owner_id=audit.lesson_owner_for_attempt(conn, attempt_id), details={"score": total_score, "grade_event_id": event_id})
             return response
 
     @app.get("/api/v1/academy/attempts/{attempt_id}/debrief", response_model=StudentDebrief)

@@ -11,6 +11,7 @@ from typing import Callable, Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Query
 
+from . import audit
 from .auth import require_role
 from .endoscapes import CVS_CRITERIA, installed_frame, installed_frames
 from .schemas import (CvsCriterionId, CvsSelfCheckCommit, CvsSelfCheckCriterion, CvsSelfCheckResult,
@@ -170,4 +171,6 @@ def register_surgivision_review_routes(app: FastAPI, db: Callable) -> None:
             result = self_check_result(frame, block_id, tuple(request.judgements), datetime.now(timezone.utc).isoformat())
             conn.execute('INSERT INTO cvs_self_checks(attempt_id,block_id,frame_id,judgements_json,result_json,committed_at) VALUES (?,?,?,?,?,?)',
                          (attempt_id, block_id, frame.id, json.dumps(list(request.judgements)), result.model_dump_json(), result.committed_at))
+            audit.append(conn, action='cvs_self_check.commit', target_kind='attempt_block', target_id=f'{attempt_id}:{block_id}', actor=user,
+                         owner_id=audit.lesson_owner_for_attempt(conn, attempt_id), details={'frame_id': frame.id, 'judgements': list(request.judgements)})
             return result
