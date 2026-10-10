@@ -9,10 +9,13 @@ const apiProxy = {
     changeOrigin: false,
   },
 }
+const spikeAliases = process.env.VITE_CORNERSTONE_SPIKE === '1'
+  ? [{ find: 'events', replacement: path.resolve(import.meta.dirname, 'node_modules/events/events.js') }]
+  : []
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  resolve: { alias: { '@': path.resolve(import.meta.dirname, './src') } },
+  resolve: { alias: [{ find: '@', replacement: path.resolve(import.meta.dirname, './src') }, ...spikeAliases] },
   server: { host: '127.0.0.1', proxy: apiProxy },
   preview: { host: '127.0.0.1', proxy: apiProxy },
   test: {

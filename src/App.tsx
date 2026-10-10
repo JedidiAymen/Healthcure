@@ -18,9 +18,11 @@ const Educator = lazy(() => import('./pages/Pages').then(page => ({ default: pag
 const LessonEditor = lazy(() => import('./pages/LessonEditor').then(page => ({ default: page.LessonEditorPage })))
 const Assignments = lazy(() => import('./pages/Pages').then(page => ({ default: page.Assignments })))
 const Submissions = lazy(() => import('./pages/Pages').then(page => ({ default: page.Submissions })))
+const CornerstoneTrial = lazy(() => import('./pages/CornerstoneTrial').then(page => ({ default: page.CornerstoneTrial })))
 
 export default function App() {
   return <SessionProvider><Routes><Route element={<Shell />}>
+    {import.meta.env.VITE_CORNERSTONE_SPIKE === '1' && <Route path="/studio/dosetwin/cornerstone-trial" element={<CornerstoneTrial/>}/>}
     <Route path="/" element={<Home/>}/>
     <Route path="/studio" element={<Studio/>}/><Route path="/studio/cases" element={<Cases/>}/>
     <Route path="/studio/surgivision/cases/:caseId" element={<DomainWorkspace module="surgivision"/>}/>

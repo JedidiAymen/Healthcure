@@ -20,6 +20,8 @@
   },
   "dependencies": {
     "@base-ui/react": "1.8.0",
+    "@cornerstonejs/core": "5.11.7",
+    "@cornerstonejs/tools": "5.11.7",
     "@dnd-kit/core": "6.3.1",
     "@dnd-kit/sortable": "10.0.0",
     "@dnd-kit/utilities": "3.2.2",
@@ -30,6 +32,7 @@
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "cmdk": "^1.1.1",
+    "events": "3.3.0",
     "lucide-react": "1.53.0",
     "motion": "14.0.0",
     "react": "19.3.0",

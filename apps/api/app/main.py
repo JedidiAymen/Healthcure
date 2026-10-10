@@ -967,6 +967,9 @@ def create_app() -> FastAPI:
         return _report(row)
 
     register_learning_routes(app, _db, list_cases)
+    if os.environ.get('MEDFORGE_ENABLE_CORNERSTONE_SPIKE') == '1':
+        from .cornerstone_spike import register_cornerstone_spike
+        register_cornerstone_spike(app, _expect_case, _case_root, _read_cached_volume, _source_revision, sha256)
     return app
 
 app=create_app()
