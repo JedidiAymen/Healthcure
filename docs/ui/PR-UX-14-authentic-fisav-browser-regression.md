@@ -27,4 +27,5 @@ Stop terminal one's services when the test ends. The saved comparison is written
 - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:15189 npm run test:e2e -- tests/e2e/fistulaguard-authentic.spec.ts` — 1 passed (14.3 seconds) against the local API and authentic `pat001`/`pat011` source files.
 - `npm run lint` — passed.
 - `npm run typecheck` — passed.
+- `npm run build` — passed on the combined review branch after this milestone. The existing vtk.js large-chunk and React compiler directive warnings remain.
 - No UI component or package was installed for this test. It uses the existing `@playwright/test` 1.64.0 dev dependency (Apache-2.0).
