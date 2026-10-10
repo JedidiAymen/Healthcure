@@ -35,4 +35,6 @@ Screenshots from the running application are in the private, ignored `.local-rev
 
 ## Scope still requiring follow-up
 
-The 200% browser-zoom sweep, popup inside a selector-bearing modal, and fully interactive keyboard-only frame selection were not separately captured in this fix. No new dialog selector was introduced. The contract generator now matches the checked-in schema in this working tree; the repository's Python/Pydantic dependency pinning still determines reproducibility across other machines.
+- Added a 200%-equivalent layout check at a 720 CSS-pixel viewport with device scale factor 2. The educator case picker remained white (`rgb(255,255,255)`), bounded to 180px, and inside the viewport; the document had no horizontal overflow. Capture: `.local-review/FIX-01/educator-picker-200pct.png`.
+- A selector inside a modal and a separate fully keyboard-only SurgiVision route pass remain open; this change introduced no new dialog selector. Existing Playwright coverage checks the Educator combobox's arrow selection, Escape, and focus behavior, and the global command dialog's Escape restoration.
+- `contracts:check` passes with the pinned `apps/api/requirements-test.txt` environment. Running it against the machine's unpinned system FastAPI 0.111.0 regenerated `ValidationError` schema differences; those files were restored and not attributed to this UI fix.
