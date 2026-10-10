@@ -233,6 +233,12 @@ test('SurgiVision frame picker stays readable beside the professional sidebar at
   expect(geometry.scrollWidth).toBeLessThanOrEqual(768)
   await mkdir('.local-review/FIX-01', { recursive: true })
   await page.screenshot({ path: '.local-review/FIX-01/surgi-picker-tablet-fixture-768x1024.png' })
+  await input.fill('7325')
+  await expect(page.getByRole('option', { name: /frame 7325/ })).toBeVisible()
+  await input.press('ArrowDown')
+  await input.press('Enter')
+  await expect(page).toHaveURL(/endoscapes%3Atest%3A162_7325/)
+  await expect(page.getByRole('heading', { name: /frame 7325/ })).toBeVisible()
 })
 
 test('model lab filters source-linked methods and explains an execution gate', async ({ page }) => {
