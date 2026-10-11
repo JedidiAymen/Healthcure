@@ -118,7 +118,11 @@ test('queued student submission survives an offline reload and replays once afte
   await page.getByLabel('Username').fill('offline-test-student')
   await page.getByLabel('Password').fill('test-only')
   await page.getByRole('button', { name: 'Sign in as student' }).click()
-  await expect(page.getByRole('heading', { name: 'Offline queue browser test' })).toBeVisible()
+  // This fixture starts with saved source evidence, so the mission correctly
+  // restores at Observe instead of reopening its already-completed brief.
+  await expect(page.getByRole('region', { name: 'Check the evidence you selected' })).toBeVisible()
+  await page.getByRole('button', { name: 'Explain your observation' }).click()
+  await expect(page.getByLabel('Your observation')).toBeVisible()
   await expect.poll(() => page.evaluate(async () => {
     const cache = await caches.open('medforge-shell-v1')
     const assets = performance.getEntriesByType('resource').map(entry => new URL(entry.name))
@@ -127,6 +131,7 @@ test('queued student submission survives an offline reload and replays once afte
     return assets.length > 0 && assets.every(url => cachedPaths.has(url.pathname))
   })).toBe(true)
   await page.getByLabel('Your observation').fill('A test-only answer retained in the local offline queue.')
+  await page.getByRole('button', { name: 'Review and submit' }).click()
   await expect(page.getByRole('button', { name: 'Submit for educator review' })).toBeEnabled()
 
   await context.setOffline(true)
