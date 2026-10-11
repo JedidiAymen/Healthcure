@@ -189,6 +189,10 @@ test('educator lesson editor loads as a real route and switches its phone panes'
   await expect(page.getByRole('heading', { name: 'Compose an evidence lesson' })).toBeVisible()
   await expect(page.getByRole('complementary', { name: 'Research source and lesson blocks' })).toBeAttached()
   await expect(page.getByRole('complementary', { name: 'Learner preview and rubric inspector' })).toBeAttached()
+  await page.getByRole('button', { name: 'Remove Instruction' }).click()
+  await expect(page.getByRole('heading', { name: 'No lesson steps yet' })).toBeVisible()
+  await page.getByRole('button', { name: 'Add the first step' }).click()
+  await expect(page.getByRole('textbox', { name: 'Instruction title' })).toHaveValue('Instruction block')
   const caseSearch = page.getByLabel(/Research source; search by case/)
   await caseSearch.fill('video 162 frame 6575')
   const caseOption = page.getByRole('option', { name: /Endoscapes test.*frame 6575/ })
@@ -233,16 +237,27 @@ test('educator lesson editor loads as a real route and switches its phone panes'
   const zoomedGeometry = await zoomedPopup.evaluate((element) => {
     const rect = element.getBoundingClientRect()
     const style = getComputedStyle(element)
-    return { left: rect.left, right: rect.right, bottom: rect.bottom, maxHeight: Number.parseFloat(style.maxHeight), background: style.backgroundColor, width: innerWidth, viewportHeight: innerHeight, visualViewportHeight: visualViewport?.height }
+    return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom, height: rect.height, maxHeight: Number.parseFloat(style.maxHeight), background: style.backgroundColor, width: innerWidth, viewportHeight: innerHeight, visualViewportHeight: visualViewport?.height }
   })
   expect(zoomedGeometry.background).toBe('rgb(255, 255, 255)')
   expect(zoomedGeometry.left).toBeGreaterThanOrEqual(0)
   expect(zoomedGeometry.right).toBeLessThanOrEqual(zoomedGeometry.width)
-  expect(zoomedGeometry.maxHeight).toBeLessThanOrEqual(Math.min(320, zoomedGeometry.viewportHeight * 0.4) + 1)
+  // DPR emulation does not reproduce Chrome page zoom's viewport units. Check
+  // the actual popup geometry and its hard cap instead of inferring 40vh from
+  // innerHeight, which can disagree with Chromium's emulated visual viewport.
+  expect(zoomedGeometry.maxHeight).toBeLessThanOrEqual(320)
+  expect(zoomedGeometry.height).toBeLessThanOrEqual(320)
+  expect(zoomedGeometry.top).toBeGreaterThanOrEqual(0)
+  expect(zoomedGeometry.bottom).toBeLessThanOrEqual(zoomedGeometry.viewportHeight + 1)
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(720)
   await page.screenshot({ path: '.local-review/FIX-01/educator-picker-200-percent-720x450.png' })
   await zoomCdp.detach()
   await page.setViewportSize({ width: 1440, height: 900 })
+  // Reopen after restoring the layout viewport so the portal recalculates its
+  // anchor instead of retaining the emulated 200%-zoom position.
+  await zoomedCaseSearch.click()
+  await zoomedCaseSearch.fill('video 162 frame 6575')
+  await expect(page.getByRole('option', { name: /Endoscapes test.*frame 6575/ })).toBeVisible()
   await expect(page.getByRole('option', { name: /Blocked source case/ })).toHaveCount(0)
   await page.getByRole('option', { name: /Endoscapes test.*frame 6575/ }).click()
   await expect(page.locator('.lesson-case-summary')).toContainText('video-162:frame-6575')

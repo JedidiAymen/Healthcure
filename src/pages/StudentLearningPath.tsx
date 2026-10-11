@@ -86,7 +86,7 @@ function AssignedLessons({ path }: { path: LearningPath }) {
 function PathContent({ path }: { path: LearningPath }) {
   const field = discipline[path.module];
   const FieldIcon = field.Icon;
-  const notStarted = path.assigned_count - path.in_progress_count - path.submitted_count - path.reviewed_count;
+  const notStarted = path.lessons.filter((lesson) => lesson.state === "not_started").length;
   return (
     <main className="academy-path-page mx-auto grid w-full max-w-7xl gap-5 sm:gap-7">
       <div>
@@ -94,8 +94,8 @@ function PathContent({ path }: { path: LearningPath }) {
           <ArrowLeft data-icon="inline-start" />All pathways
         </Button>
       </div>
-      <header className="grid overflow-hidden rounded-lg border bg-card md:grid-cols-[minmax(0,1fr)_17rem]">
-        <div className="flex min-w-0 flex-col justify-center bg-sidebar p-5 sm:p-8 lg:p-10">
+      <header className="academy-path-hero">
+        <div className="academy-path-hero-copy">
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <Badge variant="outline" className="border-primary/25 bg-background"><FieldIcon data-icon="inline-start" />{field.name}</Badge>
             <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground"><Database aria-hidden="true" className="size-4"/>Research source: {field.source}</span>
@@ -104,21 +104,21 @@ function PathContent({ path }: { path: LearningPath }) {
           <p className="mb-0 mt-3 max-w-2xl text-base leading-7 text-muted-foreground">{path.description}</p>
           <p className="mb-0 mt-5 flex items-start gap-2 border-l-2 border-primary/40 pl-3 text-sm leading-6 text-muted-foreground"><Microscope aria-hidden="true" className="mt-1 size-4 shrink-0 text-primary"/>Investigations use the original research viewer and keep each source collection separate.</p>
         </div>
-        <div className="grid content-center gap-4 bg-primary p-5 text-primary-foreground sm:p-6">
-          <div className="border-b border-primary-foreground/20 pb-3">
-            <p className="m-0 text-sm text-primary-foreground/75">Released to your cohort</p>
-            <p className="mb-0 mt-1 text-4xl font-semibold tabular-nums">{path.assigned_count}<span className="ml-2 text-base font-normal text-primary-foreground/75">lessons</span></p>
+        <div className="academy-path-count-panel">
+          <div className="academy-path-release">
+            <p className="academy-path-panel-label">Released to your cohort</p>
+            <p className="academy-path-release-count">{path.assigned_count}<span>{path.assigned_count === 1 ? "lesson" : "lessons"}</span></p>
           </div>
-          <dl className="grid grid-cols-3 gap-2" aria-label="Assignment progress">
-            <div><dt className="text-xs leading-4 text-primary-foreground/75">In progress</dt><dd className="m-0 mt-1 text-2xl font-semibold tabular-nums">{path.in_progress_count}</dd></div>
-            <div><dt className="text-xs leading-4 text-primary-foreground/75">Submitted</dt><dd className="m-0 mt-1 text-2xl font-semibold tabular-nums">{path.submitted_count}</dd></div>
-            <div><dt className="text-xs leading-4 text-primary-foreground/75">Reviewed</dt><dd className="m-0 mt-1 text-2xl font-semibold tabular-nums">{path.reviewed_count}</dd></div>
+          <dl className="academy-path-counts" aria-label="Assignment progress">
+            <div><dt>In progress</dt><dd>{path.in_progress_count}</dd></div>
+            <div><dt>Submitted</dt><dd>{path.submitted_count}</dd></div>
+            <div><dt>Reviewed</dt><dd>{path.reviewed_count}</dd></div>
           </dl>
         </div>
       </header>
 
-      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.55fr)_minmax(17rem,0.8fr)]">
-        <Card className="min-w-0 shadow-none">
+      <div className="academy-path-layout grid items-start gap-5 lg:grid-cols-[minmax(0,1.55fr)_minmax(17rem,0.8fr)]">
+        <Card className="academy-path-lessons min-w-0 shadow-none">
           <CardHeader className="border-b pb-4">
             <CardTitle className="text-xl">Investigation route</CardTitle>
             <CardDescription>Only work released to your cohort is shown. Educator review records feedback, not mastery of a clinical skill.</CardDescription>
@@ -126,10 +126,10 @@ function PathContent({ path }: { path: LearningPath }) {
           <CardContent>
             <AssignedLessons path={path} />
           </CardContent>
-          {path.lessons.length > 0 && <CardFooter className="border-t text-sm text-muted-foreground">{notStarted} available to start <span aria-hidden="true">·</span> {path.reviewed_count} educator reviewed</CardFooter>}
+          {path.lessons.length > 0 && <CardFooter className="gap-2 border-t text-sm text-muted-foreground"><span>Not started: {notStarted}</span><span aria-hidden="true">·</span><span>Educator reviewed: {path.reviewed_count}</span></CardFooter>}
         </Card>
 
-        <div className="grid gap-4">
+        <div className="academy-path-notes grid gap-4">
           <Card className="shadow-none">
             <CardHeader className="pb-3">
               <CardTitle className="text-lg">Study objectives</CardTitle>

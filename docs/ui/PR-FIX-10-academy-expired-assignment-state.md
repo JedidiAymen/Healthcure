@@ -52,3 +52,9 @@ Screenshots are local review artifacts under the repository's ignored `.local-re
 The first 768px screenshot exposed an intrinsic-width problem: the row's explanatory text made the `auto` action column too wide while the `sm` two-column breakpoint was already active, leaving too little room for the lesson title. The lesson card now keeps its stacked content/action layout until the `lg` breakpoint; desktop keeps the side-by-side layout. The overview and mobile layout are unchanged.
 
 The focused Playwright regression uses intercepted local-login and Academy-path responses on the real route, asserts one card-content column at tablet/mobile and two at desktop, checks the title region exceeds 250px at tablet, checks the disabled expired state and guidance, and asserts document/body widths match each viewport. It passed at 1440 × 1000, 768 × 1024, and 390 × 844 with no page errors. `npm run typecheck`, `npx eslint src/pages/StudentLearningPath.tsx`, and `git diff --check` also passed. No database, account, or research data was used or changed.
+
+## Path overview follow-up
+
+The path overview now uses the approved warm Academy chapter treatment: cream cover surface, white assignment/progress panel, and a readable three-metric summary across desktop and mobile. The total lesson count uses singular wording where appropriate. The footer counts only lessons actually in `not_started` state and labels them **Not started**, rather than implying that expired closed assignments can still be started. This presents API-provided state; no assignment or student records changed. Existing shadcn components remain in use; no package or component source was added.
+
+After the footer spacing adjustment, `npx playwright test tests/e2e/academy-path-deadline-responsive.spec.ts --workers=1 --output=/tmp/medforge-academy-e2e-output` passed (1 test) and refreshed the desktop/tablet/mobile captures above. Typecheck and scoped ESLint passed.
