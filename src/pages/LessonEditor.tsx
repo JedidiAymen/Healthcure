@@ -58,6 +58,7 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { ResearchCasePicker } from "@/components/ResearchCasePicker";
 import { EducatorSourcePreview } from "@/components/EducatorSourcePreview";
+import { LinkedText } from "@/components/LinkedText";
 import { Toggle } from "@/components/ui/toggle";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -496,7 +497,7 @@ export function LessonEditorPage() {
             <p className="mb-1 mt-2 text-xs font-medium leading-relaxed">{selectedCase ? `${selectedCase.label} · ${selectedCase.dataset_id}` : "Choose a verified source to continue."}</p>
             {selectedEvidence && <p className="mb-1 mt-1 text-[11px] leading-relaxed text-muted-foreground">{selectedEvidence.license_label}</p>}
             <div className="mt-4 grid gap-3 border-t border-border pt-3">
-              {draft.blocks.filter(block => block.type !== "Reveal").length ? draft.blocks.filter(block => block.type !== "Reveal").map((block, index) => <article className="border-l-2 border-primary pl-2.5" key={block.id}><span className="text-[10px] text-muted-foreground">{String(index + 1).padStart(2, "0")} · {block.type}</span><h3 className="mb-1 mt-1 text-[13px] font-semibold leading-snug">{block.title || `${block.type} block`}</h3><p className="m-0 whitespace-pre-wrap text-xs leading-relaxed text-muted-foreground">{block.content || "No learner prompt entered."}</p></article>) : <p className="m-0 text-xs leading-relaxed text-muted-foreground">Add a learner-facing block to preview the lesson.</p>}
+              {draft.blocks.filter(block => block.type !== "Reveal").length ? draft.blocks.filter(block => block.type !== "Reveal").map((block, index) => <article className="border-l-2 border-primary pl-2.5" key={block.id}><span className="text-[10px] text-muted-foreground">{String(index + 1).padStart(2, "0")} · {block.type}</span><h3 className="mb-1 mt-1 text-[13px] font-semibold leading-snug">{block.title || `${block.type} block`}</h3><p className="m-0 whitespace-pre-wrap text-xs leading-relaxed text-muted-foreground"><LinkedText>{block.content || "No learner prompt entered."}</LinkedText></p></article>) : <p className="m-0 text-xs leading-relaxed text-muted-foreground">Add a learner-facing block to preview the lesson.</p>}
             </div>
             {draft.blocks.some(block => block.type === "Reveal") && <p className="mb-0 mt-4 flex items-start gap-1.5 text-xs leading-relaxed text-muted-foreground"><LockKeyhole aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary"/> {draft.blocks.filter(block => block.type === "Reveal").length} educator reveal {draft.blocks.filter(block => block.type === "Reveal").length === 1 ? "block is" : "blocks are"} hidden from learners.</p>}
           </div>
@@ -575,7 +576,7 @@ export function LessonEditorPage() {
                   <CardHeader>
                     <div className="eyebrow">{block.type} · {String(index + 1).padStart(2, "0")}</div>
                     <CardTitle>{block.title}</CardTitle>
-                    <CardDescription>{block.content || "No learner prompt entered."}</CardDescription>
+                    <CardDescription><LinkedText>{block.content || "No learner prompt entered."}</LinkedText></CardDescription>
                   </CardHeader>
                 </Card>
               ))}

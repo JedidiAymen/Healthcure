@@ -91,6 +91,16 @@ The proposal itself says Track 3 should be claimed only with working, defensible
 4. If the event database has a provisioned reviewer and saved comparison/report, record a disposition with a rationale, reopen its history, and show JSON/FHIR export as a research artifact. Otherwise state that this final event setup gate is still open.
 5. Close with the explicit Track 2/3 boundary above and the local-only data/deployment boundary.
 
+### Optional SurgiVision video segment
+
+If the presentation includes the surgical-media experience, show it as a separate source-review feature after the DoseTwin flagship; these datasets do not describe the same patient or a linked clinical pathway. Open **SurgiVision** from the Professional Studio navigation, keep **Continuous video · source labels** selected, and use **Video source** to switch between the installed recordings:
+
+1. On Cholec80, play or seek the authentic cholecystectomy clip. The overlay and phase track follow the publisher's label for the frame currently shown. Explain that these are source annotations, not MEDFORGE predictions or surgical guidance. The separately sampled tool-presence annotations are not painted onto this video.
+2. On Appendix300, point out the one publisher-timed appendix-visibility event and the reported Gomes grade. **Jump to source event** seeks to its timestamp, where the source annotation appears over the video. At other times the overlay identifies that no event is labeled there and retains the event time/grade for discovery. This clip has no temporal model output, and its labels must not be described as MEDFORGE results.
+3. To show actual tool/action labels, switch to **Sampled replay · source labels** and inspect CholecT50's matching sampled frames. These are sparse stills, not continuous video; do not transfer their labels onto either continuous clip.
+
+The Cholec80 footage is CC BY-NC-SA 4.0, Appendix300 is CC BY 4.0, and this host's installed-data status does not establish venue-specific display permission. Keep the segment local until the event owner has cleared the applicable source terms and presentation use. If either continuous source is missing on the presentation machine, omit that video step rather than substituting unrelated footage or presenting stills as video.
+
 ## Review evidence
 
 - The actual local home route was reviewed at desktop (1440×900), tablet (768×1024), and mobile (390×844). The walkthrough heading was visible at all three sizes; each route returned HTTP 200, had no horizontal overflow, and produced no browser page errors. Captures are local and ignored by Git: `.local-review/hackcure-home/home-desktop.png`, `home-tablet.png`, and `home-mobile.png`.
