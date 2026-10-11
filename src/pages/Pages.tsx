@@ -1954,10 +1954,54 @@ type ReportFeedItem =
   | { kind: "surgivision-frame"; id: string; created_at: string; report: EvidenceReport }
   | { kind: "fisav-comparison"; id: string; created_at: string; comparison: SignalWindowComparison };
 
+type EvidenceModule = "all" | "dosetwin" | "surgivision" | "fistulaguard";
+
+function evidenceModule(entry: ReportFeedItem): Exclude<EvidenceModule, "all"> {
+  if (entry.kind === "fisav-comparison") return "fistulaguard";
+  if (entry.kind === "surgivision-frame") return "surgivision";
+  return "dosetwin";
+}
+
+function evidenceSearchText(entry: ReportFeedItem) {
+  if (entry.kind === "fisav-comparison") {
+    return [entry.id, entry.created_at, entry.comparison.case_id, entry.comparison.channel, entry.comparison.source_sha256].join(" ");
+  }
+  const { report } = entry;
+  const { document } = report;
+  return [
+    entry.id,
+    entry.created_at,
+    report.case_id,
+    document.schema,
+    document.title,
+    document.case?.dataset_id,
+    document.case?.source_case_id,
+    document.case?.split,
+    document.case?.video_id,
+    document.case?.frame_number,
+    document.analysis?.operation_id,
+    document.analysis?.method,
+    document.source?.repository,
+    document.source?.revision,
+    ...Object.keys(document.source?.files_sha256 ?? {}),
+    ...Object.values(document.source?.files_sha256 ?? {}),
+  ].filter(Boolean).join(" ");
+}
+
 const comparisonPageSize = 25;
 
 export function Reports() {
   const { data, reloading, error, hasMoreComparisons, loadingMoreComparisons, moreError, loadMoreComparisons } = useReportList();
+  const [searchText, setSearchText] = useState("");
+  const [moduleFilter, setModuleFilter] = useState<EvidenceModule>("all");
+  const visibleReports = useMemo(() => {
+    const query = searchText.trim().toLocaleLowerCase();
+    return data.filter((entry) =>
+      (moduleFilter === "all" || evidenceModule(entry) === moduleFilter)
+      && (!query || evidenceSearchText(entry).toLocaleLowerCase().includes(query)),
+    );
+  }, [data, moduleFilter, searchText]);
+  const hasReportFilters = searchText.trim() !== "" || moduleFilter !== "all";
   const download = (report: EvidenceReport) => {
     const blob = new Blob([JSON.stringify(report.document, null, 2)], {
         type: "application/json",
@@ -2005,7 +2049,43 @@ export function Reports() {
         </div>
       ) : data.length ? (
         <div className="grid gap-3">
-          {data.map((entry) => {
+          <div className="grid gap-3 rounded-xl border border-border bg-card p-3 sm:grid-cols-[minmax(16rem,1fr)_auto] sm:items-center sm:p-4">
+            <InputGroup className="h-10 w-full">
+              <InputGroupInput
+                aria-label="Search saved evidence by case, source, method, frame, or ID"
+                placeholder="Find a case, frame, source hash, or method…"
+                value={searchText}
+                onChange={(event) => setSearchText(event.target.value)}
+              />
+              <InputGroupAddon><Search aria-hidden="true" /></InputGroupAddon>
+              {searchText && <InputGroupAddon align="inline-end"><InputGroupButton aria-label="Clear evidence search" onClick={() => setSearchText("")}><X aria-hidden="true" /></InputGroupButton></InputGroupAddon>}
+            </InputGroup>
+            <ToggleGroup
+              multiple={false}
+              value={[moduleFilter]}
+              onValueChange={(value) => { if (value[0]) setModuleFilter(value[0] as EvidenceModule); }}
+              aria-label="Filter saved evidence by specialty"
+              className="flex h-auto flex-wrap justify-start gap-1 rounded-lg border border-border bg-muted/35 p-1"
+            >
+              <ToggleGroupItem value="all" className="h-10 px-3">All</ToggleGroupItem>
+              <ToggleGroupItem value="dosetwin" className="h-10 px-3">DoseTwin</ToggleGroupItem>
+              <ToggleGroupItem value="surgivision" className="h-10 px-3">SurgiVision</ToggleGroupItem>
+              <ToggleGroupItem value="fistulaguard" className="h-10 px-3">FiSaV</ToggleGroupItem>
+            </ToggleGroup>
+          </div>
+          <p role="status" aria-live="polite" className="m-0 text-xs text-muted-foreground">
+            Showing {visibleReports.length} of {data.length} loaded saved {data.length === 1 ? "record" : "records"}{hasMoreComparisons ? " · Older FiSaV comparisons are available below." : ""}
+          </p>
+          {visibleReports.length === 0 ? (
+            <Empty className="min-h-48 rounded-xl border border-dashed">
+              <EmptyHeader>
+                <EmptyMedia variant="icon"><FileText aria-hidden="true" /></EmptyMedia>
+                <EmptyTitle>No saved evidence matches</EmptyTitle>
+                <EmptyDescription>Try another case ID, source, method, frame number, or specialty.</EmptyDescription>
+              </EmptyHeader>
+              {hasReportFilters && <Button variant="outline" onClick={() => { setSearchText(""); setModuleFilter("all"); }}>Clear evidence filters</Button>}
+            </Empty>
+          ) : visibleReports.map((entry) => {
             if (entry.kind === "fisav-comparison") return (
             <Card className="m-0" key={entry.id}>
               <CardHeader className="px-4 pt-4 sm:px-5">
