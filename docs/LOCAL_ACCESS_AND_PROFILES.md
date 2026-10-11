@@ -6,7 +6,7 @@ This guide is for the local review checkout. MEDFORGE is a research and educatio
 
 Sign-in uses the app's local username/password form, not GitHub, SSO, an emailed link, or a shared demo password. `/educator` and `/academy` show their own sign-in forms. DoseTwin asks for an educator/admin account when saving a comparison and for a Clinical Reviewer/admin account when recording a research review. There is no standalone `/login` page. Professional Studio browsing is open without a login.
 
-The following is a read-only snapshot of this checkout on 2026-10-11. The profile inventory counted credentialed role grants only; it did not print usernames, inspect passwords, or change any database. A profile row marked “none” means there is no sign-in credential to use from this checkout; it does not mean that a password is available elsewhere.
+The following profile inventory was first collected read-only on 2026-10-11; it counted credentialed role grants without printing usernames or inspecting passwords. The HackCure Docker profile was prepared separately later that day. A profile row marked “none” means there is no sign-in credential to use from this checkout; it does not mean that a password is available elsewhere.
 
 | Profile | Database selected by launcher | Supported login | Pre-provisioned here |
 | --- | --- | --- | --- |
@@ -14,10 +14,10 @@ The following is a read-only snapshot of this checkout on 2026-10-11. The profil
 | Default local app (`./scripts/start_local.sh`) | `MEDFORGE_DB_PATH`, default `data/local.sqlite3` | `/educator`, `/academy`, or the DoseTwin action dialog | No credentialed role grants found in `data/local.sqlite3` during the read-only snapshot. No default password. |
 | Optional Academy/Educator seed demo | `MEDFORGE_DB_PATH`, set by the runbook to `data/jury-demo.sqlite3` | `/educator` and `/academy` | `data/jury-demo.sqlite3` was absent during the snapshot. Running `scripts/seed_demo.py` creates `demo-educator` and `demo-student` only when missing and prints each new password once. It creates no Clinical Reviewer. |
 | Isolated DoseTwin `pt_241` launcher | `data/openkbp-opt/pt_241/local.sqlite3` by default, or the explicit `MEDFORGE_DB_PATH` override | DoseTwin action dialog; `/educator` and `/academy` use the same local auth system | No credentialed role grants found in its database during the snapshot. It does not share accounts with the default app. |
-| HackCure Docker rehearsal | `data/hackcure-docker/medforge.sqlite3` on the host | `/educator`, `/academy`, or the DoseTwin action dialog at the Docker URL | No credentialed role grants found in its database during the snapshot. The profile does not seed accounts or reuse another database's accounts. |
+| HackCure Docker rehearsal | `data/hackcure-docker/medforge.sqlite3` on the host | `/educator`, `/academy`, or the DoseTwin action dialog at the Docker URL | This host has separate educator, student and reviewer accounts. Passwords are in the private, Git-ignored `data/hackcure-docker/private-access/profile-credentials.md`; they are not portable or committed. |
 | Any custom review/demo database | The exact path in `MEDFORGE_DB_PATH` | Same local UI forms | No defaults. Provision the account after selecting this path, then keep the same path for the launcher and sign-in. |
 
-Example usernames shown in setup commands are labels for accounts an operator may create; they are not evidence that those accounts exist or that a matching password is known. Passwords are never embedded in this repository. If a setup command printed a random password once and it was not saved, it cannot be recovered from the database; provision a replacement account privately in the correct profile.
+Example usernames shown in setup commands are labels for accounts an operator may create; they do not establish that an account exists in another profile. Passwords are never embedded in tracked repository files. If a setup command printed a random password once and it was not saved, it cannot be recovered from the database; provision a replacement account privately in the correct profile.
 
 ## Start the app
 
@@ -106,7 +106,7 @@ apps/api/.venv/bin/python scripts/create_local_learning_user.py \
 
 ### HackCure Docker profile
 
-The Docker rehearsal uses a separate, unencrypted SQLite database. It has **no default credentials** and does not share users or records with `data/local.sqlite3`. Start the stack first, then run these commands from the project root; each command prompts privately for a password of at least 12 characters:
+The Docker rehearsal uses a separate, unencrypted SQLite database. It has **no default credentials** and does not share users or records with `data/local.sqlite3`. On this host, the profile has been prepared with separate `demo-educator`, `demo-student` and `jury-reviewer` accounts; the matching passwords are only in the private ignored note above. On a fresh profile, start the stack first and run the commands below; each prompts privately for a password of at least 12 characters:
 
 ```sh
 docker compose -f docker-compose.yml -f docker-compose.hackcure.yml exec -it api \

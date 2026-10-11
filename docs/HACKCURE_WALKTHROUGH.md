@@ -12,14 +12,14 @@ The home screen now presents this walkthrough before the research collection mon
 
 ## Keep the two local rehearsal databases separate
 
-The normal development app and the HackCure Docker profile use different SQLite databases. A green source-import check against one database does not mean the other is ready. On 2026-10-11, the default `data/local.sqlite3` passed the authentic `pt_241` prediction-import and saved-report checks; no credentialed reviewer profile or optional Academy lesson was present. The exact HackCure Docker preflight selected `data/hackcure-docker/medforge.sqlite3`: its source manifest and loopback configuration passed, while the imported prediction, saved report, reviewer profile and optional Academy lesson were absent. A separate read-only inventory found no credentialed role grants in the default, HackCure Docker, or isolated `pt_241` databases; `data/jury-demo.sqlite3` was absent. No passwords are available in the repository. These checks do not look up or disclose passwords.
+The normal development app and the HackCure Docker profile use different SQLite databases. A green source-import check against one database does not mean the other is ready. On 2026-10-11, the default `data/local.sqlite3` had the authentic `pt_241` prediction and saved-report records but no credentialed reviewer profile. The HackCure Docker profile was prepared separately in `data/hackcure-docker/medforge.sqlite3`: its verified source pair, matching imported prediction, saved comparison report, and local reviewer credential now pass `npm run hackcure:preflight:docker`. The optional Academy lesson remains unpublished and unassigned. A rollback copy is kept under the ignored `data/hackcure-docker/backups/` directory. Event-profile passwords are in the mode-0600, Git-ignored `data/hackcure-docker/private-access/profile-credentials.md`; no password is in this repository's tracked files. The preflight checks credential presence and role only; it does not disclose or validate passwords.
 
 | Local profile | Database | `pt_241` import/report | Reviewer | Academy lesson |
 |---|---|---|---|---|
 | Default development app | `data/local.sqlite3` | Present and source-matched | Not provisioned | Not published/assigned |
-| HackCure Docker profile | `data/hackcure-docker/medforge.sqlite3` | Missing | Not provisioned | Not published/assigned |
+| HackCure Docker profile | `data/hackcure-docker/medforge.sqlite3` | Present and source-matched | Provisioned locally; password is in the private ignored note | Not published/assigned |
 
-For this Docker profile, the username/password forms appear at `/educator` and `/academy`; DoseTwin shows a sign-in dialog when a protected import/report or reviewer action is selected. There is no standalone `/login` route. The profile has no pre-provisioned event username or password. The `jury-educator`, `jury-reviewer`, and optional `jury-student` strings in the setup instructions are operator-selected example usernames only; each password is entered privately at account creation and is not supplied by this repository. Do not use credentials from another SQLite profile.
+For this Docker profile, the username/password forms appear at `/educator` and `/academy`; DoseTwin shows a sign-in dialog when a protected import/report or reviewer action is selected. There is no standalone `/login` route. The prepared local profile uses the credentials in the private ignored note above. They do not work with another SQLite profile or another machine. A separate read-only inventory should be used when checking a profile; never print stored hashes or copy these passwords to Git.
 
 ### What is ready, and what still needs event-owner setup
 
@@ -29,17 +29,17 @@ The product flow and its API controls are implemented: source-pair validation, r
 |---|---|---|
 | `pt_241` source manifest and archived `set_1` files | Present and checksum-verified by the Docker preflight | Ready on this host; recheck on the event machine |
 | Loopback-only Compose publication and read-only scientific data mounts | Passed by the Docker preflight | Ready on this host; recheck after changing Compose or the host |
-| Matching imported prediction and saved comparison report in `data/hackcure-docker/medforge.sqlite3` | Missing; the default development DB has these records, but it is a different DB | Event operator: start the Docker profile, sign in with a privately provisioned educator/admin account, import the exact `pt_241` `prediction-set_1.csv`, then save its comparison report |
-| Usable `clinical_reviewer` login in that same Docker DB | Missing | Event owner/operator: provision one interactively in the selected profile and keep its password private; the read-only preflight checks that the effective login role is reviewer/admin but cannot validate the private password |
+| Matching imported prediction and saved comparison report in `data/hackcure-docker/medforge.sqlite3` | Present; preflight matched the report to the installed `pt_241` source and archived prediction hashes | Ready on this host; sign in as the local educator and inspect the report in the running app |
+| Usable `clinical_reviewer` login in that same Docker DB | Present; a separate local reviewer login is provisioned | Ready on this host; keep the password private and verify sign-in during rehearsal. The role does not establish medical qualifications |
 | Academy learner path | Optional and absent | Only if Academy is part of the presentation: event operator publishes a source-bounded lesson, provisions a student, and assigns the lesson in that same DB |
 | Second-machine, network-isolated rehearsal | Not verified | Event team: transfer the approved code/image/data bundle privately, restore on the actual presentation machine, disconnect venue internet, then rerun checks and rehearse |
 | Organizer track acceptance and external-use permission for installed research data | Not established by repository checks | Team/organizers and the relevant rights holder; keep the demo local until cleared |
 
-The current blocker is therefore event-profile state and rehearsal, not an absent reviewer feature. Do not copy the default development DB to the Docker profile as a shortcut: prepare and recheck the exact profile that will be presented.
+The required machine-local profile and source gates now pass. Remaining gates are the human-authenticated rehearsal, optional Academy preparation if it is part of the presentation, organizer track acceptance, venue-specific source-use permission, and the second-machine/offline restore. Do not copy this database to another machine as a shortcut; provision or transfer it only through the team's approved private process.
 
 ### Operator setup sequence for the Docker rehearsal
 
-These steps prepare only the local, private Docker profile. They are deliberately separate from this repository-side readiness check; no account, import, report, assignment, or password is created by the commands in this document. Confirm the project owner has approved the installed files for this local research demonstration before proceeding.
+The steps below are for rehearsing the prepared local profile. They do not create a research disposition for the reviewer or claim organizer/venue approval. The source/use basis recorded with the archived comparison is local research inspection only.
 
 1. Start the already-built local stack and confirm source/network/database readiness:
 
@@ -48,13 +48,13 @@ These steps prepare only the local, private Docker profile. They are deliberatel
    npm run hackcure:preflight:docker
    ```
 
-   The first preflight will remain nonzero until the comparison, report, and reviewer are prepared. It does not seed or alter those records.
+   The profile preflight should pass the source, imported comparison, saved report, reviewer-role, and loopback checks. It does not prove that a human login, review, rights decision, or second-machine restore has been rehearsed.
 
-2. In a private terminal, provision the operator-approved educator and reviewer profiles in the Docker database. Each command asks for a password interactively; choose unique credentials, store them outside the repository, and do not paste them into chat or screenshots. The exact commands and account-role boundaries are in [`LOCAL_ACCESS_AND_PROFILES.md`](LOCAL_ACCESS_AND_PROFILES.md#hackcure-docker-profile). Do not provision an Academy student unless the event includes the optional learning segment.
+2. Sign in as the educator using the local private credentials note. On a fresh event machine, provision separate accounts in that machine's selected Docker profile using [`LOCAL_ACCESS_AND_PROFILES.md`](LOCAL_ACCESS_AND_PROFILES.md#hackcure-docker-profile); never reuse this host's password or copy credentials into a public repository.
 
-3. Sign in as the provisioned educator at `https://localhost:8443/studio/dosetwin/cases/openkbp%3Apt_241`. Expand **Compare a real dose prediction**, select the installed `data/openkbp-opt/pt_241/prediction-set_1.csv`, enter model revision `OpenKBP-Opt archived set_1` and source revision `16fbe0dbc64c94ed4b7e8378a090b47c6596bbd7`, record the locally approved research-use basis, confirm local use, and choose **Validate and add prediction**. Inspect the resulting matched reference/prediction, then choose **Save comparison report**. These are source validation and report-persistence steps; the archived output is not a MEDFORGE model result.
+3. At `https://localhost:8443/studio/dosetwin/cases/openkbp%3Apt_241`, open **Compare a real dose prediction** and verify that `prediction-set_1.csv · OpenKBP-Opt archived set_1` is selected. Inspect the reference, archived prediction, signed difference, DVH and per-ROI deltas. The matching report is already saved in this host's private Docker profile. On a newly provisioned profile only, follow [`LOCAL_ACCESS_AND_PROFILES.md`](LOCAL_ACCESS_AND_PROFILES.md#hackcure-docker-profile) to import and save it after the operator confirms the local research-use basis. The archived output is not a MEDFORGE model result.
 
-4. Sign out, sign in as the reviewer, and complete the rationale-bound research review described in [Jury walkthrough order](#jury-walkthrough-order). Finally rerun `npm run hackcure:preflight:docker`; the imported comparison, matching report, and reviewer checks should pass. Academy remains optional and informational.
+4. Sign out, sign in as the reviewer, and have the human reviewer complete the rationale-bound research review described in [Jury walkthrough order](#jury-walkthrough-order). Finally rerun `npm run hackcure:preflight:docker`; the imported comparison, matching report, and reviewer checks should pass. Academy remains optional for this flagship flow and is not ready as an assigned lesson in this profile.
 
 For the currently prepared same-machine DoseTwin comparison in the default local profile, use `npm run doctor -- --hackcure-preflight` and the launcher documented in [`RUN_LOCAL.md`](../RUN_LOCAL.md); do not describe that separate profile as a ready Docker or second-machine rehearsal. The Docker and development databases are intentionally not copied between profiles.
 
