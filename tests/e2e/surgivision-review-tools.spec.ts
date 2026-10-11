@@ -111,6 +111,17 @@ test('student commits a CVS self-check before the annotator values are revealed'
   await page.getByRole('button', { name: 'Sign in as student' }).click()
 
   await expect(page.getByText('Commit your CVS self-check before submitting.')).toBeVisible()
+  await page.getByRole('button', { name: 'Explore source evidence' }).click()
+  await expect(page.getByRole('img', { name: /Endoscapes source image/ })).toBeVisible()
+  await page.getByLabel('Evidence X pixel coordinate').fill('425')
+  await page.getByLabel('Evidence Y pixel coordinate').fill('240')
+  await expect(page.getByText('Your evidence point · x 425, y 240 source pixels')).toBeVisible()
+  await page.getByRole('button', { name: 'Review selected evidence' }).click()
+  await expect(page.getByRole('region', { name: 'Check the evidence you selected' })).toBeVisible()
+  await expect(page.locator('#mission-observe').getByText('Endoscapes frame endoscapes:val:2_100 · source pixel x 425, y 240')).toBeVisible()
+  await page.getByRole('button', { name: 'Explain your observation' }).click()
+  await expect(page.locator('#mission-explain').getByText('Judge the three criteria', { exact: true })).toBeVisible()
+
   const commit = page.getByRole('button', { name: 'Commit my judgement' })
   await expect(commit).toBeDisabled()
   await expect(page.getByText(/annotators marked it achieved/)).toHaveCount(0)
