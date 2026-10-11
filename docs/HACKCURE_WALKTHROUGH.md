@@ -8,6 +8,17 @@ The selected HackCure demonstration is a **DoseTwin research review** of the sam
 
 The home screen now presents this walkthrough before the research collection montage. Its action opens `pt_241` when the case appears in the active registry, otherwise it opens the case registry. The card states the boundary and that the full walkthrough depends on the active local database containing its comparison, saved report and reviewer account.
 
+## Keep the two local rehearsal databases separate
+
+The normal development app and the HackCure Docker profile use different SQLite databases. A green source-import check against one database does not mean the other is ready. On 2026-10-11, the default `data/local.sqlite3` passed the authentic `pt_241` prediction-import and saved-report checks; the reviewer profile and optional Academy lesson were absent. The exact HackCure Docker preflight selected `data/hackcure-docker/medforge.sqlite3`: the source manifest and loopback configuration passed, while its imported prediction, saved report, reviewer profile and optional Academy lesson were absent. Both checks are read-only.
+
+| Local profile | Database | `pt_241` import/report | Reviewer | Academy lesson |
+|---|---|---|---|---|
+| Default development app | `data/local.sqlite3` | Present and source-matched | Not provisioned | Not published/assigned |
+| HackCure Docker profile | `data/hackcure-docker/medforge.sqlite3` | Missing | Not provisioned | Not published/assigned |
+
+Run `npm run doctor -- --hackcure-preflight` to inspect the database selected by `MEDFORGE_DB_PATH` (the default is `data/local.sqlite3`). Run `bash scripts/hackcure_docker_preflight.sh` to inspect the separate Docker database. For the currently prepared same-machine DoseTwin comparison, start the default local app as documented in [`RUN_LOCAL.md`](../RUN_LOCAL.md); do not describe that as a ready Docker or second-machine rehearsal. The reviewer step still needs a private, operator-provisioned account in whichever database is used for the review.
+
 ## Proposal priorities against the current branch
 
 The proposal's P0/P1 labels describe its older baseline. Current status on this branch is:
@@ -44,4 +55,4 @@ The proposal itself says Track 3 should be claimed only with working, defensible
 ## Review evidence
 
 - The actual local home route was reviewed at desktop (1440×900), tablet (768×1024), and mobile (390×844). The walkthrough heading was visible at all three sizes; each route returned HTTP 200, had no horizontal overflow, and produced no browser page errors. Captures are local and ignored by Git: `.local-review/hackcure-home/home-desktop.png`, `home-tablet.png`, and `home-mobile.png`.
-- Hosted CI run [38098615459](https://github.com/JedidiAymen/Healthcure/actions/runs/38098615459) completed successfully on commit `0465d1d`. It passed install, lint, typecheck, frontend unit tests, browser shell tests, API contract tests, OpenAPI contract check, production build, and the offline Academy production-shell browser check. This does not verify a clean clone, independent machine, release tag, or jury rehearsal.
+- Hosted CI run [38099412671](https://github.com/JedidiAymen/Healthcure/actions/runs/38099412671) completed successfully on commit `ad15239`. It passed install, lint, typecheck, frontend unit tests, browser shell tests, API contract tests, OpenAPI contract check, production build, and the offline Academy production-shell browser check. This does not verify a clean clone, independent machine, release tag, or jury rehearsal.
