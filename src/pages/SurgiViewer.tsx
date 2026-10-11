@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { MouseEvent as ReactMouseEvent, PointerEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { AlertCircle, Check, ChevronLeft, ChevronRight, Download, FlaskConical, Image, LoaderCircle, Move, Save, ZoomIn, ZoomOut } from 'lucide-react'
@@ -74,6 +74,8 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
   const [publicClipLoading,setPublicClipLoading]=useState(true)
   const [showPublicClip,setShowPublicClip]=useState(false)
   const publicVideoRef=useRef<HTMLVideoElement>(null)
+  const [publicVideoNode,setPublicVideoNode]=useState<HTMLVideoElement|null>(null)
+  const registerPublicVideo=useCallback((node:HTMLVideoElement|null)=>{publicVideoRef.current=node;setPublicVideoNode(node)},[])
   const publicVideoRegionRef=useRef<HTMLDivElement>(null)
   const [publicClipCurrentSecond,setPublicClipCurrentSecond]=useState(0)
   const [pendingClipSeek,setPendingClipSeek]=useState(false)
@@ -90,7 +92,7 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
   const sourcePhase=sourcePhaseTrack.find(interval=>interval.first_frame<=sourcePhaseFrame&&interval.last_frame>=sourcePhaseFrame)
   useEffect(()=>{
     if(!pendingClipSeek||!showPublicClip||!publicClipAnnotation)return
-    const video=publicVideoRef.current
+    const video=publicVideoNode
     if(!video)return
     const seekToEvent=()=>{
       video.currentTime=publicClipAnnotation.timestamp_seconds
@@ -100,12 +102,20 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
     if(video.readyState>=1){seekToEvent();return}
     video.addEventListener('loadedmetadata',seekToEvent,{once:true})
     return()=>video.removeEventListener('loadedmetadata',seekToEvent)
-  },[pendingClipSeek,showPublicClip,publicClipAnnotation])
+  },[pendingClipSeek,showPublicClip,publicClipAnnotation,publicVideoNode])
   useEffect(()=>{
     if(!showPublicClip)return
-    const video=publicVideoRef.current
+    const video=publicVideoNode
     if(!video)return
     const updateTime=(second:number)=>setPublicClipCurrentSecond(current=>Math.abs(current-second)<0.001?current:second)
+    // `requestVideoFrameCallback` is the best clock while playback is running,
+    // but a paused seek does not reliably produce a new presented-frame
+    // callback in every browser/codec combination. Keep source labels tied to
+    // the media element's own seek/time events as well.
+    const onMediaTimeChange=()=>updateTime(video.currentTime)
+    video.addEventListener('timeupdate',onMediaTimeChange)
+    video.addEventListener('seeked',onMediaTimeChange)
+    video.addEventListener('loadedmetadata',onMediaTimeChange)
     if(typeof video.requestVideoFrameCallback==='function'){
       let callbackId=0
       let active=true
@@ -115,12 +125,10 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
         callbackId=video.requestVideoFrameCallback(onFrame)
       }
       callbackId=video.requestVideoFrameCallback(onFrame)
-      return()=>{active=false;video.cancelVideoFrameCallback(callbackId)}
+      return()=>{active=false;video.cancelVideoFrameCallback(callbackId);video.removeEventListener('timeupdate',onMediaTimeChange);video.removeEventListener('seeked',onMediaTimeChange);video.removeEventListener('loadedmetadata',onMediaTimeChange)}
     }
-    const onTimeUpdate=()=>updateTime(video.currentTime)
-    video.addEventListener('timeupdate',onTimeUpdate)
-    return()=>video.removeEventListener('timeupdate',onTimeUpdate)
-  },[showPublicClip,publicClip?.clip_id])
+    return()=>{video.removeEventListener('timeupdate',onMediaTimeChange);video.removeEventListener('seeked',onMediaTimeChange);video.removeEventListener('loadedmetadata',onMediaTimeChange)}
+  },[showPublicClip,publicClip?.clip_id,publicVideoNode])
   const [imageUrl,setImageUrl]=useState('')
   const [imageError,setImageError]=useState('')
   const [imageSize,setImageSize]=useState<{width:number;height:number}|null>(null)
@@ -298,7 +306,19 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
       <CardContent className="grid gap-4">
         <div className="grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(0,2.55fr)_minmax(17rem,1fr)]">
         <div className="grid min-w-0 content-start gap-3">
-        {showPublicClip?<VideoPlayer key={publicClip.clip_id}><div ref={publicVideoRegionRef} className="relative scroll-mt-20"><NeutralVideoSkin className="w-full overflow-hidden rounded-lg bg-[#101624]" style={{aspectRatio:'16 / 9'}}><Video ref={publicVideoRef} className="size-full" src={api.surgicalClipVideoUrl(publicClip.clip_id)} playsInline preload="metadata" aria-label={`${publicClip.dataset_id} ${publicClip.procedure_label} source video`}/></NeutralVideoSkin>{sourcePhaseTrack.length>0&&sourcePhase?<div role="group" aria-live="off" aria-label="Publisher phase annotation for the current video frame" className="pointer-events-none absolute left-3 top-3 z-10 max-w-[min(90%,34rem)] rounded-md border border-primary-foreground/25 bg-background/95 p-2.5 text-foreground shadow-lg"><Badge variant="outline" className="mb-1">Publisher phase · frame {sourcePhaseFrame.toLocaleString()}</Badge><p className="m-0 text-sm font-semibold">{formatPhaseLabel(sourcePhase.phase)}</p><p className="m-0 text-xs text-muted-foreground">Cholec80 phase label for the current frame · 25 fps source track · not model output</p></div>:sourceEventVisible&&publicClipAnnotation?<div role="status" className="pointer-events-none absolute left-3 top-3 z-10 max-w-[min(90%,34rem)] rounded-md border border-primary-foreground/25 bg-background/95 p-2.5 text-foreground shadow-lg"><Badge variant="outline" className="mb-1">Publisher source annotation · {formatClipTimeExact(publicClipAnnotation.timestamp_seconds)}</Badge><p className="m-0 text-sm font-semibold">{publicClipAnnotation.event_label}</p><p className="m-0 text-xs text-muted-foreground">Final laparoscopic grade: {publicClipAnnotation.final_laparoscopic_grade} · Gomes scale</p></div>:null}</div></VideoPlayer>:<Button variant="outline" className="w-fit" onClick={()=>setShowPublicClip(true)}>Load source video</Button>}
+        {showPublicClip?<VideoPlayer key={publicClip.clip_id}><div ref={publicVideoRegionRef} className="relative scroll-mt-20"><NeutralVideoSkin className="w-full overflow-hidden rounded-lg bg-[#101624]" style={{aspectRatio:'16 / 9'}}><Video ref={registerPublicVideo} className="size-full" src={api.surgicalClipVideoUrl(publicClip.clip_id)} playsInline preload="metadata" aria-label={`${publicClip.dataset_id} ${publicClip.procedure_label} source video`}/></NeutralVideoSkin>{sourcePhaseTrack.length>0&&sourcePhase?<div role="group" aria-live="off" aria-label="Publisher phase annotation for the current video frame" className="pointer-events-none absolute left-3 top-3 z-10 max-w-[min(90%,34rem)] rounded-md border border-primary-foreground/25 bg-background/95 p-2.5 text-foreground shadow-lg"><Badge variant="outline" className="mb-1">Publisher phase · frame {sourcePhaseFrame.toLocaleString()}</Badge><p className="m-0 text-sm font-semibold">{formatPhaseLabel(sourcePhase.phase)}</p><p className="m-0 text-xs text-muted-foreground">Cholec80 phase label for the current frame · 25 fps source track · not model output</p></div>:sourceEventVisible&&publicClipAnnotation?<div role="status" className="pointer-events-none absolute left-3 top-3 z-10 max-w-[min(90%,34rem)] rounded-md border border-primary-foreground/25 bg-background/95 p-2.5 text-foreground shadow-lg"><Badge variant="outline" className="mb-1">Publisher source annotation · {formatClipTimeExact(publicClipAnnotation.timestamp_seconds)}</Badge><p className="m-0 text-sm font-semibold">{publicClipAnnotation.event_label}</p><p className="m-0 text-xs text-muted-foreground">Final laparoscopic grade: {publicClipAnnotation.final_laparoscopic_grade} · Gomes scale</p></div>:null}</div></VideoPlayer>:<Button variant="outline" className="w-fit" onClick={()=>setShowPublicClip(true)}>Load source video</Button>}
+        {sourcePhaseTrack.length>0&&<section className="grid min-w-0 gap-2 rounded-lg border border-border bg-muted/20 p-3" aria-label="Publisher phase timeline">
+          <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="m-0 text-sm font-semibold">Published phase track</p><p className="m-0 text-xs text-muted-foreground">Select a labeled interval to seek to its first annotated frame.</p></div><Badge variant="outline" className="tabular-nums">{sourcePhase?formatPhaseLabel(sourcePhase.phase):'No label at current frame'}</Badge></div>
+          <div className="flex min-w-0 gap-1 overflow-x-auto overscroll-x-contain pb-1" role="group" aria-label="Seek to publisher-labeled phase interval">
+            {sourcePhaseTrack.map((interval,index)=>{
+              const isCurrent=sourcePhase===interval
+              const totalFrames=Math.max(1,Math.ceil(publicClip.duration_sec* (publicClip.frames_per_second??25)))
+              const span=Math.max(1,interval.last_frame-interval.first_frame+1)
+              return <button key={`${interval.first_frame}-${interval.last_frame}-${index}`} type="button" aria-label={`Seek to ${formatPhaseLabel(interval.phase)}, frames ${interval.first_frame} to ${interval.last_frame}`} aria-current={isCurrent?'time':undefined} title={`${formatPhaseLabel(interval.phase)} · frames ${interval.first_frame}–${interval.last_frame}`} onClick={()=>{setShowPublicClip(true);setPendingClipSeek(false);const video=publicVideoRef.current;if(video)video.currentTime=interval.first_frame/(publicClip.frames_per_second??25)}} className={`min-w-24 flex-1 basis-0 rounded-md border px-2 py-2 text-left transition-colors ${isCurrent?'border-primary bg-primary text-primary-foreground':'border-border bg-card text-foreground hover:bg-accent hover:text-accent-foreground'}`} style={{flexGrow:span/totalFrames}}><span className="line-clamp-2 break-words text-xs font-semibold leading-tight">{formatPhaseLabel(interval.phase)}</span><span className={`mt-0.5 block text-[10px] tabular-nums ${isCurrent?'text-primary-foreground/80':'text-muted-foreground'}`}>{formatClipTime(interval.first_frame/(publicClip.frames_per_second??25))}</span></button>
+            })}
+          </div>
+          <p className="m-0 text-[11px] leading-5 text-muted-foreground">Each interval is a publisher reference label for its recorded frame range. Unlabeled time is not interpolated. This track is not MEDFORGE model output.</p>
+        </section>}
         {publicClipAnnotation&&<div className="flex flex-col gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3 sm:flex-row sm:items-center sm:justify-between" aria-label="Publisher source annotation for this video">
           <div className="min-w-0"><div className="mb-1 flex flex-wrap items-center gap-2"><Badge variant="outline">Source annotation</Badge><span className="text-xs tabular-nums text-muted-foreground">{formatClipTimeExact(publicClipAnnotation.timestamp_seconds)}</span></div><p className="m-0 text-sm font-semibold">{publicClipAnnotation.event_label}</p><p className="m-0 text-xs leading-5 text-muted-foreground">Final laparoscopic grade {publicClipAnnotation.final_laparoscopic_grade} · Gomes scale. This is the dataset label, not an AI prediction.</p></div>
           <Button variant="outline" className="shrink-0" onClick={()=>{setShowPublicClip(true);setPendingClipSeek(true)}}>Jump to source event</Button>
