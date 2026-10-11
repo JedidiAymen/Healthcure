@@ -19,7 +19,8 @@ export MEDFORGE_HACKCURE_UID="$(id -u)"
 export MEDFORGE_HACKCURE_GID="$(id -g)"
 
 compose=(docker compose -f "$ROOT/docker-compose.yml" -f "$ROOT/docker-compose.hackcure.yml")
-"${compose[@]}" config --format json | node -e '
+compose_config="$("${compose[@]}" config --format json)"
+printf '%s\n' "$compose_config" | node -e '
 let input = "";
 process.stdin.setEncoding("utf8");
 process.stdin.on("data", (chunk) => input += chunk);
@@ -53,6 +54,24 @@ process.stdin.on("end", () => {
   console.log("HackCure Docker loopback configuration: PASS");
 });
 '
+
+# The launcher uses --no-build --pull never. Check all resolved image tags
+# before the operator attempts startup, without pulling, building, or starting
+# a service. `compose config --images` emits the exact tags selected above.
+missing_images=0
+while IFS= read -r image; do
+  [ -n "$image" ] || continue
+  if docker image inspect "$image" >/dev/null 2>&1; then
+    printf 'HackCure local image available: %s\n' "$image"
+  else
+    printf 'HackCure local image missing: %s (prepare it before offline rehearsal)\n' "$image" >&2
+    missing_images=1
+  fi
+done < <("${compose[@]}" config --images | sort -u)
+if [ "$missing_images" -ne 0 ]; then
+  exit 1
+fi
+printf 'HackCure no-pull image readiness: PASS\n'
 
 cd "$ROOT"
 npm run doctor -- --hackcure-preflight
