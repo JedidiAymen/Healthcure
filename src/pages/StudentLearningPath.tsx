@@ -42,7 +42,7 @@ function LessonRow({ lesson, index, hasNext }: { lesson: StudentLearningPathLess
             <h3 className="m-0 break-words text-base font-semibold leading-snug">{lesson.title}</h3>
             <p className="mb-0 mt-1.5 break-words text-sm leading-5 text-muted-foreground">{lesson.case_label} <span aria-hidden="true">·</span> Lesson version {lesson.version}{lesson.due_at && <> <span aria-hidden="true">·</span> Due {new Date(lesson.due_at).toLocaleDateString()}</>}</p>
           </div>
-          <Button render={<Link to={`/academy/missions/${encodeURIComponent(lesson.assignment_id)}`}/>} nativeButton={false} variant={lesson.state === "in_progress" ? "default" : "outline"} className="min-h-11 w-full justify-between sm:w-auto">{lesson.state === "in_progress" ? "Continue investigation" : lesson.state === "submitted" || lesson.state === "reviewed" ? "View feedback" : "Start investigation"}<ArrowRight data-icon="inline-end"/></Button>
+          <Button render={<Link to={`/academy/missions/${encodeURIComponent(lesson.assignment_id)}`}/>} nativeButton={false} variant={lesson.state === "in_progress" ? "default" : "outline"} className="min-h-11 w-full justify-between sm:w-auto">{lesson.state === "in_progress" ? "Continue investigation" : lesson.state === "submitted" ? "Check submission status" : lesson.state === "reviewed" ? "View educator feedback" : "Start investigation"}<ArrowRight data-icon="inline-end"/></Button>
         </CardContent>
       </Card>
     </li>

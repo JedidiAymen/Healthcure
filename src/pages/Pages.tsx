@@ -592,8 +592,10 @@ function AcademyJourneyLesson({ lesson, index }: { lesson: StudentLearningPathLe
   const state = academyLessonState[lesson.state];
   const action = lesson.state === "in_progress"
     ? "Continue"
-    : lesson.state === "submitted" || lesson.state === "reviewed"
-      ? "View feedback"
+    : lesson.state === "submitted"
+      ? "Check submission status"
+      : lesson.state === "reviewed"
+        ? "View educator feedback"
       : "Investigate";
   return (
     <li className="academy-journey-stop">
@@ -2301,9 +2303,9 @@ export function Academy() {
   const nextActivity = progress.data.next_activity;
   const firstAssigned = challenges.data.find((challenge) => challenge.state !== "reviewed") ?? challenges.data[0];
   const academyAction = nextActivity
-    ? { to: `/academy/missions/${encodeURIComponent(nextActivity.assignment_id)}`, label: nextActivity.state === "resume" ? "Continue investigation" : nextActivity.state === "awaiting_review" ? "View educator feedback" : "Begin investigation" }
+    ? { to: `/academy/missions/${encodeURIComponent(nextActivity.assignment_id)}`, label: nextActivity.state === "resume" ? "Continue investigation" : nextActivity.state === "awaiting_review" ? "Check submission status" : "Begin investigation" }
     : firstAssigned
-      ? { to: `/academy/missions/${encodeURIComponent(firstAssigned.assignment_id)}`, label: firstAssigned.state === "in_progress" ? "Continue investigation" : firstAssigned.state === "submitted" || firstAssigned.state === "reviewed" ? "View educator feedback" : "Begin investigation" }
+      ? { to: `/academy/missions/${encodeURIComponent(firstAssigned.assignment_id)}`, label: firstAssigned.state === "in_progress" ? "Continue investigation" : firstAssigned.state === "submitted" ? "Check submission status" : firstAssigned.state === "reviewed" ? "View educator feedback" : "Begin investigation" }
       : paths.data.find((path) => path.lessons.length > 0)
         ? { to: `/academy/paths/${encodeURIComponent(paths.data.find((path) => path.lessons.length > 0)!.path_id)}`, label: "Explore your learning paths" }
         : { to: "#academy-pathways", label: "Explore learning paths" };
