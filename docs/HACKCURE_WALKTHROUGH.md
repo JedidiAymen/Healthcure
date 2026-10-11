@@ -17,6 +17,22 @@ The normal development app and the HackCure Docker profile use different SQLite 
 | Default development app | `data/local.sqlite3` | Present and source-matched | Not provisioned | Not published/assigned |
 | HackCure Docker profile | `data/hackcure-docker/medforge.sqlite3` | Missing | Not provisioned | Not published/assigned |
 
+### What is ready, and what still needs event-owner setup
+
+The product flow and its API controls are implemented: source-pair validation, reviewer-only decision routes, rationale validation, immutable review records, author-scoped history, admin oversight, JSON/FHIR export, and audit linkage. Automated API coverage exercises anonymous/student/educator denial, reviewer and admin access, and cross-reviewer isolation. That is implementation evidence; it does not prepare a database or create a usable reviewer login.
+
+| Gate for the selected Docker rehearsal | Current state | Who can close it |
+|---|---|---|
+| `pt_241` source manifest and archived `set_1` files | Present and checksum-verified by the Docker preflight | Ready on this host; recheck on the event machine |
+| Loopback-only Compose publication and read-only scientific data mounts | Passed by the Docker preflight | Ready on this host; recheck after changing Compose or the host |
+| Matching imported prediction and saved comparison report in `data/hackcure-docker/medforge.sqlite3` | Missing; the default development DB has these records, but it is a different DB | Event operator: start the Docker profile, sign in with a privately provisioned educator/admin account, import the exact `pt_241` `prediction-set_1.csv`, then save its comparison report |
+| Usable `clinical_reviewer` login in that same Docker DB | Missing | Event owner/operator: provision one interactively in the selected profile and keep its password private; the preflight intentionally reports presence only and never prints credentials |
+| Academy learner path | Optional and absent | Only if Academy is part of the presentation: event operator publishes a source-bounded lesson, provisions a student, and assigns the lesson in that same DB |
+| Second-machine, network-isolated rehearsal | Not verified | Event team: transfer the approved code/image/data bundle privately, restore on the actual presentation machine, disconnect venue internet, then rerun checks and rehearse |
+| Organizer track acceptance and external-use permission for installed research data | Not established by repository checks | Team/organizers and the relevant rights holder; keep the demo local until cleared |
+
+The current blocker is therefore event-profile state and rehearsal, not an absent reviewer feature. Do not copy the default development DB to the Docker profile as a shortcut: prepare and recheck the exact profile that will be presented.
+
 Run `npm run doctor -- --hackcure-preflight` to inspect the database selected by `MEDFORGE_DB_PATH` (the default is `data/local.sqlite3`). Run `bash scripts/hackcure_docker_preflight.sh` to inspect the separate Docker database. For the currently prepared same-machine DoseTwin comparison, start the default local app as documented in [`RUN_LOCAL.md`](../RUN_LOCAL.md); do not describe that as a ready Docker or second-machine rehearsal. The reviewer step still needs a private, operator-provisioned account in whichever database is used for the review.
 
 ## Proposal priorities against the current branch
@@ -28,8 +44,8 @@ The proposal's P0/P1 labels describe its older baseline. Current status on this 
 | P0 | Clinical Review Workspace | Implemented for an installed comparison: exact-case/artefact evidence, required rationale, immutable research dispositions, reviewer authorization, audit linkage, author-scoped history, JSON and FHIR R4 exports. The HackCure Docker database still needs its matching imported comparison/report and an operator-provisioned reviewer before the end-to-end event path is ready. |
 | P0 | Explainability and limitations | Partial. DoseTwin exposes source identity, units, ROI/voxel deltas, DVHs, method and provenance. It has no live MEDFORGE prediction, model confidence or clinical validation. |
 | P0 | Reproducible jury demo | Partial. A deterministic synthetic DoseTwin viewer and local Docker profile exist. A fresh same-host `--no-build --pull never` start and read-only source mounts were verified. This does not establish public-data rights, a second-machine restore or a complete reviewer-session rehearsal. |
-| P0 | Security baseline | Partial. Local profile includes API role/object checks, SQLCipher for the Docker database, TLS 1.3 at the local proxy and hash-linked audit records. This is not production identity, external deployment security, or a qualified privacy/legal review. |
-| P0 | CI/release repair | Current branch checks pass: hosted CI completed successfully on the walkthrough commit. A clean-clone/independent-machine reproducibility check and a submission release/tag remain unverified. |
+| P0 | Security baseline | Partial. Reviewer API authorization and object scoping are implemented; the default Docker profile uses SQLCipher, while the separate HackCure rehearsal overlay deliberately uses unencrypted host-bind-mounted SQLite for its read-only host preflight. Its local proxy provides TLS 1.3 and review actions use hash-linked audit records. This is not production identity, external deployment security, or a qualified privacy/legal review. |
+| P0 | CI/release repair | Hosted run `38100993035` for `56c8c17` is pending. Its predecessor `38100708890` failed because a mobile smoke test still expected a heading removed from the current home page; that focused check now passes locally after updating the assertion. Clean-clone and independent-machine reproducibility are unverified. |
 | P1 | FHIR-oriented export | Minimal FHIR R4 research-review export exists and was validated against the official R4 JSON schema. No hospital profile, live SIH endpoint or exchange has been tested. |
 | P1 | Source-bound guided scenario | The DoseTwin review interface provides the evidence-to-disposition journey. Its complete demonstration still depends on the local comparison/report/reviewer setup above. |
 | P1 | Docker and offline fallback | Partial. Local Compose and saved-image cold start were verified on this host. A second-machine restore and fully network-isolated rehearsal remain unverified. |

@@ -2,6 +2,14 @@
 
 Baseline branch `upgrade/hackcure-compliance`; its recorded Windows-demo results below are the integration baseline. UX-46 and subsequent follow-up notes are on `feat/experiments-run-workspace`.
 
+## Current follow-up — 2026-10-11
+
+- Pushed commits `389e4b9`, `6294770`, and `56c8c17` to `feat/experiments-run-workspace`. DoseTwin pointer selection now maps to the voxel cell under the cursor, including raster-cell boundaries; its focused unit suite passed (11 tests). The mobile shell browser check now asserts the actual current home heading; the focused Playwright case passed. Typecheck and `git diff --check` passed. Hosted CI for `56c8c17` is in progress; the previous run exposed the stale heading assertion and was superseded by the passing focused fix.
+- Added `npm run hackcure:preflight:docker` and `npm run hackcure:start:docker`, with matching commands in [`RUN_LOCAL.md`](../RUN_LOCAL.md). The preflight deliberately remains red until event data/account setup is complete. Current evidence: the default local DB has the matching `pt_241` import and saved comparison report but no reviewer account; the separate Docker rehearsal DB lacks the matching import, report, reviewer account, and optional assigned Academy lesson. Both preflights are read-only. No credentials or DB records were created.
+- The HackCure walkthrough now separates implemented permission/review features from event-owner setup, naming the exact same-profile import/report, private reviewer, optional Academy, second-machine rehearsal, and organizer/rightsholder gates. It also corrects the security description: SQLCipher applies to the default Docker profile; the HackCure overlay uses host-bound SQLite without encryption. See [`HACKCURE_WALKTHROUGH.md`](HACKCURE_WALKTHROUGH.md).
+- `origin/main` is an ancestor of this branch at the latest fetch; there are no main commits missing from this feature branch (`git rev-list --left-right --count origin/main...HEAD` returned `0 53`). No merge was needed.
+- **Next critical work:** complete the DoseTwin workstation correction and global selector fixes against their explicit acceptance criteria; continue the source-backed Academy/Educator redesign; then finish and rehearse the HackCure reviewer path using the event operator's private demo profile. A green shell check or working video source alone does not make the HackCure presentation ready.
+
 ## HackCure source availability follow-up (2026-10-11)
 
 - Surfaced the HackCure flagship review in the Professional Studio home screen. The card directs to the installed same-case `pt_241` review or to the case registry, and describes the evidence, comparison and human research-disposition steps. It explicitly distinguishes the publisher-archived prediction from live MEDFORGE inference and clarifies the Track 2/Track 3 claim boundary. The exact walkthrough and current readiness gates are in [`HACKCURE_WALKTHROUGH.md`](HACKCURE_WALKTHROUGH.md).
