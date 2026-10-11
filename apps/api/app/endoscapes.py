@@ -550,27 +550,45 @@ def installed_frame(frame_id: str | None = None) -> SurgicalFrameRecord | None:
 
 
 # Listing re-stats every image, which is slow on Docker Desktop bind mounts (about 10 s for 1,933
-# frames). The list is cached per manifest signature for a few minutes; opening a frame still
-# re-verifies its path, size and SHA-256 through _record().
+# frames). The list is cached per manifest signature and served immediately; once older than the
+# TTL it is refreshed in the background. Opening a frame still re-verifies its path, size and
+# SHA-256 through _record().
 CASE_LIST_TTL_SECONDS = 300.0
 _case_list_cache: tuple[Any, float, list[Case]] | None = None
 _case_list_lock = threading.Lock()
+_case_list_refreshing = threading.Event()
+
+
+def _refresh_case_list(signature: tuple[Any, ...]) -> list[Case]:
+    global _case_list_cache
+    result = _list_cases_uncached()
+    with _case_list_lock:
+        _case_list_cache = (signature, time.monotonic(), result)
+    return result
+
+
+def _background_refresh(signature: tuple[Any, ...]) -> None:
+    try:
+        _refresh_case_list(signature)
+    finally:
+        _case_list_refreshing.clear()
 
 
 def installed_cases() -> list[Case]:
     """List case metadata without rebuilding annotation records for each row."""
-    global _case_list_cache
     root = root_dir()
     signature = _manifest_signature(root) if root is not None else None
     if signature is None:
         return []
     with _case_list_lock:
         cached = _case_list_cache
-        if cached and cached[0] == signature and time.monotonic() - cached[1] < CASE_LIST_TTL_SECONDS:
-            return list(cached[2])
-        result = _list_cases_uncached()
-        _case_list_cache = (signature, time.monotonic(), result)
-        return list(result)
+    if cached and cached[0] == signature:
+        if time.monotonic() - cached[1] >= CASE_LIST_TTL_SECONDS and not _case_list_refreshing.is_set():
+            _case_list_refreshing.set()
+            threading.Thread(target=_background_refresh, args=(signature,), name="endoscapes-case-list-refresh", daemon=True).start()
+        return list(cached[2])
+    # Cold start or a changed manifest: build the list now.
+    return list(_refresh_case_list(signature))
 
 
 def _list_cases_uncached() -> list[Case]:
