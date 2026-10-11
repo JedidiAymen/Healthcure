@@ -30,6 +30,13 @@ describe("filterModelCatalog", () => {
     expect(filterModelCatalog(records, { module: "all", readiness: "all", search: "single-frame" }).map((x) => x.id)).toEqual(["gated-cvs"]);
   });
 
+  it("searches stable registry IDs and pinned source provenance", () => {
+    expect(filterModelCatalog(records, { module: "all", readiness: "all", search: "gated-cvs" }).map((x) => x.id)).toEqual(["gated-cvs"]);
+    expect(filterModelCatalog(records, { module: "all", readiness: "all", search: "rev-3" }).map((x) => x.id)).toEqual(["unverified-signal"]);
+    expect(filterModelCatalog(records, { module: "all", readiness: "all", search: "example.test/cvs" }).map((x) => x.id)).toEqual(["gated-cvs"]);
+    expect(filterModelCatalog(records, { module: "all", readiness: "all", search: "fistulaguard" }).map((x) => x.id)).toEqual(["unverified-signal"]);
+  });
+
   it("combines specialty and readiness filters using registry readiness only", () => {
     expect(filterModelCatalog(records, { module: "all", readiness: "ready", search: "" }).map((x) => x.id)).toEqual(["ready-dose"]);
     expect(filterModelCatalog(records, { module: "all", readiness: "gated", search: "" }).map((x) => x.id)).toEqual(["gated-cvs", "unverified-signal"]);
