@@ -35,7 +35,7 @@ gzip -t hackcure-images-<timestamp>.tar.gz
 gzip -dc hackcure-images-<timestamp>.tar.gz | docker image load
 ```
 
-Then check that all four image tags listed in the JSON manifest are present, restore and verify the separate data archive using the institution/team-approved transfer process, and run the HackCure Compose preflight. On 2026-10-11, a fresh local Compose project booted all four services with `--no-build --pull never`; `/healthz`, the `pt_241` browser route, and its source-backed viewer manifest returned HTTP 200. This confirms the host's saved images support a same-machine no-pull startup. It does not prove a second-machine restore, network-isolated boot, or successful data archive transfer. The Compose profile requires version 2.24.4 or newer; see [`RUN_LOCAL.md`](../RUN_LOCAL.md).
+Then check that all four image tags listed in the JSON manifest are present, restore and verify the separate data archive using the institution/team-approved transfer process, and run the HackCure Compose preflight. On 2026-10-11, a fresh local Compose project booted all four services with `--no-build --pull never`; module/case/video registries and the `pt_201` viewer manifest returned HTTP 200, while byte-range requests for both source videos returned HTTP 206. This confirms the host's saved images and mounted sources support a same-machine no-pull startup. It does not prove a second-machine restore, network-isolated boot, or successful data archive transfer. The Compose profile requires version 2.24.4 or newer; see [`RUN_LOCAL.md`](../RUN_LOCAL.md).
 
 ## Restore rehearsal without touching live state
 

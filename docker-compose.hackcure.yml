@@ -23,7 +23,16 @@ services:
       MEDFORGE_DB_PATH: /var/lib/medforge/hackcure/medforge.sqlite3
       MEDFORGE_LOCAL_DB_DIR: /var/lib/medforge/hackcure
       MEDFORGE_DB_KEY_FILE: ""
+      # pt_201 is a separate source-backed viewer case. Only pt_241 has the
+      # matching archived set_1 comparison files in this rehearsal profile.
+      MEDFORGE_OPENKBP_CASE_DIR: ""
+      MEDFORGE_OPENKBP_CASES_JSON: '{"openkbp:pt_201":"/medforge-datasets/openkbp/pt_201"}'
       MEDFORGE_OPENKBP_FULL_CASES_JSON: '{"openkbp:pt_241":"/datasets/openkbp-opt/pt_241"}'
+      MEDFORGE_ENDOSCAPES_ROOT: /medforge-datasets/endoscapes
+      MEDFORGE_FISAV_ROOT: /medforge-datasets/fisav
+      MEDFORGE_APPENDIX300_ROOT: /medforge-datasets/appendix300
+      MEDFORGE_CHOLECT50_VALIDATION_ROOT: /datasets/cholect50/challenge-validation
+      MEDFORGE_CHOLECT80_ROOT: /medforge-datasets/cholec80
     # The overlay deliberately uses plain SQLite for the host read-only preflight.
     # Remove the base profile's unused SQLCipher secret mount; no key is needed here.
     secrets: !reset []
@@ -31,3 +40,25 @@ services:
       - type: bind
         source: ${MEDFORGE_HACKCURE_DB_DIR:?Start with scripts/start_hackcure_docker.sh}
         target: /var/lib/medforge/hackcure
+      # These bind mounts resolve the host's local dataset symlinks before
+      # Docker starts. They add no copies and remain read-only in the container.
+      - type: bind
+        source: ${MEDFORGE_HACKCURE_OPENKBP_ROOT:?Start with scripts/start_hackcure_docker.sh}
+        target: /medforge-datasets/openkbp
+        read_only: true
+      - type: bind
+        source: ${MEDFORGE_HACKCURE_ENDOSCAPES_ROOT:?Start with scripts/start_hackcure_docker.sh}
+        target: /medforge-datasets/endoscapes
+        read_only: true
+      - type: bind
+        source: ${MEDFORGE_HACKCURE_FISAV_ROOT:?Start with scripts/start_hackcure_docker.sh}
+        target: /medforge-datasets/fisav
+        read_only: true
+      - type: bind
+        source: ${MEDFORGE_HACKCURE_APPENDIX300_ROOT:?Start with scripts/start_hackcure_docker.sh}
+        target: /medforge-datasets/appendix300
+        read_only: true
+      - type: bind
+        source: ${MEDFORGE_HACKCURE_CHOLECT80_ROOT:?Start with scripts/start_hackcure_docker.sh}
+        target: /medforge-datasets/cholec80
+        read_only: true

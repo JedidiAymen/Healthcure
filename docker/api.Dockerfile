@@ -23,6 +23,8 @@ COPY docker/api-entrypoint.sh /usr/local/bin/medforge-api
 RUN sed -i 's/\r$//' /usr/local/bin/medforge-api && chmod 0755 /usr/local/bin/medforge-api \
     && useradd --system --uid 10001 --home /var/lib/medforge medforge \
     && mkdir -p /var/lib/medforge/db /var/lib/medforge/dose-artifacts \
+       /medforge-datasets/openkbp /medforge-datasets/endoscapes /medforge-datasets/fisav \
+       /medforge-datasets/appendix300 /medforge-datasets/cholec80 \
     && chown -R medforge /var/lib/medforge
 
 USER medforge
