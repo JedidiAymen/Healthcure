@@ -295,7 +295,10 @@ def restore_check(archive_path: Path, root: Path = ROOT) -> dict[str, Any]:
         if required_manifest not in expected_asset_paths:
             raise BackupError("The source provenance manifest is missing from the archive.")
         source_manifest = extracted[required_manifest]
-        source_document = json.loads(source_manifest.read_text(encoding="utf8"))
+        try:
+            source_document = json.loads(source_manifest.read_text(encoding="utf8"))
+        except (OSError, ValueError) as exc:
+            raise BackupError("The restored source provenance manifest cannot be parsed as JSON.") from exc
         full_case = source_document.get("openkbp_full_case") if isinstance(source_document, dict) else None
         source_files = full_case.get("files") if isinstance(full_case, dict) else None
         if not isinstance(source_document, dict) or source_document.get("dataset_case_id") != "pt_241" or source_document.get("prediction_set") != "set_1" or not isinstance(source_files, list):

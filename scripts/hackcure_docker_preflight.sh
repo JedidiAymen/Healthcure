@@ -34,6 +34,22 @@ process.stdin.on("end", () => {
       throw new Error(`Compose service ${name} publishes a host port.`);
     }
   }
+  const apiMounts = config.services?.api?.volumes ?? [];
+  const requiredReadOnlyTargets = [
+    "/datasets",
+    "/medforge-datasets/openkbp",
+    "/medforge-datasets/endoscapes",
+    "/medforge-datasets/fisav",
+    "/medforge-datasets/appendix300",
+    "/medforge-datasets/cholec80",
+  ];
+  for (const target of requiredReadOnlyTargets) {
+    const mount = apiMounts.find((candidate) => candidate.type === "bind" && candidate.target === target);
+    if (!mount || mount.read_only !== true) {
+      throw new Error(`HackCure dataset bind mount ${target} is missing or not read-only.`);
+    }
+  }
+  console.log("HackCure API dataset mounts (read-only): PASS");
   console.log("HackCure Docker loopback configuration: PASS");
 });
 '
