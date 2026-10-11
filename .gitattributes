@@ -4,3 +4,4 @@ contracts/openapi-implemented.json text eol=lf
 packages/contracts/generated-api.ts text eol=lf
 # Shell entrypoints run inside Linux containers.
 *.sh text eol=lf
+docs/demo/*.mp4 filter=lfs diff=lfs merge=lfs -text

@@ -4,6 +4,8 @@
 
 AI is arriving in every medical specialty: dose prediction in radiotherapy, video analysis in surgery, signal analysis in vascular access. MEDFORGE trains clinicians to understand and question these tools instead of trusting them blindly. Every number on screen shows where it comes from and how it was computed. Reviewers measure where an AI output disagrees with the reference, and record an accountable human decision. Educators turn the same real cases into graded lessons. MEDFORGE is research and education software.
 
+**Demo video:** [`docs/demo/MEDFORGE_demo.mp4`](docs/demo/MEDFORGE_demo.mp4) (open it on GitHub and choose *View raw* or *Download* to play).
+
 ---
 
 ## What MEDFORGE does
