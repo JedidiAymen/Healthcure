@@ -690,7 +690,7 @@ function StudioDepartmentAtlas({ cases }: { cases: CaseRecord[] }) {
         </div>
         <Badge variant="outline" className="w-fit rounded-sm font-normal">Three independent research collections</Badge>
       </div>
-      <div className="grid min-w-0 gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+      <div className="grid min-w-0 gap-4 lg:grid-cols-2 xl:grid-cols-3">
         {sourceInventory.map(({ id, module, record, count }) => {
           const caseId = record?.id ?? "";
           const unavailable = !record;
