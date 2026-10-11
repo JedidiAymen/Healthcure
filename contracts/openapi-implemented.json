@@ -1881,6 +1881,20 @@
         "title": "EducatorCohortCreate",
         "type": "object"
       },
+      "EducatorCohortLearner": {
+        "additionalProperties": false,
+        "properties": {
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "display_name"
+        ],
+        "title": "EducatorCohortLearner",
+        "type": "object"
+      },
       "EducatorCohortMembership": {
         "additionalProperties": false,
         "properties": {
@@ -1893,6 +1907,38 @@
           "student_id"
         ],
         "title": "EducatorCohortMembership",
+        "type": "object"
+      },
+      "EducatorCohortRoster": {
+        "additionalProperties": false,
+        "properties": {
+          "cohort_id": {
+            "title": "Cohort Id",
+            "type": "string"
+          },
+          "cohort_name": {
+            "title": "Cohort Name",
+            "type": "string"
+          },
+          "learners": {
+            "items": {
+              "$ref": "#/components/schemas/EducatorCohortLearner"
+            },
+            "title": "Learners",
+            "type": "array"
+          },
+          "student_count": {
+            "title": "Student Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cohort_id",
+          "cohort_name",
+          "student_count",
+          "learners"
+        ],
+        "title": "EducatorCohortRoster",
         "type": "object"
       },
       "EducatorDraft": {
@@ -9380,6 +9426,59 @@
       }
     },
     "/api/v1/educator/cohorts/{cohort_id}/students": {
+      "get": {
+        "operationId": "educator_cohort_students_api_v1_educator_cohorts__cohort_id__students_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cohort_id",
+            "required": true,
+            "schema": {
+              "title": "Cohort Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EducatorCohortRoster"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Educator Cohort Students"
+      },
       "post": {
         "operationId": "educator_cohort_add_student_api_v1_educator_cohorts__cohort_id__students_post",
         "parameters": [

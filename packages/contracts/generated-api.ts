@@ -620,7 +620,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Educator Cohort Students */
+        get: operations["educator_cohort_students_api_v1_educator_cohorts__cohort_id__students_get"];
         put?: never;
         /** Educator Cohort Add Student */
         post: operations["educator_cohort_add_student_api_v1_educator_cohorts__cohort_id__students_post"];
@@ -2066,10 +2067,26 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** EducatorCohortLearner */
+        EducatorCohortLearner: {
+            /** Display Name */
+            display_name: string;
+        };
         /** EducatorCohortMembership */
         EducatorCohortMembership: {
             /** Student Id */
             student_id: string;
+        };
+        /** EducatorCohortRoster */
+        EducatorCohortRoster: {
+            /** Cohort Id */
+            cohort_id: string;
+            /** Cohort Name */
+            cohort_name: string;
+            /** Learners */
+            learners: components["schemas"]["EducatorCohortLearner"][];
+            /** Student Count */
+            student_count: number;
         };
         /** EducatorDraft */
         EducatorDraft: {
@@ -5366,6 +5383,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EducatorCohort"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    educator_cohort_students_api_v1_educator_cohorts__cohort_id__students_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                cohort_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EducatorCohortRoster"];
                 };
             };
             /** @description Validation Error */
