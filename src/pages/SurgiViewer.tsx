@@ -74,8 +74,8 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
   const [publicClipLoading,setPublicClipLoading]=useState(true)
   const [showPublicClip,setShowPublicClip]=useState(false)
   const publicVideoRef=useRef<HTMLVideoElement>(null)
-  const [publicVideoNode,setPublicVideoNode]=useState<HTMLVideoElement|null>(null)
-  const registerPublicVideo=useCallback((node:HTMLVideoElement|null)=>{publicVideoRef.current=node;setPublicVideoNode(node)},[])
+  const [publicVideoMountEpoch,setPublicVideoMountEpoch]=useState(0)
+  const registerPublicVideo=useCallback((node:HTMLVideoElement|null)=>{publicVideoRef.current=node;if(node)setPublicVideoMountEpoch(epoch=>epoch+1)},[])
   const publicVideoRegionRef=useRef<HTMLDivElement>(null)
   const [publicClipCurrentSecond,setPublicClipCurrentSecond]=useState(0)
   const [pendingClipSeek,setPendingClipSeek]=useState(false)
@@ -92,7 +92,7 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
   const sourcePhase=sourcePhaseTrack.find(interval=>interval.first_frame<=sourcePhaseFrame&&interval.last_frame>=sourcePhaseFrame)
   useEffect(()=>{
     if(!pendingClipSeek||!showPublicClip||!publicClipAnnotation)return
-    const video=publicVideoNode
+    const video=publicVideoRef.current
     if(!video)return
     const seekToEvent=()=>{
       video.currentTime=publicClipAnnotation.timestamp_seconds
@@ -102,10 +102,10 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
     if(video.readyState>=1){seekToEvent();return}
     video.addEventListener('loadedmetadata',seekToEvent,{once:true})
     return()=>video.removeEventListener('loadedmetadata',seekToEvent)
-  },[pendingClipSeek,showPublicClip,publicClipAnnotation,publicVideoNode])
+  },[pendingClipSeek,showPublicClip,publicClipAnnotation,publicVideoMountEpoch])
   useEffect(()=>{
     if(!showPublicClip)return
-    const video=publicVideoNode
+    const video=publicVideoRef.current
     if(!video)return
     const updateTime=(second:number)=>setPublicClipCurrentSecond(current=>Math.abs(current-second)<0.001?current:second)
     // `requestVideoFrameCallback` is the best clock while playback is running,
@@ -128,7 +128,7 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
       return()=>{active=false;video.cancelVideoFrameCallback(callbackId);video.removeEventListener('timeupdate',onMediaTimeChange);video.removeEventListener('seeked',onMediaTimeChange);video.removeEventListener('loadedmetadata',onMediaTimeChange)}
     }
     return()=>{video.removeEventListener('timeupdate',onMediaTimeChange);video.removeEventListener('seeked',onMediaTimeChange);video.removeEventListener('loadedmetadata',onMediaTimeChange)}
-  },[showPublicClip,publicClip?.clip_id,publicVideoNode])
+  },[showPublicClip,publicClip?.clip_id,publicVideoMountEpoch])
   const [imageUrl,setImageUrl]=useState('')
   const [imageError,setImageError]=useState('')
   const [imageSize,setImageSize]=useState<{width:number;height:number}|null>(null)
