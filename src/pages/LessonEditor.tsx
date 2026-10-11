@@ -55,6 +55,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { ResearchCasePicker } from "@/components/ResearchCasePicker";
 import { EducatorSourcePreview } from "@/components/EducatorSourcePreview";
 import { Toggle } from "@/components/ui/toggle";
@@ -575,26 +576,44 @@ export function LessonEditorPage() {
                   items={draft.blocks.map((block) => block.id)}
                   strategy={verticalListSortingStrategy}
                 >
-                  <div className="mt-2 grid gap-2">
-                    {draft.blocks.map((block, index) => (
-                      <SortableLessonBlock
-                        key={block.id}
-                        block={block}
-                        index={index}
-                        count={draft.blocks.length}
-                        onShift={(direction) => shift(index, direction)}
-                        onRemove={() =>
-                          update({
-                            ...draft,
-                            blocks: draft.blocks.filter((_, i) => i !== index),
-                          })
-                        }
-                        onChange={(field, value) =>
-                          setBlock(index, field, value)
-                        }
-                      />
-                    ))}
-                  </div>
+                  {draft.blocks.length ? (
+                    <div className="mt-2 grid gap-2">
+                      {draft.blocks.map((block, index) => (
+                        <SortableLessonBlock
+                          key={block.id}
+                          block={block}
+                          index={index}
+                          count={draft.blocks.length}
+                          onShift={(direction) => shift(index, direction)}
+                          onRemove={() =>
+                            update({
+                              ...draft,
+                              blocks: draft.blocks.filter((_, i) => i !== index),
+                            })
+                          }
+                          onChange={(field, value) =>
+                            setBlock(index, field, value)
+                          }
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <Empty className="mt-3 min-h-64 rounded-xl border border-dashed border-primary/30 bg-card px-5 py-10">
+                      <EmptyHeader>
+                        <EmptyMedia variant="icon" className="size-11 rounded-xl bg-primary/10 text-primary">
+                          <Layers3 />
+                        </EmptyMedia>
+                        <EmptyTitle>No lesson steps yet</EmptyTitle>
+                        <EmptyDescription>
+                          Build an evidence path for learners. Start with an instruction, then add source views, observations, or questions from the block library.
+                        </EmptyDescription>
+                      </EmptyHeader>
+                      <Button type="button" size="sm" onClick={() => add("Instruction")}>
+                        <Plus data-icon="inline-start" />
+                        Add the first step
+                      </Button>
+                    </Empty>
+                  )}
                 </SortableContext>
               </DndContext>
             </div>

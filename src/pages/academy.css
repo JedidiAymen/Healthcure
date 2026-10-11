@@ -591,14 +591,62 @@
 }
 
 .academy-path-hero {
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, .45fr);
-  align-items: end;
-  gap: 24px;
-  padding: 27px 30px;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, .55fr);
+  align-items: stretch;
+  gap: 12px;
+  padding: 12px;
   border: 1px solid var(--academy-rule);
-  border-radius: 18px;
+  border-radius: 16px;
+  background: linear-gradient(112deg, #fff8ed 0%, #fffdf8 68%, #f4ede2 100%);
+}
+
+.academy-path-hero-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 22px 22px 24px;
+}
+
+.academy-path-count-panel {
+  align-self: stretch;
+  padding: 20px;
+  border: 1px solid #e8ded2;
+  border-radius: 12px;
   background: #fff;
+}
+
+.academy-path-panel-label {
+  margin: 0;
+  color: var(--academy-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .035em;
+}
+
+.academy-path-release-count {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  margin: 4px 0 0;
+  color: #1d2740;
+  font-family: var(--font-academy-display);
+  font-size: 38px;
+  font-weight: 700;
+  letter-spacing: -.055em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.academy-path-release-count span {
+  color: var(--academy-muted);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0;
 }
 
 .academy-path-hero h1 {
@@ -619,23 +667,26 @@
 
 .academy-path-counts {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px 14px;
-  margin: 0;
-  padding-left: 18px;
-  border-left: 2px solid #3552d7;
-  font-size: 13px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 17px 0 0;
+  padding: 14px 0 0;
+  border-top: 1px solid var(--academy-rule);
 }
 
 .academy-path-counts dt {
   color: var(--academy-muted);
+  font-size: 11px;
+  line-height: 1.35;
 }
 
 .academy-path-counts dd {
-  margin: 0;
-  text-align: right;
+  margin: 5px 0 0;
+  color: #3552d7;
+  font-size: 23px;
+  font-weight: 650;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
-  font-weight: 600;
 }
 
 .academy-path-layout {
@@ -864,8 +915,17 @@
 
   .academy-path-hero {
     grid-template-columns: 1fr;
-    gap: 18px;
-    padding: 22px 20px;
+    gap: 0;
+    padding: 8px;
+  }
+
+  .academy-path-hero-copy {
+    padding: 18px 14px 20px;
+  }
+
+  .academy-path-count-panel {
+    margin: 0 6px 6px;
+    padding: 16px;
   }
 
   .academy-path-hero h1 {
@@ -873,7 +933,12 @@
   }
 
   .academy-path-counts {
-    max-width: 430px;
+    max-width: none;
+    gap: 6px;
+  }
+
+  .academy-path-counts dt {
+    font-size: 10px;
   }
 
   .academy-lesson-detail {
