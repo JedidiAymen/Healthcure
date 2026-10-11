@@ -73,7 +73,7 @@ Use this profile when the rehearsal must run in Docker and the host preflight mu
 Prepare the Docker images and the local `pt_241` source files on this machine before rehearsal. The launcher below does not build or pull images; it verifies the resolved Compose ports, starts only already available images, and waits up to 120 seconds for the services to run and the API health check to pass before printing the app URL. A timeout returns an error instead of reporting the stack ready. It creates the ignored `data/hackcure-docker/` directory when needed. The app applies its normal database schema migrations at startup but does **not** seed student, educator, reviewer, or admin accounts. Do not provision reviewer/student accounts as part of this setup unless the people responsible for the rehearsal explicitly arrange that separately.
 
 ```sh
-./scripts/start_hackcure_docker.sh
+npm run hackcure:start:docker
 ```
 
 Open the local app at <https://localhost:8443/studio/dosetwin/cases/openkbp%3Apt_241>. Caddy uses its local certificate authority for `localhost`; trust that certificate on the demo machine before the presentation. Stop the stack with:
@@ -87,7 +87,7 @@ This profile deliberately uses a host-bind-mounted, unencrypted SQLite demo data
 The Compose profile maps `openkbp:pt_241` to `/datasets/openkbp-opt/pt_241` for the API. The companion `scripts/hackcure_docker_preflight.sh` resolves that same source directory on the host and checks `data/hackcure-docker/medforge.sqlite3` with SQLite read-only/query-only settings:
 
 ```sh
-./scripts/hackcure_docker_preflight.sh
+npm run hackcure:preflight:docker
 ```
 
 The first run is expected to report missing imported comparison state and reviewer credentials. It does not create them. The Docker preflight checks the rendered Compose host ports and the source/database profile; its doctor output also reports the development launcher's loopback setting. A passing preflight still does not replace an interactive Docker rehearsal. `start_hackcure_docker.sh` independently checks the rendered Compose config and refuses to start if any host-published port is not bound to `127.0.0.1`.
