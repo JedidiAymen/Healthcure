@@ -94,7 +94,7 @@ test('home resumes the latest completed source-backed case summary', async ({ pa
 test('small phone viewport keeps the app shell within the screen', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: /clinical research, grounded in evidence/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /clinical teams, working from evidence/i })).toBeVisible()
   const pageWidth = await page.evaluate(() => document.documentElement.scrollWidth)
   expect(pageWidth).toBeLessThanOrEqual(390)
 })
