@@ -31,7 +31,7 @@ def test_seed_is_idempotent_and_prints_passwords_once(tmp_path):
     env = _env(tmp_path, db)
     first = _run(env)
     assert first.returncode == 0, first.stderr
-    assert 'demo-educator' in first.stdout and 'demo-student' in first.stdout
+    assert 'demo-educator' in first.stdout and 'demo-student' in first.stdout and 'demo-reviewer' in first.stdout
     assert 'created DRAFT: Reading a dose-volume histogram' in first.stdout
     assert 'skipped fistulaguard' in first.stdout and 'skipped surgivision' in first.stdout
 
@@ -41,7 +41,8 @@ def test_seed_is_idempotent_and_prints_passwords_once(tmp_path):
     assert 'kept DRAFT: Reading a dose-volume histogram' in second.stdout
 
     with sqlite3.connect(db) as conn:
-        assert conn.execute('SELECT count(*) FROM local_credentials').fetchone()[0] == 2
+        assert conn.execute('SELECT count(*) FROM local_credentials').fetchone()[0] == 3
+        assert conn.execute("SELECT count(*) FROM role_grants WHERE role='clinical_reviewer'").fetchone()[0] == 1
         assert conn.execute('SELECT count(*) FROM learning_cohorts').fetchone()[0] == 1
         assert conn.execute('SELECT count(*) FROM learning_cohort_memberships').fetchone()[0] == 1
         assert conn.execute('SELECT count(*) FROM educator_drafts').fetchone()[0] == 1

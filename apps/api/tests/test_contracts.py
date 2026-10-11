@@ -477,6 +477,10 @@ def test_authentic_fisav_learning_delivery_with_delayed_reference_release(client
         'title':draft.json()['title'],'case_id':draft.json()['case_id'],'content':draft.json()['content'],'expected_revision':2})
     assert corrected.status_code==200
     publish_request={'source_terms_confirmed':True,'source_review_note':'CC BY 4.0 attribution reviewed for this local learning use.'}
+    # The preview opened at revision 1 is stale after two edits; the server refuses until revision 3 is previewed.
+    stale=client.post(f'/api/v1/educator/drafts/{draft_id}/publish',headers=educator,json=publish_request)
+    assert stale.status_code==409 and stale.json()['detail']['code']=='PREVIEW_REQUIRED'
+    assert client.get(f'/api/v1/educator/drafts/{draft_id}/preview',headers=educator).status_code==200
     published=client.post(f'/api/v1/educator/drafts/{draft_id}/publish',headers=educator,json=publish_request)
     assert published.status_code==200,published.text
     version=published.json()
@@ -633,6 +637,7 @@ def test_authentic_fisav_learning_delivery_with_delayed_reference_release(client
             'title':'Observe an annotated surgical frame','case_id':endo_case['id'],
             'content':{'rubric':'Explain the visible evidence and its limits.','rubric_criteria':RUBRIC,'blocks':[{'id':'question','type':'Question','title':'What can you support?','content':'Describe visible evidence without claiming surgical clearance.'},{'id':'reference','type':'Reveal','title':'Reference annotations','content':'Compare your observations with the source labels after review.'}]}})
         assert endo_draft.status_code==201,endo_draft.text
+        assert client.get(f"/api/v1/educator/drafts/{endo_draft.json()['id']}/preview",headers=educator).status_code==200
         endo_publish=client.post(f"/api/v1/educator/drafts/{endo_draft.json()['id']}/publish",headers=educator,json={
             'source_terms_confirmed':True,'source_review_note':'Non-commercial research attribution and permitted classroom access reviewed.'})
         assert endo_publish.status_code==200,endo_publish.text
@@ -1010,6 +1015,10 @@ def test_endoscapes_manifest_exposes_only_verified_sampled_frames(monkeypatch,tm
     assert response.status_code==200
     assert response.json()['annotations'][0]['segmentation']=={'size':[480,854],'counts':'def'}
     (split/'4_26200.jpg').write_bytes(b'altered')
+    # Opening a frame re-verifies it at once; the cached case list catches up when its TTL expires.
+    assert client.get('/api/v1/surgivision/frames/4_26200').status_code==404
+    import app.endoscapes as endoscapes_module
+    endoscapes_module._case_list_cache=None
     cases=client.get('/api/v1/cases').json()
     assert len(cases)==1 and cases[0]['id']=='endoscapes:train:13_46850'
 

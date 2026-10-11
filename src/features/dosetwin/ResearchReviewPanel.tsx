@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { ClipboardCheck, Crosshair, Download, History, ShieldAlert } from "lucide-react"
-import { api, type ResearchReview, type ResearchReviewCreate, type ResearchReviewDecision, type VoxelDifference } from "@/lib/api"
+import { api, type AuditVerification, type ResearchReview, type ResearchReviewCreate, type ResearchReviewDecision, type VoxelDifference } from "@/lib/api"
 import { useSession } from "@/lib/session"
 import { ProvenanceBadge } from "@/components/ProvenanceBadge"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -12,7 +12,7 @@ import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 
-type Props = { caseId: string; artifactId: string; roi: string; axis: 0 | 1 | 2; index: number }
+type Props = { caseId: string; artifactId: string; roi: string; axis: 0 | 1 | 2; index: number; onReopen?: (review: ResearchReview) => void }
 
 const DECISIONS: { value: ResearchReviewDecision; label: string }[] = [
   { value: "accept_for_further_expert_assessment", label: "Accept for further expert assessment" },
@@ -32,7 +32,7 @@ function voxelFor(axis: 0 | 1 | 2, index: number, a: number, b: number): [number
   return axis === 0 ? [index, a, b] : axis === 1 ? [a, index, b] : [a, b, index]
 }
 
-export function ResearchReviewPanel({ caseId, artifactId, roi, axis, index }: Props) {
+export function ResearchReviewPanel({ caseId, artifactId, roi, axis, index, onReopen }: Props) {
   const { user, requestResearchSignIn } = useSession()
   const canReview = user?.role === "clinical_reviewer" || user?.role === "admin"
   const queryClient = useQueryClient()
@@ -44,6 +44,7 @@ export function ResearchReviewPanel({ caseId, artifactId, roi, axis, index }: Pr
   const [saved, setSaved] = useState<ResearchReview | null>(null)
   const [error, setError] = useState("")
   const [busy, setBusy] = useState(false)
+  const [audit, setAudit] = useState<AuditVerification | null>(null)
   const history = useQuery({ queryKey: ["researchReviews", caseId, artifactId, user?.id ?? "anonymous"], queryFn: () => api.researchReviews(caseId, artifactId), enabled: canReview, retry: false })
   const ready = decision !== null && rationale.trim().length >= 10 && !busy
 
@@ -62,6 +63,11 @@ export function ResearchReviewPanel({ caseId, artifactId, roi, axis, index }: Pr
       await queryClient.invalidateQueries({ queryKey: ["researchReviews", caseId, artifactId] })
     } catch (e) { setError(e instanceof Error ? e.message : "The research review could not be recorded") }
     finally { setBusy(false) }
+  }
+  const verifyAudit = async () => {
+    setError("")
+    try { setAudit(await api.auditVerify()) }
+    catch (e) { setError(e instanceof Error ? e.message : "The audit log could not be verified") }
   }
   const exportDocument = async (review: ResearchReview, format: "export" | "fhir") => {
     try { download(`${review.id}-${format === "fhir" ? "fhir-r4" : "report"}.json`, await api.researchReviewDocument(review.id, format)) }
@@ -111,6 +117,7 @@ export function ResearchReviewPanel({ caseId, artifactId, roi, axis, index }: Pr
 
         <section className="grid gap-2" aria-label="Review history">
           <h4 className="m-0 flex items-center gap-2 text-sm font-semibold"><History aria-hidden className="size-4" />Review history</h4>
+          {canReview && <div className="flex flex-wrap items-center gap-2"><Button type="button" size="sm" variant="outline" onClick={() => void verifyAudit()}>Verify audit log</Button>{audit && <span role="status" className={audit.ok ? "text-sm text-primary" : "text-sm text-destructive"}>{audit.ok ? `Hash chain verified: ${audit.entries} entries, head ${audit.head_hash?.slice(0, 12) ?? "none"}...` : `Chain broken at entry ${audit.first_broken_id}: ${audit.reason}`}</span>}</div>}
           {history.error && <p className="m-0 text-sm text-muted-foreground">{history.error.message}</p>}
           {history.data?.length === 0 && <p className="m-0 text-sm text-muted-foreground">No research review has been recorded for this prediction yet.</p>}
           <ul className="m-0 grid list-none gap-2 p-0">
@@ -119,6 +126,7 @@ export function ResearchReviewPanel({ caseId, artifactId, roi, axis, index }: Pr
               <p className="m-0 text-sm">{review.rationale}</p>
               <p className="m-0 text-xs text-muted-foreground">{review.reviewer_name} · mean {review.evidence.reference_mean_gy.toFixed(2)} vs {review.evidence.prediction_mean_gy.toFixed(2)} Gy (difference {review.evidence.mean_delta_gy >= 0 ? "+" : ""}{review.evidence.mean_delta_gy.toFixed(2)} Gy){review.supersedes_id ? " · revises an earlier review" : ""}</p>
               <div className="flex flex-wrap gap-2">
+                {onReopen && <Button type="button" size="sm" variant="outline" onClick={() => onReopen(review)}>Reopen view</Button>}
                 <Button type="button" size="sm" variant="outline" onClick={() => setSupersedes(review)}>Revise</Button>
                 <Button type="button" size="sm" variant="outline" onClick={() => void exportDocument(review, "export")}><Download data-icon="inline-start" />Report JSON</Button>
                 <Button type="button" size="sm" variant="outline" onClick={() => void exportDocument(review, "fhir")}><Download data-icon="inline-start" />FHIR R4</Button>

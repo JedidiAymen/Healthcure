@@ -387,6 +387,9 @@ def register_learning_routes(app: FastAPI, db: Callable, list_cases: Callable[[]
             raise HTTPException(409, detail={"code": "SOURCE_UNAVAILABLE", "message": "The selected source is no longer installed"})
         license_label, review, _ = _case_terms(case)
         content = json.loads(draft[4])
+        with db() as conn:
+            conn.execute("""INSERT INTO educator_draft_previews(draft_id,revision) VALUES (?,?)
+                            ON CONFLICT(draft_id) DO UPDATE SET revision=excluded.revision,previewed_at=CURRENT_TIMESTAMP""", (draft_id, draft[5]))
         return {
             "title": draft[3], "module": draft[6], "case_id": case.id,
             "case_label": case.label, "dataset_id": case.dataset_id,
@@ -427,6 +430,9 @@ def register_learning_routes(app: FastAPI, db: Callable, list_cases: Callable[[]
                 raise HTTPException(422, detail={"code": "CVS_SELF_CHECK_MODULE", "message": "CVS self-check blocks need an Endoscapes SurgiVision frame"})
             if not any(b["content"].strip() for b in content["blocks"] if b["type"] != "Reveal"):
                 raise HTTPException(422, detail={"code": "LEARNER_CONTENT_REQUIRED", "message": "Add learner-visible instructions or questions"})
+            previewed = conn.execute("SELECT revision FROM educator_draft_previews WHERE draft_id=?", (draft_id,)).fetchone()
+            if previewed is None or previewed[0] != draft[5]:
+                raise HTTPException(409, detail={"code": "PREVIEW_REQUIRED", "message": "Open the learner-safe preview of the current revision before publishing"})
             mapping = conn.execute(
                 "SELECT lesson_id FROM educator_draft_publications WHERE draft_id=?", (draft_id,)
             ).fetchone()

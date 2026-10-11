@@ -3,9 +3,10 @@ import { useQueries, useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { Activity, CircleAlert, Database, Expand, Eye, EyeOff, Layers3, LoaderCircle, Move, ZoomIn, ZoomOut } from 'lucide-react'
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts'
-import { api, type DvhSummary, type StudentDoseViewerEvidence, type VoxelSlice, type ViewerEvidenceState } from '../lib/api'
+import { api, type DvhSummary, type ResearchReview, type StudentDoseViewerEvidence, type VoxelSlice, type ViewerEvidenceState } from '../lib/api'
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
+import { ProvenanceBadge } from '@/components/ProvenanceBadge'
 import { Field, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -45,6 +46,7 @@ function DoseScaleLegend({doseMaxGy,synthetic,selectedRois}:{doseMaxGy:number;sy
   <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-muted-foreground"><span>{synthetic?'Synthetic illustrative dose scale · not physical Gy':'OpenKBP reference dose · fixed case scale'}</span><span className="font-mono">Maximum {doseMaxGy.toFixed(1)} {unit}</span></div>
   <div className="h-2.5 rounded-sm" aria-hidden="true" style={{background:'linear-gradient(90deg, rgb(58,77,207) 0%, rgb(32,157,190) 38%, rgb(239,139,91) 72%, rgb(255,222,134) 100%)'}}/>
   <div className="flex items-center justify-between font-mono text-[10px] text-muted-foreground"><span>0 {unit}</span><span>{(doseMaxGy*.5).toFixed(1)} {unit}</span><span>{doseMaxGy.toFixed(1)} {unit}</span></div>
+  {!synthetic&&<ProvenanceBadge kind="SOURCE_BENCHMARK" detail="OpenKBP reference dose array"/>}
   <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground">{selectedRois.map(name=><span key={name} className="flex items-center gap-2"><i className="size-2 rounded-full" style={{backgroundColor:`rgb(${roiColors[name]?.join(',')??'130,190,220'})`}}/>{name} boundary</span>)}</div>
  </div>
 }
@@ -157,6 +159,12 @@ export function DoseViewer({caseId,onEvidenceChange,viewerEvidence,locked=false,
  const [activeAxis,setActiveAxis]=useState<Axis>(savedState?.axis??2)
  const [is3dOpen,setIs3dOpen]=useState(false)
  const [inspectionTab,setInspectionTab]=useState('measurements')
+ // Replays a recorded research review: its structure, plane, slice and inspected voxel.
+ const reopenReview=(review:ResearchReview)=>{
+  const view=review.evidence.view,axis:Axis=view.axis===0||view.axis===1||view.axis===2?view.axis:2
+  setRoi(review.evidence.roi);setSelectedRois([review.evidence.roi]);setActiveAxis(axis)
+  setCoordinates(current=>{const next=[...(review.evidence.voxel?.voxel??current)] as Voxel;if(!review.evidence.voxel&&typeof view.index==='number')next[axis]=view.index;return next})
+ }
  const [zoom,setZoom]=useState(1)
  const [pan,setPan]=useState({x:0,y:0})
  const [panMode,setPanMode]=useState(false)
@@ -231,7 +239,7 @@ export function DoseViewer({caseId,onEvidenceChange,viewerEvidence,locked=false,
     </TabsContent>
     {!locked&&!guided&&!viewerOnly&&<TabsContent value="comparison" className="w-full min-w-0">
      <div className="mb-4"><h4 className="m-0 text-sm font-semibold">Compare a real dose prediction</h4><p className="m-0 mt-1 text-xs text-muted-foreground">Aligned same-case arrays with per-structure deltas. Predictions are shown only when an authentic compatible artifact is available.</p></div>
-     {activeDvh&&<Suspense fallback={<div role="status" className="flex items-center gap-2 py-10 text-sm text-muted-foreground"><LoaderCircle className="size-4 animate-spin"/>Loading comparison tools…</div>}><DoseTwinComparisonPanel caseId={caseId} roi={roi} axis={activeAxis} index={coordinates[activeAxis]} spacingMm={activeDvh.spacing_mm}/></Suspense>}
+     {activeDvh&&<Suspense fallback={<div role="status" className="flex items-center gap-2 py-10 text-sm text-muted-foreground"><LoaderCircle className="size-4 animate-spin"/>Loading comparison tools…</div>}><DoseTwinComparisonPanel caseId={caseId} roi={roi} axis={activeAxis} index={coordinates[activeAxis]} spacingMm={activeDvh.spacing_mm} onReopenReview={reopenReview}/></Suspense>}
     </TabsContent>}
     <TabsContent value="source" className="grid w-full min-w-0 gap-3">
      {activeDvh&&<><div className="grid gap-2 rounded-lg border border-border bg-background px-4 py-3" aria-label="Dose display legend"><div className="flex items-center justify-between text-xs text-muted-foreground"><span>{synthetic?'Synthetic illustrative dose scale · not physical Gy':'OpenKBP reference dose · fixed case scale'}</span><span className="font-mono">0–{activeDvh.dose_display_max_gy.toFixed(1)} {synthetic?'synthetic scale units':'Gy'}</span></div><div className="h-3 rounded-sm" style={{background:'linear-gradient(90deg, rgb(58,77,207) 0%, rgb(32,157,190) 38%, rgb(239,139,91) 72%, rgb(255,222,134) 100%)'}}/><div className="flex items-center justify-between font-mono text-[10px] text-muted-foreground"><span>0 {synthetic?'units':'Gy'}</span><span>{(activeDvh.dose_display_max_gy*.5).toFixed(1)} {synthetic?'units':'Gy'}</span><span>{activeDvh.dose_display_max_gy.toFixed(1)} {synthetic?'units':'Gy'}</span></div><div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">{selectedRois.map(name=><span key={name} className="flex items-center gap-2"><i className="size-2 rounded-full" style={{backgroundColor:`rgb(${roiColors[name]?.join(',')??'130,190,220'})`}}/>{name} boundary</span>)}</div></div><div className="rounded-lg border border-border bg-background p-3 sm:flex sm:items-center sm:justify-between sm:gap-4 sm:px-4"><div className="flex items-start gap-2 text-sm"><Database className="mt-0.5 size-4 shrink-0 text-primary"/><div><p className="m-0 font-medium">{synthetic?'Synthetic phantom arrays':'OpenKBP reference arrays'}</p><p className="m-0 mt-1 text-xs text-muted-foreground">{activeDvh.origin} · revision <span className="font-mono">{activeDvh.source_revision}</span></p></div></div><details className="mt-3 text-xs text-muted-foreground sm:mt-0"><summary className="cursor-pointer">View {synthetic?'deterministic':'source'} SHA-256 hashes</summary><div className="mt-2 grid gap-1 font-mono text-[10px] break-all"><code>{synthetic?'synthetic dose volume':'dose.csv'} {activeDvh.dose_sha256}</code><code>{synthetic?'synthetic CT volume':'ct.csv'} {ctHash}</code>{dvhRecords.map(item=><code key={item.roi}>{synthetic?'mask':'ROI'} {item.roi} {item.roi_sha256}</code>)}</div></details></div><>{synthetic?<p className="m-0 px-1 text-xs font-medium text-amber-900">SYNTHETIC PHANTOM · NOT ANATOMY · NOT A TREATMENT PLAN · arbitrary synthetic dose scale, not physical Gy · relative water density, not CT HU · no patient-space orientation</p>:<><p className="m-0 px-1 text-xs text-muted-foreground">Benchmark reference dose is not a delivered clinical plan · processed-grid coordinates only · axis orientation unknown</p><Alert className="border-amber-300 bg-amber-50 text-amber-950"><CircleAlert/><AlertTitle>OpenKBP dataset terms are not confirmed</AlertTitle><AlertDescription>The repository’s MIT license applies to its code; it does not establish rights for these dataset files. Keep this case in local research and education use. Do not redistribute it or show it externally until the dataset terms are reviewed. <a className="font-medium underline underline-offset-4" href="https://github.com/ababier/open-kbp/tree/ce625e62f3b04203f22bd9d1634f3e8fb0245e46" target="_blank" rel="noreferrer">View the pinned source revision</a>.</AlertDescription></Alert></>}</></>}

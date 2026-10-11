@@ -1,13 +1,13 @@
 # Demo data policy
 
-What each dataset may show, and where. **The deployment is local only**: the demo PC runs the Docker stack. There is no public or hosted site (decision of 2026-10-10, recorded in `docs/FLAGSHIP_DECISION.md`).
+What each dataset may show, and where. **The deployment is local only**: the demo PC runs the Docker stack. There is no public or hosted site.
 
-Licence terms below come from each source's own documentation, as recorded in `docs/BLOCKERS.md` and the dataset manifests under `data/`. Anything marked *verify* has not been confirmed on this machine.
+Licence terms below come from each source's own documentation, as recorded in the dataset manifests under `data/`. Anything marked *verify* has not been confirmed on this machine.
 
 | Dataset | Licence and terms | Local Docker demo (jury, on the demo PC) | Screenshots or slides | Public or hosted | Attribution to show |
 |---|---|---|---|---|---|
 | OpenKBP `pt_201` (DoseTwin) | No dataset licence was found. The repository's MIT licence covers code only. Personal hackathon use. | Yes, from read-only mounts | Avoid raw CT and dose images in slides that leave the room. Prefer numbers (DVH values, cross-check table) or a labelled synthetic phantom. | No | OpenKBP repository and pinned commit (shown in the app) |
-| OpenKBP-Opt `pt_241` reference and archived set_1 prediction (DoseTwin) | Archive data terms not established (`docs/BLOCKERS.md`) | Yes, if installed on the demo PC, badged ARCHIVED PREDICTION (not our inference) | Same as above | No | OpenKBP-Opt repository; state "archived prediction, checkpoint hash not published" |
+| OpenKBP-Opt `pt_241` reference and archived set_1 prediction (DoseTwin) | Archive data terms not established | Yes, if installed on the demo PC, badged ARCHIVED PREDICTION (not our inference) | Same as above | No | OpenKBP-Opt repository; state "archived prediction, checkpoint hash not published" |
 | Endoscapes (SurgiVision) | CC BY-NC-SA 4.0, non-commercial scientific research | Yes, non-commercial hackathon demo | Allowed with attribution, non-commercial only, and share-alike for derived images | No (no redistribution of the sample) | Endoscapes authors and licence (shown in the app) |
 | Appendix300 clip (SurgiVision) | CC BY 4.0 | Yes | Yes, with attribution | Not planned | Kolbinger et al., Scientific Data 2026, doi 10.1038/s41597-026-07593-6 |
 | CholecT50 validation frames (SurgiVision) | *Verify licence before display* (not installed on this machine) | Only after the licence is checked | Not until verified | No | Nwoye et al. 2022 (shown in the app) |

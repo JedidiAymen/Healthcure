@@ -1,7 +1,7 @@
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { OfflineBanner } from '@/components/OfflineBanner'
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { Activity, AudioLines, BookOpenCheck, Boxes, ClipboardCheck, FileText, FlaskConical, GraduationCap, Layers3, LogOut, Microscope, Radio, ScanLine, Search, ShieldCheck, Stethoscope, Trophy, Users } from 'lucide-react'
+import { Activity, AudioLines, BookOpenCheck, Boxes, ClipboardCheck, FileText, FlaskConical, GraduationCap, Layers3, LogOut, Microscope, Radio, ScanLine, Search, ShieldCheck, Stethoscope, Trophy, UserCog, Users } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -169,6 +169,7 @@ export function Shell() {
         {user && <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 px-2 py-2 group-data-[collapsible=icon]:hidden">
           <span className="truncate text-[13px] font-semibold" title={user.display_name}>{user.display_name}</span>
           <Badge variant="outline" className="max-w-24 truncate capitalize">{user.role.replace('_', ' ')}</Badge>
+          <Button variant="ghost" size="sm" className="col-span-2 justify-start" render={<NavLink to="/account" />} nativeButton={false}><UserCog data-icon="inline-start"/>Your data</Button>
           <Button variant="ghost" size="sm" className="col-span-2 justify-start" onClick={() => void logout()}><LogOut data-icon="inline-start"/>Sign out</Button>
         </div>}
         <SidebarMenu><SidebarMenuItem><SidebarMenuButton size="sm" tooltip="Research & education only" className="text-muted-foreground"><ShieldCheck/><span>Research &amp; education</span></SidebarMenuButton></SidebarMenuItem></SidebarMenu>

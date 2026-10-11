@@ -84,6 +84,7 @@ def test_sensitive_flows_write_entries_and_educators_see_their_own_content(clien
     student = auth_headers(client, 'learner', 'student')
     draft = client.post('/api/v1/educator/drafts', headers=educator, json={'title': 'Audit lesson', 'case_id': 'fisav:pat001',
         'content': {'rubric': 'Manual.', 'rubric_criteria': RUBRIC, 'blocks': [{'id': 'q', 'type': 'Question', 'title': 'Q', 'content': 'Describe the window.'}]}}).json()
+    assert client.get(f"/api/v1/educator/drafts/{draft['id']}/preview", headers=educator).status_code == 200
     version = client.post(f"/api/v1/educator/drafts/{draft['id']}/publish", headers=educator,
                           json={'source_terms_confirmed': True, 'source_review_note': 'Synthetic test source reviewed.'}).json()
     cohort = client.post('/api/v1/educator/cohorts', headers=educator, json={'name': 'Audit cohort'}).json()

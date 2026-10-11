@@ -248,6 +248,7 @@ export type CvsSelfCheckResult = ApiSchemas['CvsSelfCheckResult'];
 export type SignalFilterResult = ApiSchemas['SignalFilterResult'];
 export type SignalQuality = ApiSchemas['SignalQuality'];
 export type TelemetryStatus = ApiSchemas['TelemetryStatus'];
+export type AuditVerification = ApiSchemas['AuditVerification'];
 export type TelemetryWindow = ApiSchemas['TelemetryWindow'];
 export type ResearchReview = ApiSchemas['ResearchReview'];
 export type VoxelDifference = ApiSchemas['VoxelDifference'];
@@ -441,7 +442,8 @@ export const api = {
   gradeEducatorAttempt: (attemptId: string, criterion_scores: { criterion_id: string; earned_points: number; note: string }[], feedback: string, reason: string, idempotencyKey: string) =>
     post<EducatorAttemptReview>(`/api/v1/educator/attempts/${encodeURIComponent(attemptId)}/grade`, { criterion_scores, feedback, reason }, { "Idempotency-Key": idempotencyKey }),
   modules: () => request<Capability[]>("/api/v1/modules"),
-  cases: () => request<CaseRecord[]>("/api/v1/cases"),
+  // The first listing after an API start can take several seconds on Docker Desktop mounts.
+  cases: () => request<CaseRecord[]>("/api/v1/cases", 30000),
   caseDetails: (caseId: string) => request<CaseRecord>(`/api/v1/cases/${encodeURIComponent(caseId)}`),
   surgicalFrame: (frameId: string) =>
     request<SurgicalFrameRecord>(
@@ -478,6 +480,9 @@ export const api = {
   researchReviews: (caseId: string, artifactId: string) =>
     request<ResearchReview[]>(`/api/v1/research-reviews?case_id=${encodeURIComponent(caseId)}&artifact_id=${encodeURIComponent(artifactId)}`, 15000),
   createResearchReview: (input: ResearchReviewCreate) => post<ResearchReview>('/api/v1/research-reviews', input, {}, 30000),
+  auditVerify: () => request<AuditVerification>('/api/v1/audit/verify', 15000),
+  accountExport: () => request<unknown>('/api/v1/account/export', 15000),
+  accountErase: (password: string) => post<{ status: string; learner_code: string; display_name: string }>('/api/v1/account/erase', { password, confirm: 'ERASE MY ACCOUNT' }),
   researchReviewDocument: (reviewId: string, format: 'export' | 'fhir') =>
     request<unknown>(`/api/v1/research-reviews/${encodeURIComponent(reviewId)}/${format}`, 15000),
   surgicalFrames: (filters: SurgicalFrameFilters = {}) => {

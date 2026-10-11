@@ -8,6 +8,8 @@ import math
 import os
 from pathlib import Path
 import re
+import threading
+import time
 from typing import Any
 from urllib.parse import unquote
 
@@ -547,8 +549,31 @@ def installed_frame(frame_id: str | None = None) -> SurgicalFrameRecord | None:
     return None
 
 
+# Listing re-stats every image, which is slow on Docker Desktop bind mounts (about 10 s for 1,933
+# frames). The list is cached per manifest signature for a few minutes; opening a frame still
+# re-verifies its path, size and SHA-256 through _record().
+CASE_LIST_TTL_SECONDS = 300.0
+_case_list_cache: tuple[Any, float, list[Case]] | None = None
+_case_list_lock = threading.Lock()
+
+
 def installed_cases() -> list[Case]:
     """List case metadata without rebuilding annotation records for each row."""
+    global _case_list_cache
+    root = root_dir()
+    signature = _manifest_signature(root) if root is not None else None
+    if signature is None:
+        return []
+    with _case_list_lock:
+        cached = _case_list_cache
+        if cached and cached[0] == signature and time.monotonic() - cached[1] < CASE_LIST_TTL_SECONDS:
+            return list(cached[2])
+        result = _list_cases_uncached()
+        _case_list_cache = (signature, time.monotonic(), result)
+        return list(result)
+
+
+def _list_cases_uncached() -> list[Case]:
     index = _index()
     if index is None:
         return []

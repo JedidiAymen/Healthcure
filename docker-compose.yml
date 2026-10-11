@@ -52,6 +52,8 @@ services:
       MEDFORGE_LOCAL_DB_DIR: /var/lib/medforge/db
       MEDFORGE_DOSE_ARTIFACT_DIR: /var/lib/medforge/dose-artifacts
       MEDFORGE_OPENKBP_CASE_DIR: /datasets/openkbp/pt_201
+      # Second full case for the flagship comparison; skipped by the API when the folder is absent.
+      MEDFORGE_OPENKBP_FULL_CASES_JSON: '{"openkbp:pt_241":"/datasets/openkbp-opt/pt_241"}'
       MEDFORGE_FISAV_ROOT: /datasets/fisav
       MEDFORGE_ENDOSCAPES_ROOT: /datasets/endoscapes
       MEDFORGE_APPENDIX300_ROOT: /datasets/appendix300

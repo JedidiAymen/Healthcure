@@ -4,6 +4,7 @@ import { AlertTriangle, CheckCircle2, HeartPulse, Layers, SlidersHorizontal, Sti
 import { api, type SignalQuality, type BeatAnalysis, type SignalAnnotation, type SignalFilterQuery, type SignalFilterResult, type SignalWindow } from "@/lib/api"
 import { overlayWindows, validateFilterInput } from "@/lib/signal-tools"
 import { useSession } from "@/lib/session"
+import { ProvenanceBadge } from "@/components/ProvenanceBadge"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -232,6 +233,7 @@ export function SignalTools(props: Props) {
         <CardDescription>Teaching tools for the selected window</CardDescription>
         <CardTitle role="heading" aria-level={3}>Signal processing tools</CardTitle>
         <CardDescription>Filters, ECG beat analysis and window overlays describe measured source values. They are not diagnostic.</CardDescription>
+        <ProvenanceBadge kind="RULE_BASED_METHOD" detail="Deterministic filters, beat detection and quality rules on FiSaV source samples" />
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="filter" className="min-w-0 flex-col gap-3">

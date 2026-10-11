@@ -98,7 +98,7 @@ Each script downloads from the official source, verifies SHA-256 checksums, and 
 | Browser tests (source-independent, as in CI) | `npm run test:e2e:ci` |
 | Overclaim check | `node scripts/py.mjs scripts/check_claims.py` |
 
-CI (`.github/workflows/ui-and-api.yml`) runs these on Ubuntu with Python 3.13 and Node 22. Current results are recorded in [`docs/PROGRESS.md`](docs/PROGRESS.md).
+CI (`.github/workflows/ui-and-api.yml`) runs these on Ubuntu with Python 3.13 and Node 22.
 
 ## Security and privacy notes
 
@@ -109,4 +109,4 @@ CI (`.github/workflows/ui-and-api.yml`) runs these on Ubuntu with Python 3.13 an
 - **Privacy by design:** datasets carry pseudonymous source IDs only, and derived labels keep the minimum fields.
 - **No legal compliance claim:** GDPR and INPDP obligations are documented, not claimed solved.
 
-For the locally selected `pt_241` walkthrough and account preparation, see [`RUN_LOCAL.md`](RUN_LOCAL.md) and [`docs/LOCAL_ACCESS_AND_PROFILES.md`](docs/LOCAL_ACCESS_AND_PROFILES.md). Read [`docs/DEMO_ASSETS.md`](docs/DEMO_ASSETS.md) for installed source boundaries, and [`docs/HACKCURE_COMPLIANCE.md`](docs/HACKCURE_COMPLIANCE.md), [`docs/DECISIONS.md`](docs/DECISIONS.md), and [`docs/BLOCKERS.md`](docs/BLOCKERS.md) for demo status and remaining gates.
+For the locally selected `pt_241` walkthrough and account preparation, see [`RUN_LOCAL.md`](RUN_LOCAL.md) and [`docs/LOCAL_ACCESS_AND_PROFILES.md`](docs/LOCAL_ACCESS_AND_PROFILES.md). Read [`docs/DEMO_ASSETS.md`](docs/DEMO_ASSETS.md) for the installed sources and their hashes.

@@ -100,6 +100,7 @@ def _publish_cvs_lesson(client, educator, blocks):
         'title': 'CVS self-check', 'case_id': case_id,
         'content': {'rubric': 'Manual rubric.', 'rubric_criteria': RUBRIC, 'blocks': blocks}})
     assert draft.status_code == 201, draft.text
+    assert client.get(f"/api/v1/educator/drafts/{draft.json()['id']}/preview", headers=educator).status_code in (200, 409)
     return draft.json()['id'], client.post(f"/api/v1/educator/drafts/{draft.json()['id']}/publish", headers=educator,
                                            json={'source_terms_confirmed': True, 'source_review_note': 'Synthetic test source reviewed.'})
 

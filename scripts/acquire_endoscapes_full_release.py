@@ -184,13 +184,26 @@ def extract_and_hash(archive: ZipFile) -> tuple[list[dict], int]:
                 print(f"Verified/extracted {index:,}/{len(infos):,} archive entries ({total:,} file bytes)", flush=True)
         for destination, target, _normalized in link_targets:
             destination.parent.mkdir(parents=True, exist_ok=True)
+            link_source = (destination.parent / target).resolve(strict=True)
+            try:
+                link_source.relative_to(DATA_ROOT.resolve())
+            except ValueError as error:
+                raise RuntimeError(f"Archive alias target escapes dataset root: {destination}") from error
             if destination.is_symlink():
                 if os.readlink(destination) != target:
                     raise RuntimeError(f"Refusing to replace mismatched symbolic link: {destination}")
             elif destination.exists():
-                raise RuntimeError(f"Refusing to replace existing non-link with archive symbolic link: {destination}")
+                # A hard link made on Windows by an earlier run is accepted only if it is the same file.
+                if not os.path.samefile(destination, link_source):
+                    raise RuntimeError(f"Refusing to replace existing non-link with archive symbolic link: {destination}")
             else:
-                destination.symlink_to(target)
+                try:
+                    destination.symlink_to(target)
+                except OSError as error:
+                    # Windows without symlink privilege (WinError 1314): hard-link the same installed file instead.
+                    if getattr(error, "winerror", None) != 1314:
+                        raise
+                    _hard_link(link_source, destination)
             resolved = destination.resolve(strict=True)
             try:
                 resolved.relative_to(DATA_ROOT.resolve())
@@ -204,6 +217,21 @@ def extract_and_hash(archive: ZipFile) -> tuple[list[dict], int]:
     os.replace(manifest_path, DATA_ROOT / "medforge-full-release-files.jsonl")
     print(f"Extraction finished in {time.monotonic() - started:.1f}s", flush=True)
     return records, total
+
+
+def _hard_link(source: Path, destination: Path) -> None:
+    # Windows can briefly report a fresh link name as existing (for example while antivirus scans it); retry, then accept the same file.
+    for attempt in range(5):
+        try:
+            os.link(source, destination)
+            return
+        except FileExistsError:
+            if os.path.lexists(destination):
+                if os.path.samefile(destination, source):
+                    return
+                raise
+            time.sleep(0.2 * (attempt + 1))
+    os.link(source, destination)
 
 
 def info_kind(info) -> int:

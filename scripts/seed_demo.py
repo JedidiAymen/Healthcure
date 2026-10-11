@@ -1,4 +1,4 @@
-"""Seed a local demo: one educator, one student, one cohort and starter lesson drafts.
+"""Seed a local demo: one educator, one student, one clinical reviewer, one cohort and starter lesson drafts.
 
 Idempotent: existing accounts, the cohort and drafts with the same title are left
 unchanged, and passwords are printed only when an account is first created.
@@ -20,6 +20,8 @@ import uuid
 ROOT = Path(__file__).resolve().parents[1]
 EDUCATOR = ('demo-educator', 'Demo Educator', 'educator')
 STUDENT = ('demo-student', 'Demo Student', 'student')
+# Operator-designated reviewer for the DoseTwin research review; it does not verify medical credentials.
+REVIEWER = ('demo-reviewer', 'Demo Reviewer', 'clinical_reviewer')
 COHORT = 'Demo cohort'
 
 LESSONS_DIR = ROOT / 'content' / 'lessons'
@@ -86,7 +88,7 @@ def main() -> None:
     created: list[tuple[str, str, str]] = []
     with _db() as conn:
         ids = {}
-        for username, display_name, role in (EDUCATOR, STUDENT):
+        for username, display_name, role in (EDUCATOR, STUDENT, REVIEWER):
             row = conn.execute('SELECT user_id FROM local_credentials WHERE username=? COLLATE NOCASE', (username,)).fetchone()
             if row:
                 ids[role] = row[0]

@@ -1,9 +1,15 @@
 // MEDFORGE app-shell service worker (degraded mode). Caches only the built app shell and assets.
 // API responses, signal windows and research data are never cached.
-const CACHE = 'medforge-shell-v1'
+const CACHE = 'medforge-shell-v2'
 
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(['/', '/index.html'])).then(() => self.skipWaiting()))
+  // Precache the shell and every hashed build asset (listed at build time), so screens not yet
+  // opened still load offline.
+  event.waitUntil(caches.open(CACHE).then(async cache => {
+    await cache.addAll(['/', '/index.html'])
+    const listed = await fetch('/sw-assets.json').then(response => response.ok ? response.json() : []).catch(() => [])
+    await cache.addAll(listed)
+  }).then(() => self.skipWaiting()))
 })
 
 self.addEventListener('activate', event => {
