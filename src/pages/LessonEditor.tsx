@@ -463,6 +463,18 @@ export function LessonEditorPage() {
     };
   }, []);
   const rubricTotal = draft.rubricCriteria.reduce((sum, item) => sum + (Number(item.max_points) || 0), 0);
+  const rubricIsPublishable = draft.rubricCriteria.length >= 2 && rubricTotal === 100;
+  const hasLearnerQuestion = draft.blocks.some(
+    (block) => (block.type === "Question" || block.type === "CVS self-check") && block.content.trim().length > 0,
+  );
+  const hasLearnerContent = draft.blocks.some(
+    (block) => block.type !== "Reveal" && block.content.trim().length > 0,
+  );
+  const publicationReadinessIssues = [
+    ...(!rubricIsPublishable ? ["The published rubric needs at least two criteria totaling exactly 100 points."] : []),
+    ...(!hasLearnerQuestion ? ["Add a learner question with a prompt before publishing."] : []),
+    ...(!hasLearnerContent ? ["Add learner-visible instructions or questions before publishing."] : []),
+  ];
   const previewStale = preview !== null && (!saved || previewRevision !== revision);
   const showMobilePane = (pane: "blocks" | "canvas" | "inspector") => {
     setMobilePane(pane);
@@ -569,6 +581,11 @@ export function LessonEditorPage() {
               ))}
             </div>
             <FieldGroup className="mt-5">
+              {publicationReadinessIssues.length > 0 && <Alert role="status" className="mb-1">
+                <CircleAlert />
+                <AlertTitle>Complete the lesson before publishing</AlertTitle>
+                <AlertDescription><ul className="my-1 grid gap-1 pl-4">{publicationReadinessIssues.map(issue => <li key={issue}>{issue}</li>)}</ul></AlertDescription>
+              </Alert>}
               <Field orientation="horizontal">
                 <Checkbox id="source-confirmed" checked={sourceConfirmed} onCheckedChange={checked => setSourceConfirmed(checked === true)} disabled={preview.publication_review === "blocked" || previewStale} />
                 <FieldLabel htmlFor="source-confirmed">I reviewed the source terms and confirm this use follows the displayed license and attribution requirements.</FieldLabel>
@@ -585,7 +602,7 @@ export function LessonEditorPage() {
                 </Alert>
               )}
               <div className="flex gap-2">
-                <Button disabled={saving || previewStale || preview.publication_review === "blocked" || !sourceConfirmed || reviewNote.trim().length < 10} onClick={() => void publish()}>{saving ? "Publishing…" : "Publish immutable version"}</Button>
+                <Button disabled={saving || previewStale || preview.publication_review === "blocked" || publicationReadinessIssues.length > 0 || !sourceConfirmed || reviewNote.trim().length < 10} onClick={() => void publish()}>{saving ? "Publishing…" : "Publish immutable version"}</Button>
                 <Button variant="outline" disabled={saving} onClick={() => { setPreview(null); setPreviewRevision(null); }}>Close preview</Button>
               </div>
             </FieldGroup>
