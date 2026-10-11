@@ -45,7 +45,7 @@ function LessonRow({ lesson, index, hasNext }: { lesson: StudentLearningPathLess
       {hasNext && <span aria-hidden="true" className="absolute bottom-0 left-[1.1rem] top-10 w-px bg-border sm:left-[1.35rem]" />}
       <span className="relative z-10 grid size-9 place-items-center self-start rounded-full border border-border bg-sidebar text-sm font-semibold text-primary sm:size-11">{lesson.state === "reviewed" ? <StatusIcon aria-hidden="true" className="size-4 text-primary"/> : String(index + 1).padStart(2, "0")}</span>
       <Card className="min-w-0 rounded-md shadow-none">
-        <CardContent className="grid gap-4 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:p-5">
+        <CardContent className="grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center sm:p-5">
           <div className="min-w-0">
             <div className="mb-1.5 flex flex-wrap items-center gap-2">
               <Badge variant={lesson.state === "in_progress" ? "secondary" : "outline"}><StatusIcon data-icon="inline-start" aria-hidden="true"/>{status.label}</Badge>
