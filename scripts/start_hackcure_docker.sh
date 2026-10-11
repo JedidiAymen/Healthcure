@@ -39,9 +39,9 @@ process.stdin.on("end", () => {
   console.log("Compose configuration check passed: only the proxy publishes loopback ports.");
 });
 '
-"${compose[@]}" up -d --no-build --pull never
+"${compose[@]}" up -d --wait --wait-timeout 120 --no-build --pull never
 
-printf '\nLocal HackCure stack started at https://localhost:%s\n' "${MEDFORGE_HTTPS_PORT:-8443}"
+printf '\nLocal HackCure stack is running and the API is healthy at https://localhost:%s\n' "${MEDFORGE_HTTPS_PORT:-8443}"
 printf 'Flagship route: https://localhost:%s/studio/dosetwin/cases/openkbp%%3Apt_241\n' "${MEDFORGE_HTTPS_PORT:-8443}"
 printf 'Shared host/API database: %s/medforge.sqlite3\n' "$DB_DIR"
 printf 'Stop with: docker compose -f docker-compose.yml -f docker-compose.hackcure.yml down\n'
