@@ -34,6 +34,7 @@
     "@kitware/vtk.js": "37.4.1",
     "@tanstack/react-query": "5.104.1",
     "@videojs/react": "10.0.1",
+    "@xyflow/react": "12.12.0",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "cmdk": "^1.1.1",
