@@ -49,7 +49,7 @@ function readSignalWorkspaceState(recordId:string):SignalWorkspacePreferences|nu
   return null
 }
 
-function SignalTrace({data,color}:{data:SignalWindow;color:string}) {
+function SignalTrace({data,color,onCursorSample}:{data:SignalWindow;color:string;onCursorSample:(sample:SignalWindow['samples'][number]|null)=>void}) {
   const host=useRef<HTMLDivElement>(null)
   const chartData=useMemo<uPlot.AlignedData>(()=>[
     data.samples.map(point=>point.time_sec),
@@ -75,6 +75,10 @@ function SignalTrace({data,color}:{data:SignalWindow;color:string}) {
       ],
       cursor:{show:true,drag:{x:false,y:false}},
       legend:{show:false},
+      hooks:{setCursor:[plot=>{
+        const index=plot.cursor.idx
+        onCursorSample(typeof index==='number'?data.samples[index]??null:null)
+      }]},
     },chartData,target)
     const resize=new ResizeObserver(entries=>{
       const nextWidth=Math.floor(entries[0]?.contentRect.width??target.clientWidth)
@@ -82,7 +86,7 @@ function SignalTrace({data,color}:{data:SignalWindow;color:string}) {
     })
     resize.observe(target)
     return ()=>{resize.disconnect();plot?.destroy();plot=null}
-  },[chartData,color])
+  },[chartData,color,data,onCursorSample])
   return <div ref={host} className="signal-trace-uplot" aria-hidden="true"/>
 }
 
@@ -151,6 +155,7 @@ export function FistulaViewer({recordId,availableRecordIds,guided=false,onEviden
   const [record,setRecord]=useState<SignalRecord|null>(null)
   const [recordSearch,setRecordSearch]=useState('')
   const [windowData,setWindowData]=useState<SignalWindow|null>(null)
+  const [inspectedSample,setInspectedSample]=useState<SignalWindow['samples'][number]|null>(null)
   const [spectrum,setSpectrum]=useState<SignalSpectrum|null>(null)
   const [spectrogram,setSpectrogram]=useState<SignalSpectrogram|null>(null)
   const [spectrogramLoading,setSpectrogramLoading]=useState(false)
@@ -190,7 +195,7 @@ export function FistulaViewer({recordId,availableRecordIds,guided=false,onEviden
   useEffect(()=>{if(recordDuration===undefined)return;const maximum=Math.max(0,recordDuration-duration);if(start>maximum)setStart(maximum)},[recordCaseId,recordDuration,duration,start])
   useEffect(()=>{if(guided||comparisonId||!recordSourceId)return;try{localStorage.setItem(`medforge:fistulaguard:${recordSourceId}`,JSON.stringify({record_id:recordSourceId,channel,start_sec:start,duration_sec:duration} satisfies SignalWorkspacePreferences))}catch{/* Local persistence is optional when browser storage is unavailable. */}},[guided,comparisonId,recordSourceId,channel,start,duration])
   useEffect(()=>{if(recordDuration!==undefined)setComparisonStart(Math.min(5,Math.max(0,recordDuration-5)))},[recordCaseId,recordDuration])
-  useEffect(()=>{if(!record)return;const maximum=Math.max(0,record.duration_sec-duration);if(start>maximum)return;let live=true;const timer=window.setTimeout(()=>{setAnalysisLoading(true);setWindowData(null);setSpectrum(null);setFeatures(null);setError('');Promise.all([api.signalWindow(record.id,channel,start,duration),api.signalSpectrum(record.id,channel,start,duration),api.signalFeatures(record.id,channel,start,duration)]).then(([trace,psd,summary])=>{if(live){setWindowData(trace);setSpectrum(psd);setFeatures(summary)}}).catch(e=>{if(live)setError(e instanceof Error?e.message:'Unable to calculate this source window')}).finally(()=>{if(live)setAnalysisLoading(false)})},120);return()=>{live=false;window.clearTimeout(timer)}},[record,channel,start,duration])
+  useEffect(()=>{if(!record)return;const maximum=Math.max(0,record.duration_sec-duration);if(start>maximum)return;let live=true;const timer=window.setTimeout(()=>{setAnalysisLoading(true);setWindowData(null);setInspectedSample(null);setSpectrum(null);setFeatures(null);setError('');Promise.all([api.signalWindow(record.id,channel,start,duration),api.signalSpectrum(record.id,channel,start,duration),api.signalFeatures(record.id,channel,start,duration)]).then(([trace,psd,summary])=>{if(live){setWindowData(trace);setSpectrum(psd);setFeatures(summary)}}).catch(e=>{if(live)setError(e instanceof Error?e.message:'Unable to calculate this source window')}).finally(()=>{if(live)setAnalysisLoading(false)})},120);return()=>{live=false;window.clearTimeout(timer)}},[record,channel,start,duration])
   useEffect(()=>{if(!record||spectralView!=='spectrogram')return;let live=true;setSpectrogramLoading(true);setSpectrogramError('');setSpectrogram(null);const timer=window.setTimeout(()=>{api.signalSpectrogram(record.id,channel,start,duration).then(value=>{if(live)setSpectrogram(value)}).catch(e=>{if(live)setSpectrogramError(e instanceof Error?e.message:'Unable to calculate the selected-window spectrogram')}).finally(()=>{if(live)setSpectrogramLoading(false)})},120);return()=>{live=false;window.clearTimeout(timer)}},[record,channel,start,duration,spectralView])
   useEffect(()=>{if(!record||!comparisonEnabled)return;let live=true;setComparisonLoading(true);setComparisonError('');setComparisonFeatures(null);const timer=window.setTimeout(()=>{api.signalFeatures(record.id,channel,Math.min(comparisonStart,maxComparisonStart),duration).then(value=>{if(live)setComparisonFeatures(value)}).catch(e=>{if(live)setComparisonError(e instanceof Error?e.message:'Unable to calculate the comparison window')}).finally(()=>{if(live)setComparisonLoading(false)})},120);return()=>{live=false;window.clearTimeout(timer)}},[record,channel,comparisonEnabled,comparisonStart,maxComparisonStart,duration])
   useEffect(()=>{if(!record||guided){setSavedComparisons([]);return}let live=true;api.signalComparisons(record.case_id).then(value=>{if(live)setSavedComparisons(value)}).catch(()=>{if(live)setSavedComparisons([])});return()=>{live=false}},[record,guided])
@@ -229,7 +234,11 @@ export function FistulaViewer({recordId,availableRecordIds,guided=false,onEviden
     <div className="fistula-inspection-layout">
       <Card className="fistula-signal-viewport min-w-0 overflow-hidden">
         <CardHeader className="fistula-viewport-header flex flex-col gap-2 pb-1 sm:flex-row sm:items-center sm:justify-between"><div><span className="fistula-kicker">MEASURED WAVEFORM</span><CardTitle className="flex items-center gap-2"><AudioWaveform data-icon="inline-start"/>{channel}</CardTitle><CardDescription>{formatSourceTime(start,record.sample_rate_hz)}–{formatSourceTime(start+duration,record.sample_rate_hz)} s · {windowData?.original_sample_count.toLocaleString()??'—'} source samples</CardDescription></div><div className="fistula-axis-notes"><span>Y · source value</span><span>X · captured time (s)</span></div></CardHeader>
-        <CardContent className="min-w-0 pt-2"><SourceWindowLocator start={start} duration={duration} totalDuration={record.duration_sec} sampleRateHz={record.sample_rate_hz}/><div className="signal-chart fistula-waveform-chart" role="img" aria-label={`${channel} source waveform from ${formatSourceTime(start,record.sample_rate_hz)} to ${formatSourceTime(start+duration,record.sample_rate_hz)} seconds`}>{windowData?<SignalTrace data={windowData} color={channelColors[channel]??'#57d1bd'}/>:<div className="grid h-full place-items-center text-sm text-muted-foreground">Loading measured source samples…</div>}</div>
+        <CardContent className="min-w-0 pt-2"><SourceWindowLocator start={start} duration={duration} totalDuration={record.duration_sec} sampleRateHz={record.sample_rate_hz}/><div className="signal-chart fistula-waveform-chart" role="img" aria-label={`${channel} source waveform from ${formatSourceTime(start,record.sample_rate_hz)} to ${formatSourceTime(start+duration,record.sample_rate_hz)} seconds`}>{windowData?<SignalTrace data={windowData} color={channelColors[channel]??'#57d1bd'} onCursorSample={setInspectedSample}/>:<div className="grid h-full place-items-center text-sm text-muted-foreground">Loading measured source samples…</div>}</div>
+          <div className="fistula-cursor-readout" aria-label="Waveform cursor sample">
+            <span>{inspectedSample?'Inspected plotted source point':'Trace inspection'}</span>
+            {inspectedSample?<output className="font-mono tabular-nums">{inspectedSample.time_sec.toFixed(6)} s <b>·</b> {inspectedSample.value.toPrecision(8)} <small>{windowData?.channel_unit??'source-value (physical unit unspecified)'}</small></output>:<span className="fistula-cursor-hint">Move across the trace to inspect a displayed sample.</span>}
+          </div>
           <div className="fistula-trace-footer"><span><i style={{background:channelColors[channel]}}/>Original source values · physical unit unspecified</span><span>Plotted trace uses a bounded min/max envelope; analysis uses all source samples.</span></div>
           {windowData&&<WaveformDataTable data={windowData}/>}
         </CardContent>

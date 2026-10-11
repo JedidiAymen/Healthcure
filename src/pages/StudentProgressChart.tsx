@@ -82,6 +82,9 @@ export function StudentProgressChart({ history }: { history: RubricHistoryPoint[
       .sort((left, right) => parseReviewDate(left.reviewed_at).getTime() - parseReviewDate(right.reviewed_at).getTime()),
     [activeDimensionId, history],
   );
+  const latestPoint = points[points.length - 1];
+  const previousPoint = points.length > 1 ? points[points.length - 2] : undefined;
+  const scoreChange = latestPoint && previousPoint ? latestPoint.percent - previousPoint.percent : null;
   const chartPoints = useMemo<ChartHistoryPoint[]>(
     () => points.map((point, index) => ({ ...point, chartKey: point.id, reviewNumber: index + 1 })),
     [points],
@@ -171,6 +174,23 @@ export function StudentProgressChart({ history }: { history: RubricHistoryPoint[
             {activeDimension && points.length ? (
               <>
                 <p className="text-sm text-muted-foreground">{activeDimension.label} · {points.length} reviewed {points.length === 1 ? "attempt" : "attempts"}</p>
+                {latestPoint ? (
+                  <section aria-label="Latest reviewed rubric result" className="grid gap-3 rounded-xl border border-primary/15 bg-primary/[0.035] p-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Latest educator review</p>
+                      <p className="mt-1 font-mono text-3xl font-semibold tabular-nums text-foreground">{latestPoint.percent.toFixed(1)}<span className="text-lg text-muted-foreground">%</span></p>
+                      <p className="mt-1 text-sm text-muted-foreground">{latestPoint.earned_points}/{latestPoint.available_points} points · {formatReviewDate(latestPoint.reviewed_at)}</p>
+                    </div>
+                    {scoreChange !== null ? (
+                      <div className="flex flex-wrap items-center gap-2 text-sm lg:justify-end">
+                        <span className="rounded-full border border-border bg-background px-3 py-1.5 font-medium tabular-nums text-foreground">
+                          {scoreChange > 0 ? "+" : ""}{scoreChange.toFixed(1)} percentage points
+                        </span>
+                        <span className="text-muted-foreground">since previous review</span>
+                      </div>
+                    ) : null}
+                  </section>
+                ) : null}
                 <ChartContainer config={chartConfig} className="h-[220px] min-w-0 w-full">
                   <LineChart
                     accessibilityLayer
