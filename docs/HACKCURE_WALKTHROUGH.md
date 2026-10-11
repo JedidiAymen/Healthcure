@@ -40,3 +40,8 @@ The proposal itself says Track 3 should be claimed only with working, defensible
 3. Explain that output is archived publisher data, describe the numerical method and limitations, and make no live-inference or treatment-safety claim.
 4. If the event database has a provisioned reviewer and saved comparison/report, record a disposition with a rationale, reopen its history, and show JSON/FHIR export as a research artifact. Otherwise state that this final event setup gate is still open.
 5. Close with the explicit Track 2/3 boundary above and the local-only data/deployment boundary.
+
+## Review evidence
+
+- The actual local home route was reviewed at desktop (1440×900), tablet (768×1024), and mobile (390×844). The walkthrough heading was visible at all three sizes; each route returned HTTP 200, had no horizontal overflow, and produced no browser page errors. Captures are local and ignored by Git: `.local-review/hackcure-home/home-desktop.png`, `home-tablet.png`, and `home-mobile.png`.
+- Hosted CI run [38098396629](https://github.com/JedidiAymen/Healthcure/actions/runs/38098396629) completed successfully on commit `9642f3f`. It passed install, lint, typecheck, frontend unit tests, browser shell tests, API contract tests, OpenAPI contract check, production build, and the offline Academy production-shell browser check. This verifies that commit only; the next pushed commit requires its own hosted run.
