@@ -7,6 +7,8 @@ CASE_DIR="$ROOT/data/openkbp-opt/pt_241"
 
 source "$ROOT/scripts/lib/hackcure-compose-version.sh"
 require_hackcure_compose
+source "$ROOT/scripts/lib/hackcure-dataset-roots.sh"
+hackcure_configure_dataset_roots
 
 # Match the host-side paths to the bind mounts and container paths declared in
 # docker-compose.hackcure.yml. The doctor opens this database read-only.

@@ -16,6 +16,9 @@ export MEDFORGE_HACKCURE_DB_DIR="$DB_DIR"
 export MEDFORGE_HACKCURE_UID="$(id -u)"
 export MEDFORGE_HACKCURE_GID="$(id -g)"
 mkdir -p "$DB_DIR"
+export MEDFORGE_HACKCURE_CREATE_EMPTY_DATASET_ROOTS=1
+source "$ROOT/scripts/lib/hackcure-dataset-roots.sh"
+hackcure_configure_dataset_roots
 
 compose=(docker compose -f "$ROOT/docker-compose.yml" -f "$ROOT/docker-compose.hackcure.yml")
 "${compose[@]}" config --format json | node -e '
