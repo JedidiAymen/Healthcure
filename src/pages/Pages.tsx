@@ -306,6 +306,7 @@ function EmptySource({ module }: { module: ModuleId }) {
 export function Home() {
   const cases = useApi(queryKeys.cases, api.cases, [] as CaseRecord[]);
   const runHistory = useApi(queryKeys.runs, api.runs, [] as RunRecord[]);
+  const hackcureCase = cases.data.find((item) => item.module === "dosetwin" && item.source_case_id === "pt_241");
   const resumableRun = runHistory.data.find((run): run is DoseTwinRunRecord =>
     run.operation_id === "openkbp.case_summary" && run.status === "completed" && run.results !== null,
   );
@@ -362,6 +363,50 @@ export function Home() {
             </Card>
           </Link>
         </div>
+      </section>
+
+      <section aria-labelledby="hackcure-walkthrough-title">
+        <Card className="overflow-hidden rounded-xl border-primary/20 bg-primary/[0.025]">
+          <CardHeader className="gap-3 pb-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="grid gap-2">
+              <Badge variant="outline" className="w-fit gap-2 rounded-md border-primary/25 bg-background px-2.5 py-1 text-primary">
+                <ClipboardCheck data-icon="inline-start" /> HackCure · flagship walkthrough
+              </Badge>
+              <div>
+                <CardTitle id="hackcure-walkthrough-title" className="text-xl tracking-tight">A source-backed DoseTwin research review</CardTitle>
+                <CardDescription className="mt-1 max-w-3xl leading-relaxed">Follow one same-case reference-versus-archived-prediction review from evidence inspection to a reasoned, auditable disposition. This makes the HackCure story visible without blending the unrelated clinical datasets.</CardDescription>
+              </div>
+            </div>
+            <Badge variant="secondary" className="w-fit shrink-0">Research &amp; education only</Badge>
+          </CardHeader>
+          <CardContent className="grid gap-4 pt-1">
+            <ol className="m-0 grid list-none gap-3 p-0 md:grid-cols-3">
+              <li className="rounded-lg border bg-background/80 p-3">
+                <p className="m-0 text-xs font-semibold uppercase tracking-wide text-primary">01 · Evidence</p>
+                <p className="mb-0 mt-1 text-sm leading-5 text-foreground">Open OpenKBP-Opt <code>pt_241</code> and verify the matching source case.</p>
+              </li>
+              <li className="rounded-lg border bg-background/80 p-3">
+                <p className="m-0 text-xs font-semibold uppercase tracking-wide text-primary">02 · Inspect</p>
+                <p className="mb-0 mt-1 text-sm leading-5 text-foreground">Compare reference and archived <code>set_1</code> output with ROI differences, DVHs, units, and provenance.</p>
+              </li>
+              <li className="rounded-lg border bg-background/80 p-3">
+                <p className="m-0 text-xs font-semibold uppercase tracking-wide text-primary">03 · Review</p>
+                <p className="mb-0 mt-1 text-sm leading-5 text-foreground">Record a rationale-bound research disposition, then reopen its evidence and export.</p>
+              </li>
+            </ol>
+            <Alert>
+              <ShieldCheck />
+              <AlertTitle>Track boundary and local rehearsal status</AlertTitle>
+              <AlertDescription>This is not a Track 2 triage/care service or a Track 3 assistive medical device. The prediction is publisher-archived output, not live MEDFORGE inference, and a research disposition never approves treatment. The reviewer and saved comparison/report must be present in the selected local rehearsal database before the full walkthrough can be completed.</AlertDescription>
+            </Alert>
+          </CardContent>
+          <CardFooter className="flex flex-wrap items-center justify-between gap-3 border-t bg-background/60 px-4 py-3 sm:px-6">
+            <span className="text-xs text-muted-foreground">The demonstration depends on the local dataset and database profile.</span>
+            <Button render={<Link to={hackcureCase ? `/studio/dosetwin/cases/${encodeURIComponent(hackcureCase.id)}` : "/studio/cases"} />} nativeButton={false}>
+              {hackcureCase ? "Open pt_241 review workspace" : "Browse available cases"}<ArrowRight data-icon="inline-end" />
+            </Button>
+          </CardFooter>
+        </Card>
       </section>
 
       <section aria-labelledby="home-research-title" className="grid gap-4 border-t border-border pt-5">
