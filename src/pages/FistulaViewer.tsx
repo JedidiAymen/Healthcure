@@ -95,6 +95,18 @@ function SpectrumDataTable({data}:{data:SignalSpectrum}) {
   return <details className="mt-3" onToggle={event=>setOpen(event.currentTarget.open)}><summary className="cursor-pointer text-sm text-muted-foreground">View PSD data table · {data.frequencies_hz.length.toLocaleString()} frequency bins</summary><p className="mt-2 text-xs text-muted-foreground">Calculated from {data.window_samples.toLocaleString()}-sample Hann windows with 50% overlap. Power remains in source-value²/Hz; physical units were not specified.</p>{open&&<div className="mt-2 max-h-64 overflow-auto rounded-md border"><Table><TableCaption>{data.channel} Welch power spectral density for {data.start_sec.toFixed(3)}–{(data.start_sec+data.duration_sec).toFixed(3)} s. Source SHA-256 {data.source_sha256}.</TableCaption><TableHeader><TableRow><TableHead>Frequency (Hz)</TableHead><TableHead>Power / Hz</TableHead></TableRow></TableHeader><TableBody>{data.frequencies_hz.map((frequency,index)=><TableRow key={`${frequency}-${index}`}><TableCell className="font-mono tabular-nums">{frequency.toFixed(3)}</TableCell><TableCell className="font-mono tabular-nums">{data.power_per_hz[index].toExponential(8)}</TableCell></TableRow>)}</TableBody></Table></div>}</details>
 }
 
+function SourceWindowLocator({start,duration,totalDuration,sampleRateHz}:{start:number;duration:number;totalDuration:number;sampleRateHz:number}) {
+  const safeDuration=Math.max(totalDuration,Number.EPSILON)
+  const left=Math.max(0,Math.min(100,(start/safeDuration)*100))
+  const width=Math.max(0,Math.min(100-left,(duration/safeDuration)*100))
+  const end=Math.min(totalDuration,start+duration)
+  return <div className="fistula-source-locator" aria-label={`Selected source interval ${formatSourceTime(start,sampleRateHz)} to ${formatSourceTime(end,sampleRateHz)} seconds of ${formatSourceTime(totalDuration,sampleRateHz)} seconds`}>
+    <div className="fistula-source-locator-heading"><span>RECORDING TIMEBASE</span><span>{(sampleRateHz/1000).toLocaleString(undefined,{maximumFractionDigits:3})} kHz · {totalDuration.toFixed(2)} s</span></div>
+    <div className="fistula-source-track" aria-hidden="true"><span className="fistula-source-track-selection" style={{left:`${left}%`,width:`${width}%`}}/></div>
+    <div className="fistula-source-track-labels"><span>0 s</span><span>Selected {formatSourceTime(start,sampleRateHz)}–{formatSourceTime(end,sampleRateHz)} s</span><span>{totalDuration.toFixed(2)} s</span></div>
+  </div>
+}
+
 function SignalSpectrogram({data}:{data:SignalSpectrogram}) {
   const width=data.times_sec.length,height=data.frequencies_hz.length
   const cellPaths=useMemo(()=>{
@@ -201,8 +213,8 @@ export function FistulaViewer({recordId,availableRecordIds,guided=false,onEviden
     {openedComparisonError&&<div role="alert" className="rounded-md border border-destructive/40 p-3 text-sm text-destructive">{openedComparisonError}</div>}
     {comparisonId&&!openedComparisonError&&<div role="status" className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm">Reopened saved FiSaV windows from their checksum-verified source recording.</div>}
     <header className="grid gap-2 border-b border-border pb-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-      <div><span className="eyebrow">FISTULAGUARD / FiSaV SOURCE LAB</span><h2 className="mt-1 mb-0 text-2xl font-semibold tracking-tight">AVF multichannel signal review</h2><p className="mt-1 mb-0 text-sm text-muted-foreground">Measured CSV recording · {record.source_case_id} · {record.sample_count.toLocaleString()} time samples</p></div>
-      <Badge variant="outline" className="w-fit gap-2 text-primary"><span className="size-2 rounded-full bg-primary"/>Checksum verified</Badge>
+      <div><span className="eyebrow">FISTULAGUARD / FiSaV SOURCE LAB</span><h2 className="mt-1 mb-0 text-2xl font-semibold tracking-tight">AVF multichannel signal review</h2><p className="mt-1 mb-0 text-sm text-muted-foreground">Measured CSV recording · {record.source_case_id} · {record.sample_count.toLocaleString()} time samples</p><div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground"><span><b className="font-medium text-foreground">{record.dataset_id}</b> source</span><span>{record.channels.length} recorded channels</span><span>{record.sample_rate_hz.toLocaleString()} samples/s</span><span>{record.duration_sec.toFixed(2)} s total</span></div></div>
+      <div className="grid justify-items-start gap-1 sm:justify-items-end"><Badge variant="outline" className="w-fit gap-2 text-primary"><span className="size-2 rounded-full bg-primary"/>Checksum verified</Badge><code className="fistula-source-fingerprint" title={`Full SHA-256: ${record.source_sha256}`} aria-label={`Full FiSaV source SHA-256 ${record.source_sha256}`}>{record.source_sha256}</code></div>
     </header>
 
     <Card className="fistula-control-strip min-w-0 @container/fistula-controls">
@@ -217,7 +229,7 @@ export function FistulaViewer({recordId,availableRecordIds,guided=false,onEviden
     <div className="fistula-inspection-layout">
       <Card className="fistula-signal-viewport min-w-0 overflow-hidden">
         <CardHeader className="fistula-viewport-header flex flex-col gap-2 pb-1 sm:flex-row sm:items-center sm:justify-between"><div><span className="fistula-kicker">MEASURED WAVEFORM</span><CardTitle className="flex items-center gap-2"><AudioWaveform data-icon="inline-start"/>{channel}</CardTitle><CardDescription>{formatSourceTime(start,record.sample_rate_hz)}–{formatSourceTime(start+duration,record.sample_rate_hz)} s · {windowData?.original_sample_count.toLocaleString()??'—'} source samples</CardDescription></div><div className="fistula-axis-notes"><span>Y · source value</span><span>X · captured time (s)</span></div></CardHeader>
-        <CardContent className="min-w-0 pt-2"><div className="signal-chart fistula-waveform-chart" role="img" aria-label={`${channel} source waveform from ${formatSourceTime(start,record.sample_rate_hz)} to ${formatSourceTime(start+duration,record.sample_rate_hz)} seconds`}>{windowData?<SignalTrace data={windowData} color={channelColors[channel]??'#57d1bd'}/>:<div className="grid h-full place-items-center text-sm text-muted-foreground">Loading measured source samples…</div>}</div>
+        <CardContent className="min-w-0 pt-2"><SourceWindowLocator start={start} duration={duration} totalDuration={record.duration_sec} sampleRateHz={record.sample_rate_hz}/><div className="signal-chart fistula-waveform-chart" role="img" aria-label={`${channel} source waveform from ${formatSourceTime(start,record.sample_rate_hz)} to ${formatSourceTime(start+duration,record.sample_rate_hz)} seconds`}>{windowData?<SignalTrace data={windowData} color={channelColors[channel]??'#57d1bd'}/>:<div className="grid h-full place-items-center text-sm text-muted-foreground">Loading measured source samples…</div>}</div>
           <div className="fistula-trace-footer"><span><i style={{background:channelColors[channel]}}/>Original source values · physical unit unspecified</span><span>Plotted trace uses a bounded min/max envelope; analysis uses all source samples.</span></div>
           {windowData&&<WaveformDataTable data={windowData}/>}
         </CardContent>
