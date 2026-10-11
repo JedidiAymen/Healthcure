@@ -23,7 +23,9 @@ from .schemas import (
     EducatorAttemptReview,
     EducatorCohort,
     EducatorCohortCreate,
+    EducatorCohortLearner,
     EducatorCohortMembership,
+    EducatorCohortRoster,
     EducatorGradeRequest,
     EducatorPublishRequest,
     EducatorStudent,
@@ -314,6 +316,27 @@ def register_learning_routes(app: FastAPI, db: Callable, list_cases: Callable[[]
                 (user["id"],),
             ).fetchall()
         return [EducatorCohort(id=row[0], name=row[1], student_count=row[2]) for row in rows]
+
+    @app.get("/api/v1/educator/cohorts/{cohort_id}/students", response_model=EducatorCohortRoster)
+    def educator_cohort_students(cohort_id: str, user: dict = Depends(educator)):
+        with db() as conn:
+            cohort = conn.execute(
+                "SELECT id,name FROM learning_cohorts WHERE id=? AND created_by=?",
+                (cohort_id, user["id"]),
+            ).fetchone()
+            if cohort is None:
+                raise _not_found("COHORT_NOT_FOUND", "No cohort belongs to this account")
+            rows = conn.execute(
+                """SELECT u.id,u.display_name FROM learning_cohort_memberships m
+                   JOIN users u ON u.id=m.user_id
+                   JOIN role_grants g ON g.user_id=u.id AND g.role='student' AND g.scope='platform'
+                   WHERE m.cohort_id=? ORDER BY u.display_name COLLATE NOCASE,u.id""",
+                (cohort_id,),
+            ).fetchall()
+        learners = [EducatorCohortLearner(display_name=row[1]) for row in rows]
+        return EducatorCohortRoster(
+            cohort_id=cohort[0], cohort_name=cohort[1], student_count=len(learners), learners=learners,
+        )
 
     @app.post("/api/v1/educator/cohorts", response_model=EducatorCohort, status_code=201)
     def educator_cohort_create(request: EducatorCohortCreate, user: dict = Depends(educator)):

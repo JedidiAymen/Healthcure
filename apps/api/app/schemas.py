@@ -174,6 +174,15 @@ class EducatorStudent(StrictModel):
     id: str
     display_name: str
 
+class EducatorCohortLearner(StrictModel):
+    display_name: str
+
+class EducatorCohortRoster(StrictModel):
+    cohort_id: str
+    cohort_name: str
+    student_count: int
+    learners: list[EducatorCohortLearner]
+
 class EducatorCohortMembership(StrictModel):
     student_id: str
 

@@ -186,6 +186,7 @@ export type EducatorDraftPreview = {
 };
 export type EducatorCohort = { id: string; name: string; student_count: number };
 export type EducatorStudent = { id: string; display_name: string };
+export type EducatorCohortRoster = { cohort_id: string; cohort_name: string; student_count: number; learners: { display_name: string }[] };
 export type EducatorAssignment = {
   id: string; lesson_version_id: string; lesson_title: string; cohort_id: string;
   due_at: string | null; student_count: number;
@@ -427,6 +428,7 @@ export const api = {
   studentDebrief: (attemptId: string) => request<StudentDebrief>(`/api/v1/academy/attempts/${encodeURIComponent(attemptId)}/debrief`),
   educatorStudents: () => request<EducatorStudent[]>("/api/v1/educator/students"),
   educatorCohorts: () => request<EducatorCohort[]>("/api/v1/educator/cohorts"),
+  educatorCohortRoster: (cohortId: string) => request<EducatorCohortRoster>(`/api/v1/educator/cohorts/${encodeURIComponent(cohortId)}/students`),
   createEducatorCohort: (name: string) => post<EducatorCohort>("/api/v1/educator/cohorts", { name }),
   addStudentToCohort: (cohortId: string, studentId: string) => post<{ cohort_id: string; student_count: number }>(`/api/v1/educator/cohorts/${encodeURIComponent(cohortId)}/students`, { student_id: studentId }),
   educatorVersions: () => request<PublishedLessonVersion[]>("/api/v1/educator/versions"),

@@ -49,7 +49,9 @@ python3 scripts/hackcure_backup_restore.py restore-check data/hackcure-docker/ba
 
 Malformed or unreadable source-provenance JSON is reported as a restore-check failure rather than a traceback. A successful integrity check still does not establish dataset permissions or event readiness.
 
-On 2026-10-11, the current local HackCure database and `pt_241 / set_1` source files were archived and restore-checked successfully: 15 members verified and SQLite `quick_check` returned `ok`. This rehearsal database still has no imported comparison/report or reviewer account, so the backup is not an event-ready state.
+On 2026-10-11, the current local HackCure database and `pt_241 / set_1` source files were archived and restore-checked successfully: 15 members verified and SQLite `quick_check` returned `ok`. The live event profile's matching imported prediction, saved report and reviewer-role presence also pass the read-only preflight. The snapshot stays on this machine; a second-machine restore and authenticated reviewer rehearsal have not been performed.
+
+The current source commit `f44d9c826e04c82c3a28a97ca36048743223030c` has a local-only Docker image bundle at `data/hackcure-docker/backups/images/hackcure-images-20261011T043203Z.tar.gz`, SHA-256 `1bd9e7a6036dedb77f5c65e3b4d3c18f0e61c60be0416a260b8b901153663251`. `npm run hackcure:preflight:docker` verified the archive, all four no-pull images, loopback-only Compose ports, read-only dataset mounts, and the source/import/report/reviewer profile checks. Regenerate the bundle after any source change. This host-side result does not prove transfer, another machine's restore, organizer acceptance, or venue-specific display rights.
 
 ## What this does not prove
 

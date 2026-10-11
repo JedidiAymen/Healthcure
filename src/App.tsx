@@ -18,6 +18,7 @@ const Educator = lazy(() => import('./pages/Pages').then(page => ({ default: pag
 const LessonEditor = lazy(() => import('./pages/LessonEditor').then(page => ({ default: page.LessonEditorPage })))
 const Assignments = lazy(() => import('./pages/Pages').then(page => ({ default: page.Assignments })))
 const Submissions = lazy(() => import('./pages/Pages').then(page => ({ default: page.Submissions })))
+const EducatorLearners = lazy(() => import('./pages/EducatorLearners').then(page => ({ default: page.EducatorLearnersPage })))
 
 export default function App() {
   return <SessionProvider><Routes><Route element={<Shell />}>
@@ -28,7 +29,7 @@ export default function App() {
     <Route path="/studio/fistulaguard/cases/:caseId" element={<DomainWorkspace module="fistulaguard"/>}/>
     <Route path="/studio/models" element={<Models/>}/><Route path="/studio/experiments" element={<Experiments/>}/><Route path="/studio/reports" element={<Reports/>}/>
     <Route path="/academy" element={<LearningRoleGate role="student"><Academy/></LearningRoleGate>}/><Route path="/academy/paths/:pathId" element={<LearningRoleGate role="student"><StudentLearningPathPage/></LearningRoleGate>}/><Route path="/academy/missions/:missionId" element={<LearningRoleGate role="student"><Mission/></LearningRoleGate>}/><Route path="/academy/progress" element={<LearningRoleGate role="student"><Progress/></LearningRoleGate>}/>
-    <Route path="/educator" element={<LearningRoleGate role="educator"><Educator/></LearningRoleGate>}/><Route path="/educator/cases/:lessonId/edit" element={<LearningRoleGate role="educator"><LessonEditor/></LearningRoleGate>}/><Route path="/educator/assignments" element={<LearningRoleGate role="educator"><Assignments/></LearningRoleGate>}/><Route path="/educator/submissions" element={<LearningRoleGate role="educator"><Submissions/></LearningRoleGate>}/>
+    <Route path="/educator" element={<LearningRoleGate role="educator"><Educator/></LearningRoleGate>}/><Route path="/educator/cases/:lessonId/edit" element={<LearningRoleGate role="educator"><LessonEditor/></LearningRoleGate>}/><Route path="/educator/assignments" element={<LearningRoleGate role="educator"><Assignments/></LearningRoleGate>}/><Route path="/educator/submissions" element={<LearningRoleGate role="educator"><Submissions/></LearningRoleGate>}/><Route path="/educator/learners" element={<LearningRoleGate role="educator"><EducatorLearners/></LearningRoleGate>}/>
     <Route path="*" element={<Home/>}/>
   </Route></Routes></SessionProvider>
 }

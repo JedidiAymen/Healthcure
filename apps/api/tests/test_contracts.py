@@ -345,6 +345,35 @@ def test_educator_drafts_are_server_owned_revisioned_and_hidden_from_students(cl
     assert 'PRIVATE: answer key' not in academy.text and draft_id not in academy.text
 
 
+def test_educator_cohort_roster_is_owner_scoped_and_minimal(client):
+    credentials='local-test-password-123'
+    users=[('roster-teacher-a','teacher-a','educator'),('roster-teacher-b','teacher-b','educator'),
+           ('roster-student-a','Student A','student'),('roster-student-b','Student B','student')]
+    with _db() as conn:
+        for user_id,display_name,role in users:
+            salt,digest=password_record(credentials)
+            conn.execute('INSERT INTO users(id,display_name) VALUES(?,?)',(user_id,display_name))
+            conn.execute('INSERT INTO local_credentials(user_id,username,salt,password_hash) VALUES(?,?,?,?)',(user_id,display_name.lower().replace(' ','-'),salt,digest))
+            conn.execute('INSERT INTO role_grants(user_id,role,scope) VALUES(?,?,?)',(user_id,role,'platform'))
+        conn.execute('INSERT INTO learning_cohorts(id,name,created_by) VALUES(?,?,?)',('roster-cohort-a','Owned group','roster-teacher-a'))
+        conn.execute('INSERT INTO learning_cohorts(id,name,created_by) VALUES(?,?,?)',('roster-cohort-b','Other group','roster-teacher-b'))
+        conn.execute('INSERT INTO learning_cohort_memberships(user_id,cohort_id,added_by) VALUES(?,?,?)',('roster-student-a','roster-cohort-a','roster-teacher-a'))
+        conn.execute('INSERT INTO learning_cohort_memberships(user_id,cohort_id,added_by) VALUES(?,?,?)',('roster-student-b','roster-cohort-b','roster-teacher-b'))
+    def auth(username):
+        token=client.post('/api/v1/auth/local-login',json={'username':username,'password':credentials}).json()['access_token']
+        return {'Authorization':f'Bearer {token}'}
+    teacher=auth('teacher-a')
+    student=auth('student-a')
+    response=client.get('/api/v1/educator/cohorts/roster-cohort-a/students',headers=teacher)
+    assert response.status_code==200,response.text
+    assert response.json()=={
+        'cohort_id':'roster-cohort-a','cohort_name':'Owned group','student_count':1,
+        'learners':[{'display_name':'Student A'}],
+    }
+    assert client.get('/api/v1/educator/cohorts/roster-cohort-b/students',headers=teacher).status_code==404
+    assert client.get('/api/v1/educator/cohorts/roster-cohort-a/students',headers=student).status_code==403
+
+
 def test_student_challenges_require_published_version_and_matching_cohort(client):
     credentials='local-test-password-123'
     with _db() as conn:

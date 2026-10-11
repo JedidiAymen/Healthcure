@@ -1,7 +1,7 @@
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { OfflineBanner } from '@/components/OfflineBanner'
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { Activity, AudioLines, BookOpenCheck, Boxes, ClipboardCheck, FileText, FlaskConical, GraduationCap, Layers3, LogOut, Microscope, Radio, ScanLine, Search, ShieldCheck, Stethoscope, Trophy } from 'lucide-react'
+import { Activity, AudioLines, BookOpenCheck, Boxes, ClipboardCheck, FileText, FlaskConical, GraduationCap, Layers3, LogOut, Microscope, Radio, ScanLine, Search, ShieldCheck, Stethoscope, Trophy, Users } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -79,6 +79,8 @@ export function Shell() {
                 ? 'Assignments'
                 : location.pathname.startsWith('/educator/submissions')
                   ? 'Submissions'
+                  : location.pathname.startsWith('/educator/learners')
+                    ? 'Learners'
                   : location.pathname.startsWith('/educator')
                     ? 'Educator studio'
                     : specialties.find((s) => location.pathname.includes(s.label.toLowerCase()))?.label ?? navigation.find((n) => location.pathname === n.to)?.label ?? 'Professional studio'
@@ -110,6 +112,7 @@ export function Shell() {
       { label: 'Lessons', to: '/educator', icon: BookOpenCheck, active: location.pathname === '/educator' || location.pathname.startsWith('/educator/cases/') },
       { label: 'Assignments', to: '/educator/assignments', icon: ClipboardCheck, active: location.pathname === '/educator/assignments' },
       { label: 'Submissions', to: '/educator/submissions', icon: FileText, active: location.pathname === '/educator/submissions' },
+      { label: 'Learners', to: '/educator/learners', icon: Users, active: location.pathname === '/educator/learners' },
     ]
   const normalizedSearch = searchText.trim().toLocaleLowerCase()
   const matchingCases = useMemo(() => {
