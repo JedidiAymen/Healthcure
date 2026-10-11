@@ -5,6 +5,7 @@ import { api, type EducatorAttemptReview } from "@/lib/api";
 import { assessEducatorEvidencePreview, verifyAssignedSignalEvidence } from "@/lib/educator-evidence-preview";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const DoseViewer = lazy(() => import("@/pages/DoseViewer").then((module) => ({ default: module.DoseViewer })));
@@ -69,7 +70,10 @@ export function EducatorEvidencePreview({ attempt }: { attempt: EducatorAttemptR
         {issue ? (
           <div role={issueState === "absent" || !sourceCheck.isError ? "status" : "alert"} className="flex min-h-32 items-center gap-3 rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
             {issueState === "absent" ? <Database className="size-5 shrink-0"/> : <CircleAlert className="size-5 shrink-0 text-amber-600"/>}
-            <span>{issueMessage}</span>
+            <div className="grid min-w-0 flex-1 gap-2">
+              <span>{issueMessage}</span>
+              {assessment.state === "ready" && sourceCheck.isError && issueState !== "mismatch" && <Button type="button" variant="outline" size="sm" className="w-fit" disabled={sourceCheck.isFetching} onClick={() => void sourceCheck.refetch()}>{sourceCheck.isFetching ? "Checking source…" : "Retry source check"}</Button>}
+            </div>
           </div>
         ) : (
           <div className="min-w-0 overflow-hidden" data-testid="assigned-evidence-viewer">

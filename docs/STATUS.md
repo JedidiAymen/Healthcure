@@ -4,11 +4,13 @@ Updated: 2026-10-11
 
 ## Latest shared checkpoint (2026-10-11)
 
-- `main` is pushed at `3ac15b1` (`Connect workflow actions and gate stale demo bundles`). CI for the previous checkpoint `54bf505` passed; CI for this new commit is pending.
+- `main` now includes the workflow controls, local readiness gates, Educator retry, and event checklist described in this section. CI status follows the latest push in the repository's Actions page; do not treat a prior green commit as verification of a newer one.
 - The Experiments graph now calls the existing OpenKBP case-summary operation, links returned metrics to run history, and saves a provenance-linked evidence report. It reflects real pending/error/result states and disables run actions for sources that are not ready. No run or report was created during this update.
 - The Student Academy now distinguishes a restored local draft from a queued offline submission. Learners can explicitly save a restored draft to sync it to the server; queued submissions keep their existing idempotent replay behavior.
 - The read-only HackCure Docker preflight checks that the newest local image archive is valid for the checked-out source commit. It reports the existing archive as stale (`e2a8d8a`, behind current `main`), so second-machine/offline rehearsal remains blocked until a bundle is prepared from the selected release commit. It also reports the separate missing imported comparison/report/reviewer state and absent optional Academy assignment. No Docker image was rebuilt and no profile data, credentials, or permissions were changed.
-- Lightweight validation for this checkpoint: `npm run typecheck`, `npm run lint`, `git diff --check`, and `bash -n scripts/hackcure_docker_preflight.sh` passed. No broad local suite was run. Preview is available at `http://127.0.0.1:5173/studio/experiments` while its local server remains running.
+- Educator evidence preview now offers a **Retry source check** button after transient load failures; an integrity mismatch remains an alert and cannot be bypassed. No assignment or profile data changed.
+- [`HACKCURE_EVENT_CHECKLIST.md`](HACKCURE_EVENT_CHECKLIST.md) turns the reviewed proposal and current source gates into an operator sequence, including organizer, source-rights, private profile, authenticated review, and offline fallback gates. It does not claim organizer acceptance.
+- Lightweight validation for these changes: `npm run typecheck`, `npm run lint`, `git diff --check`, and `bash -n scripts/hackcure_docker_preflight.sh` passed. No broad local suite was run. Preview is available at `http://127.0.0.1:5173/studio/experiments` while its local server remains running.
 
 ## Latest local integration (2026-10-11)
 

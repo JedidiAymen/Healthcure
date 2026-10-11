@@ -2,6 +2,8 @@
 
 Updated 2026-10-11. This is a repository-side rehearsal aid based on the user-provided *MEDFORGE HackCure Platform Enhancement Proposal* and the current feature branch. The proposal labels its additions as proposed at its reviewed 2026-10-10 baseline; its status table is not a current implementation audit or organizer approval. The participant cahier remains the source for official track requirements.
 
+For a print-friendly operator sequence with explicit release gates, use the [`HackCure event-readiness checklist`](HACKCURE_EVENT_CHECKLIST.md). This walkthrough remains the detailed setup and evidence reference.
+
 ## Product story
 
 The selected HackCure demonstration is a **DoseTwin research review** of the same OpenKBP-Opt `pt_241` reference and publisher-archived `set_1` prediction. The operator checks matched source identity, inspects ROI and voxel differences, DVHs and provenance, records a rationale-bound research disposition, then reopens and exports that record. The archived output is not MEDFORGE inference. A research disposition is not radiotherapy approval.
