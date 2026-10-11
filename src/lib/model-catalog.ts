@@ -18,7 +18,18 @@ export function filterModelCatalog(
     if (options.readiness === "ready" && model.readiness !== "ready") return false;
     if (options.readiness === "gated" && model.readiness === "ready") return false;
     if (!query) return true;
-    return [model.name, ...model.operation_ids, model.source_license, model.details]
+    // These are all registry-supplied identifiers and provenance fields. Search
+    // must never synthesize a status or imply that a source is installed.
+    return [
+      model.id,
+      model.name,
+      model.module,
+      ...model.operation_ids,
+      model.source_revision,
+      model.source_license,
+      model.upstream_url,
+      model.details,
+    ]
       .some((value) => value.toLocaleLowerCase().includes(query));
   });
 }

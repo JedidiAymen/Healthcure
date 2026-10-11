@@ -21,7 +21,7 @@ EXPECTED_IMAGES = {
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
-def verify(archive: Path) -> dict[str, object]:
+def verify(archive: Path, *, expected_source_commit: str | None = None) -> dict[str, object]:
     archive = archive.expanduser().resolve(strict=True)
     if not archive.name.startswith("hackcure-images-") or not archive.name.endswith(".tar.gz"):
         raise ValueError("Expected a hackcure-images-*.tar.gz archive.")
@@ -60,6 +60,14 @@ def verify(archive: Path) -> dict[str, object]:
     repository_commit = manifest.get("repository_commit")
     if not isinstance(repository_commit, str) or not re.fullmatch(r"[0-9a-f]{7,40}", repository_commit):
         raise ValueError("The manifest does not contain a valid source commit.")
+    if expected_source_commit is not None:
+        if not re.fullmatch(r"[0-9a-f]{7,40}", expected_source_commit):
+            raise ValueError("The expected source commit must be a 7- to 40-character lowercase Git SHA.")
+        if not repository_commit.startswith(expected_source_commit) and not expected_source_commit.startswith(repository_commit):
+            raise ValueError(
+                "The image bundle was built from source commit "
+                f"{repository_commit}, not the expected checkout {expected_source_commit}."
+            )
 
     # Read to EOF so gzip validates the trailer and CRC without extracting files.
     with gzip.open(archive, "rb") as stream:
@@ -101,9 +109,13 @@ def verify(archive: Path) -> dict[str, object]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("archive", type=Path, help="hackcure-images-*.tar.gz archive")
+    parser.add_argument(
+        "--expected-source-commit",
+        help="Require the manifest source commit to match this full or abbreviated Git SHA.",
+    )
     args = parser.parse_args()
     try:
-        result = verify(args.archive)
+        result = verify(args.archive, expected_source_commit=args.expected_source_commit)
     except (OSError, ValueError, json.JSONDecodeError, tarfile.TarError, gzip.BadGzipFile) as exc:
         print(f"HackCure image bundle verification failed: {exc}", file=sys.stderr)
         return 1

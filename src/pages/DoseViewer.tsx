@@ -79,6 +79,14 @@ function DosePlane({caseId,axis,index,coordinates,selectedRois,showDose,showRoi,
   queryFn:async()=>{const [ct,dose,...masks]=await Promise.all([api.slice(caseId,axis,index,'ct',selectedRois[0]),api.slice(caseId,axis,index,'dose',selectedRois[0]),...selectedRois.map(name=>api.slice(caseId,axis,index,'roi',name))]);return {ct,dose,rois:selectedRois.map((name,i)=>({name,values:masks[i].values}))} satisfies SlicePack},
  })
  const pack=sliceQuery.data??null,busy=sliceQuery.isPending,error=sliceQuery.error?.message??''
+ const samplePoint=crosshairForPlane(axis,coordinates)
+ const sampleOffset=samplePoint.row*128+samplePoint.column
+ const selectedSample=pack?{
+  ct:pack.ct.values[sampleOffset],
+  dose:pack.dose.values[sampleOffset],
+  structures:pack.rois.map(layer=>({name:layer.name,inside:layer.values[sampleOffset]>0})),
+ }:null
+ const formatSourceValue=(value:number|undefined)=>typeof value==='number'&&Number.isFinite(value)?value.toFixed(4):'Unavailable'
  useEffect(()=>{if(pack)onCtHash(pack.ct.source_sha256)},[pack,onCtHash])
  return <Card className="group overflow-hidden rounded-xl border border-border/80 bg-card/90 shadow-sm" size="sm">
   <CardHeader className="flex-row items-start justify-between gap-3 border-b border-border/70 px-4 py-3">
@@ -90,6 +98,15 @@ function DosePlane({caseId,axis,index,coordinates,selectedRois,showDose,showRoi,
   </CardHeader>
    <CardContent className="grid gap-3 p-4 pt-3">
    <div ref={viewportRef} className={`relative grid ${size==='primary'?'aspect-square min-h-0 max-h-[min(72vh,760px)]':'h-[min(38vh,344px)] min-h-64'} place-items-center overflow-hidden rounded-lg border border-[#34415C] bg-[#101624] p-2 [&:fullscreen]:min-h-screen [&:fullscreen]:rounded-none`} tabIndex={0} role="group" aria-label={`${synthetic?'Synthetic phantom':'OpenKBP'} ${descriptor.title} imaging viewport`} onWheel={event=>{event.preventDefault();if(!locked)onIndexChange(axis,index+(event.deltaY>0?1:-1))}} onKeyDown={event=>{if(locked)return;if(event.key==='ArrowDown'||event.key==='ArrowRight'){event.preventDefault();onIndexChange(axis,index+1)}else if(event.key==='ArrowUp'||event.key==='ArrowLeft'){event.preventDefault();onIndexChange(axis,index-1)}}}>{busy?<div className="flex items-center gap-2 text-sm text-muted-foreground"><LoaderCircle className="size-4 animate-spin"/>{synthetic?'Generating phantom slice…':'Reading source arrays…'}</div>:error?<div className="flex items-center gap-2 text-sm text-amber-300"><CircleAlert className="size-4"/>{error}</div>:pack&&<SliceCanvas pack={pack} axis={axis} coordinates={coordinates} showDose={showDose} showRoi={showRoi} opacity={opacity} doseMaxGy={doseMaxGy} ctRange={ctRange} spacingMm={spacingMm} zoom={zoom} pan={pan} panMode={panMode} onPanChange={onPanChange} onPick={(row,column)=>onCoordinateChange(axis,row,column)} locked={locked} size={size} synthetic={synthetic}/>}<Button type="button" variant="outline" size="icon-sm" className="absolute right-3 top-3 z-10 border-white/20 bg-[#101624]/90 text-white hover:bg-[#202b41] hover:text-white" aria-label={isFullscreen?'Exit fullscreen':'View fullscreen'} onClick={()=>{if(isFullscreen)void document.exitFullscreen();else void viewportRef.current?.requestFullscreen()}}><Expand/></Button></div>
+   {size==='primary'&&selectedSample&&<section aria-label="Selected voxel source sample" className="grid gap-2 rounded-md border border-border bg-background px-3 py-2.5">
+    <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1"><h4 className="m-0 text-xs font-semibold">Selected voxel sample</h4><span className="font-mono text-[11px] tabular-nums text-muted-foreground">x {coordinates[0]} · y {coordinates[1]} · z {coordinates[2]}</span></div>
+    <dl className="m-0 grid grid-cols-2 gap-2 sm:grid-cols-3">
+     <div><dt className="text-[10px] text-muted-foreground">{synthetic?'Relative density array':'CT source value'}</dt><dd className="m-0 font-mono text-xs tabular-nums">{formatSourceValue(selectedSample.ct)} <span className="font-sans text-[10px] text-muted-foreground">{pack?.ct.unit}</span></dd></div>
+     <div><dt className="text-[10px] text-muted-foreground">{synthetic?'Illustrative dose array':'Reference dose array'}</dt><dd className="m-0 font-mono text-xs tabular-nums">{formatSourceValue(selectedSample.dose)} <span className="font-sans text-[10px] text-muted-foreground">{pack?.dose.unit}</span></dd></div>
+     <div className="col-span-2 sm:col-span-1"><dt className="text-[10px] text-muted-foreground">Selected structures</dt><dd className="m-0 text-xs">{selectedSample.structures.length?selectedSample.structures.map(item=><span key={item.name} className="mr-2 inline-flex items-center gap-1.5"><i className="size-1.5 rounded-full" style={{backgroundColor:`rgb(${roiColors[item.name]?.join(',')??'130,190,220'})`}}/>{item.name}: {item.inside?'inside mask':'outside mask'}</span>):'No ROI mask loaded'}</dd></div>
+    </dl>
+    <p className="m-0 text-[10px] leading-4 text-muted-foreground">Read directly from the active CT, dose and mask slices at the linked processed-grid index; dose source: {pack?.dose.source_file}. Source units and reference status are preserved.</p>
+   </section>}
    <div role="group" aria-label={`${descriptor.indexLabel} slice control`} className="grid gap-1 px-1">
     <div className="flex items-center justify-between text-xs"><span className="font-medium">Scrub slice</span><span className="font-mono tabular-nums text-muted-foreground">{index} / 127</span></div>
     <Slider aria-label={`${descriptor.indexLabel} slice index`} min={0} max={127} step={1} value={[index]} disabled={locked} onValueChange={value=>{const next=Array.isArray(value)?value[0]:value;onIndexChange(axis,clampDoseIndex(next))}}/>
