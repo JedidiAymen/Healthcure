@@ -734,7 +734,9 @@ test('DoseTwin keeps one Gy scale, linked ROI overlays and voxel mapping under z
   await secondaryY.scrollIntoViewIfNeeded()
   const secondaryYBounds = await secondaryY.boundingBox()
   if (!secondaryYBounds) throw new Error('DoseTwin Y-index dock view is not positioned')
-  await page.mouse.click(secondaryYBounds.x + secondaryYBounds.width * 0.26, secondaryYBounds.y + secondaryYBounds.height * 0.76)
+  // Target the center of source cell column 33 / row 97. A 26% boundary-adjacent
+  // point can round to the preceding CSS pixel before the browser dispatches it.
+  await page.mouse.click(secondaryYBounds.x + secondaryYBounds.width * (33.5 / 128), secondaryYBounds.y + secondaryYBounds.height * (97.5 / 128))
   await expect(page.locator('#dose-coordinate-0')).toHaveValue('97')
   await expect(page.locator('#dose-coordinate-1')).toHaveValue('65')
   await expect(page.locator('#dose-coordinate-2')).toHaveValue('33')
