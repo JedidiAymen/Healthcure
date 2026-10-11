@@ -2643,7 +2643,7 @@ export function Mission() {
     const queue = async () => {
       // Offline: keep the submit with its key; it is replayed automatically when the connection returns.
       await enqueueSubmit(offlineStore(), { attemptId: attempt.attempt_id, revision: attempt.revision, idempotencyKey, answers, viewerEvidence });
-      setError(""); setOfflineNotice({ kind: "submission-queued", message: "You are offline. This submission is stored on this device and will be sent automatically when a connection returns." });
+      setError(""); setOfflineNotice({ kind: "submission-queued", message: "You are offline. Your submission is queued on this device and will be sent automatically." });
     };
     if (!navigator.onLine) { await queue(); return; }
     setSaving(true); setError("");

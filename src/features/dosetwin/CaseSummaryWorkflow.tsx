@@ -142,7 +142,7 @@ export function CaseSummaryWorkflow({ selectedCase, selectedCaseId, run, runBusy
       {
         id: "summary-request",
         type: "caseSummaryStage",
-        position: { x: 0, y: 154 },
+        position: { x: 0, y: 225 },
         data: {
           title: "Case-summary API request",
           detail: runError || (!sourceCanRun && selectedCase ? "This source is inspection-only or blocked in the installed profile, so the existing run operation is unavailable." : "POST /api/v1/runs · openkbp.case_summary. The server validates the installed sparse arrays and records their provenance; identical inputs reuse the saved run."),
@@ -160,7 +160,7 @@ export function CaseSummaryWorkflow({ selectedCase, selectedCaseId, run, runBusy
       {
         id: "returned-metrics",
         type: "caseSummaryStage",
-        position: { x: 0, y: 308 },
+        position: { x: 0, y: 450 },
         data: {
           title: "Returned benchmark metrics",
           detail: metricDetails,
@@ -177,7 +177,7 @@ export function CaseSummaryWorkflow({ selectedCase, selectedCaseId, run, runBusy
       {
         id: "saved-report",
         type: "caseSummaryStage",
-        position: { x: 0, y: 462 },
+        position: { x: 0, y: 675 },
         data: {
           title: "Evidence report · this visit",
           detail: reportError || (hasSavedReport ? `Saved during this visit · ${report?.id} · ${report?.status}` : reportBusy ? "Saving a report from the selected run." : hasCurrentMetrics ? "Save a provenance-linked report from the selected run. This trace only tracks saves made during this visit." : "Available after a result has been returned. This trace only tracks saves made during this visit."),
@@ -209,7 +209,7 @@ export function CaseSummaryWorkflow({ selectedCase, selectedCaseId, run, runBusy
         </div>
         <span className="text-[10px] text-muted-foreground">Source truth comes from this profile&apos;s API.</span>
       </div>
-      <div className="h-[620px] w-full overflow-hidden rounded-md border border-border bg-background" aria-label="OpenKBP case-summary workflow graph">
+      <div className="h-[850px] w-full overflow-hidden rounded-md border border-border bg-background" aria-label="OpenKBP case-summary workflow graph">
         <ReactFlow
           nodes={nodes}
           edges={edges}
