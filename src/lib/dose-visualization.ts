@@ -58,11 +58,12 @@ export function slicePointFromCanvasPosition(
 ): SlicePoint | null {
   if (!(rect.width > 0) || !(rect.height > 0)) return null
   return {
-    // Pointer coordinates describe a continuous point over a raster. Select the
-    // nearest voxel center so sub-pixel rounding at the transformed canvas edge
-    // does not move a deliberate selection into the preceding voxel.
-    column: clampDoseIndex(Math.round(((clientX - rect.left) / rect.width) * DOSE_GRID_SIZE)),
-    row: clampDoseIndex(Math.round(((clientY - rect.top) / rect.height) * DOSE_GRID_SIZE)),
+    // The rendered canvas is a grid of cells: floor assigns every point inside
+    // a cell to that cell's voxel. Rounding normalized coordinates shifts the
+    // latter half of each voxel into its neighbor (for example, x=1.5/128
+    // incorrectly selects column 2 instead of column 1).
+    column: clampDoseIndex(Math.floor(((clientX - rect.left) / rect.width) * DOSE_GRID_SIZE)),
+    row: clampDoseIndex(Math.floor(((clientY - rect.top) / rect.height) * DOSE_GRID_SIZE)),
   }
 }
 

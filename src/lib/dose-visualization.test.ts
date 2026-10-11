@@ -41,6 +41,14 @@ describe('DoseTwin linked voxel coordinates', () => {
     expect(slicePointFromCanvasPosition(20, 30, { ...rect, width: 0 })).toBeNull()
   })
 
+  it('keeps every pointer position inside a rendered pixel on that voxel', () => {
+    const rect = { left: 10, top: 20, width: 256, height: 256 }
+    // Each voxel occupies two CSS pixels here. Rounding normalized positions
+    // would incorrectly move the second pixel of a cell into the next voxel.
+    expect(slicePointFromCanvasPosition(13, 23, rect)).toEqual({ row: 1, column: 1 })
+    expect(slicePointFromCanvasPosition(15.9, 25.9, rect)).toEqual({ row: 2, column: 2 })
+  })
+
   it('maps pointer positions after anisotropic display sizing, zoom and pan', () => {
     const portraitPlane = { left: 318, top: 74, width: 320, height: 578 }
     const zoomedPannedPlane = { left: 410, top: 162, width: 480, height: 867 }
