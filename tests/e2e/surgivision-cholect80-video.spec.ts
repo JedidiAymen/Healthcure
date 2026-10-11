@@ -44,9 +44,22 @@ test('Cholec80 source phase stays aligned to the decoded full-rate video frame @
 
   const secondPhase = clip!.phase_track[1]
   const targetTime = (secondPhase.first_frame + 0.25) / clip!.frames_per_second!
-  await video.evaluate((element, seconds) => { (element as HTMLVideoElement).currentTime = seconds }, targetTime)
+  await video.evaluate((element, seconds) => new Promise<void>((resolve, reject) => {
+    const media = element as HTMLVideoElement
+    const timeout = window.setTimeout(() => reject(new Error('Native video did not finish seeking to the selected source phase')), 15_000)
+    media.addEventListener('seeked', () => { window.clearTimeout(timeout); resolve() }, { once: true })
+    media.currentTime = seconds
+  }), targetTime)
   await expect(overlay).toContainText(secondPhase.phase.replace(/([a-z])([A-Z])/g, '$1 $2'))
   await expect(overlay).toContainText(`frame ${secondPhase.first_frame.toLocaleString()}`)
+  await expect(overlay).toContainText('not model output')
+  const phaseTimeline = page.getByRole('group', { name: 'Seek to publisher-labeled phase interval' })
+  await expect(phaseTimeline.getByRole('button')).toHaveCount(clip!.phase_track.length)
+  const thirdPhase = clip!.phase_track[2]
+  const thirdPhaseLabel = thirdPhase.phase.replace(/([a-z])([A-Z])/g, '$1 $2')
+  await phaseTimeline.getByRole('button', { name: `Seek to ${thirdPhaseLabel}, frames ${thirdPhase.first_frame} to ${thirdPhase.last_frame}` }).click()
+  await expect.poll(() => video.evaluate(element => (element as HTMLVideoElement).currentTime)).toBeGreaterThanOrEqual(thirdPhase.first_frame / clip!.frames_per_second!)
+  await expect(overlay).toContainText(thirdPhaseLabel)
 
   await expect(page.getByRole('combobox', { name: 'Select continuous surgical video' })).toContainText('Cholec80 · Laparoscopic cholecystectomy')
   await mkdir('.local-review/CHOLECT80-VIDEO', { recursive: true })

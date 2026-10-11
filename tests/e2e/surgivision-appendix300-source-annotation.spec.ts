@@ -34,7 +34,8 @@ test('Appendix300 source event and grade appear at their video timestamp @source
   await page.goto('/studio/surgivision/cases/current')
   await page.getByRole('combobox', { name: 'Select continuous surgical video' }).click()
   await page.getByRole('option', { name: 'Appendix300 · Laparoscopic appendectomy' }).click()
-  await page.getByRole('button', { name: 'Jump to source event' }).click()
+  const inspector = page.getByRole('complementary', { name: 'Video evidence inspector' })
+  await inspector.getByRole('button', { name: 'Jump to source event' }).click()
   const inVideoAnnotation = page.locator('[role="status"]').filter({ hasText: 'Publisher source annotation' })
   await expect(inVideoAnnotation).toContainText('Appendix fully visible before invasive preparation')
   await expect(inVideoAnnotation).toContainText('Final laparoscopic grade: 2 · Gomes scale')
@@ -49,7 +50,7 @@ test('Appendix300 source event and grade appear at their video timestamp @source
 
   for (const viewport of [{ width: 1440, height: 900 }, { width: 768, height: 1024 }, { width: 390, height: 844 }]) {
     await page.setViewportSize(viewport)
-    await page.getByRole('button', { name: 'Jump to source event' }).click()
+    await inspector.getByRole('button', { name: 'Jump to source event' }).click()
     await expect(inVideoAnnotation).toBeVisible()
     await expect(page.locator('html')).toHaveJSProperty('scrollWidth', viewport.width)
     await page.screenshot({ path: `.local-review/UX-32/surgivision-source-event-${viewport.width}x${viewport.height}.png` })
