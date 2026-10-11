@@ -63,6 +63,26 @@ def _hash_file(path: Path) -> str | None:
     return digest.hexdigest()
 
 
+def _has_signin_capable_reviewer(conn: sqlite3.Connection) -> bool:
+    """Mirror local-login role precedence so the available credential opens reviewer routes."""
+    return conn.execute(
+        """SELECT 1
+           FROM users u
+           JOIN role_grants g ON g.user_id=u.id AND g.scope='platform'
+           JOIN local_credentials c ON c.user_id=u.id
+           WHERE g.role IN ('clinical_reviewer','admin')
+             AND g.role=(
+               SELECT effective.role FROM role_grants effective
+               WHERE effective.user_id=u.id AND effective.scope='platform'
+               ORDER BY CASE effective.role
+                 WHEN 'admin' THEN 0 WHEN 'educator' THEN 1
+                 WHEN 'student' THEN 2 WHEN 'clinical_reviewer' THEN 3 ELSE 4 END
+               LIMIT 1
+             )
+           LIMIT 1"""
+    ).fetchone() is not None
+
+
 def hackcure_preflight() -> tuple[list[dict[str, object]], bool]:
     """Read-only readiness checks for the documented local HackCure walkthrough."""
     case_root, case_config_error = _configured_pt241_root()
@@ -141,11 +161,7 @@ def hackcure_preflight() -> tuple[list[dict[str, object]], bool]:
                                     and files.get("reference:dose.csv") == reference_sha):
                                 report_ready = True
                                 break
-                    reviewer_ready = conn.execute(
-                        "SELECT 1 FROM users u JOIN role_grants g ON g.user_id=u.id AND g.scope='platform' "
-                        "JOIN local_credentials c ON c.user_id=u.id "
-                        "WHERE g.role IN ('clinical_reviewer','admin') LIMIT 1"
-                    ).fetchone() is not None
+                    reviewer_ready = _has_signin_capable_reviewer(conn)
                     academy_ready = conn.execute(
                         "SELECT 1 FROM assignments a "
                         "JOIN lesson_versions v ON v.id=a.lesson_version_id AND v.status='published' "
