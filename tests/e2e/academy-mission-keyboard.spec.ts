@@ -60,6 +60,7 @@ test('learner can complete the source-backed investigation flow from the keyboar
   })
 
   await page.setViewportSize({ width: 1440, height: 1000 })
+  await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto(`/academy/missions/${assignmentId}`)
   await expect(page.getByText('Student sign in', { exact: true })).toBeVisible()
   await page.getByLabel('Username').fill('academy-qa')
@@ -68,14 +69,22 @@ test('learner can complete the source-backed investigation flow from the keyboar
 
   await expect(page.getByRole('heading', { name: 'Describe a measured vascular signal' })).toBeVisible()
   const steps = page.getByRole('navigation', { name: 'Investigation steps' })
-  for (const label of ['Brief', 'Explore evidence', 'Observe', 'Explain', 'Submit']) {
-    const link = steps.getByRole('link', { name: new RegExp(label) })
-    await link.press('Enter')
-    await expect(page).toHaveURL(new RegExp(`#mission-${label === 'Brief' ? 'brief' : label === 'Explore evidence' ? 'explore' : label.toLowerCase()}`))
-  }
+  const stepButton = (label: string) => steps.getByRole('button', { name: new RegExp(label) })
+  const expectStepInView = async (id: string) => expect.poll(() => page.locator(`#${id}`).evaluate(element => {
+    const top = element.getBoundingClientRect().top
+    // The Academy stepper remains above the selected stage; keep the stage
+    // near that navigation rather than demanding it sit at the viewport edge.
+    return top >= -80 && top <= 260
+  })).toBe(true)
+  await expect(stepButton('Brief')).toHaveAttribute('aria-current', 'step')
+  await expect(stepButton('Observe')).toBeDisabled()
+  await stepButton('Explore evidence').press('Enter')
+  await expect(stepButton('Explore evidence')).toHaveAttribute('aria-current', 'step')
+  await expect(page.getByText('Inspect the assigned source', { exact: true })).toBeVisible()
+  await expectStepInView('mission-explore')
 
-  const submit = page.getByRole('button', { name: 'Submit for educator review' })
-  await expect(submit).toBeDisabled()
+  const reviewEvidence = page.getByRole('button', { name: 'Review selected evidence' })
+  await expect(reviewEvidence).toBeDisabled()
   const waveform = page.getByRole('img', { name: /source waveform/ })
   await expect(waveform).toBeVisible()
   await expect(page.getByText(/Checksum verified/)).toBeVisible()
@@ -87,16 +96,23 @@ test('learner can complete the source-backed investigation flow from the keyboar
   await expect(channels.getByRole('button', { name: 'PZT2', exact: true })).toBeFocused()
   await page.keyboard.press('Space')
   await expect(waveform).toHaveAttribute('aria-label', /raw PZT2 source waveform/)
-  await expect(page.locator('#mission-observe').getByText('Evidence selected', { exact: true })).toBeVisible()
+  await stepButton('Observe').press('Enter')
+  await expect(stepButton('Observe')).toHaveAttribute('aria-current', 'step')
+  await expect(page.getByText('Check the evidence you selected', { exact: true })).toBeVisible()
+  await expect(page.locator('#mission-observe').getByText(/FiSaV pat001 · raw PZT2 · 0\.0–5\.0 s/)).toBeVisible()
+  await expectStepInView('mission-observe')
+  await stepButton('Explain').press('Enter')
 
   await page.getByLabel('Your observation').nth(0).fill('The selected five-second source window contains a varying raw PZT2 trace.')
   await page.getByLabel('Your observation').nth(1).fill('The source values have no stated physical unit, so this window cannot establish clinical adequacy.')
-  await expect(submit).toBeEnabled()
-  await page.getByRole('link', { name: /Submit/ }).press('Enter')
+  await expect(page.getByRole('button', { name: 'Review and submit' })).toBeEnabled()
+  await stepButton('Submit').press('Enter')
+  await expect(stepButton('Submit')).toHaveAttribute('aria-current', 'step')
+  await expectStepInView('mission-submit')
   await page.getByRole('button', { name: 'Submit for educator review' }).press('Enter')
 
   await expect(page.getByText('Submission received', { exact: true })).toBeVisible()
-  await expect(page.getByText(/PZT2 · 0\.0–5\.0 s/)).toBeVisible()
+  await expect(page.locator('#mission-submit').getByText(/raw PZT2 · 0\.0–5\.0 s/)).toBeVisible()
   expect(submittedAttempt.observations).toHaveLength(2)
   expect(submittedAttempt.viewer_evidence).toMatchObject({ kind: 'fistulaguard', record_id: 'pat001', channel: 'raw PZT2' })
 
