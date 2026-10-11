@@ -1,178 +1,7 @@
-.fistulaguard-workspace {
-  --signal-viewport: #101624;
-  --signal-panel: #171f30;
-  --signal-line: #34415c;
-  --signal-text: #e9eef7;
-  --signal-muted: #a6b1c4;
-  --signal-grid: #29354a;
-  --signal-axis: #93a2bb;
-}
-
-.fistula-control-strip {
-  position: sticky;
-  top: 64px;
-  z-index: 10;
-  background: color-mix(in srgb, var(--background) 95%, transparent);
-  backdrop-filter: blur(12px);
-}
-
-.fistula-signal-viewport {
-  border-color: var(--signal-line);
-  background: var(--signal-viewport);
-  color: var(--signal-text);
-}
-
-.fistula-signal-viewport [data-slot="card-description"] {
-  color: var(--signal-muted);
-}
-
-.fistula-inspection-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  align-items: start;
-  gap: 1rem;
-}
-
-.fistula-inspector {
-  border-color: var(--border);
-  background: var(--card);
-}
-
-.fistula-compact-spectrum {
-  height: 340px;
-}
-
-.fistula-inspector [data-slot="tabs-content"] {
-  min-width: 0;
-}
-
-.fistula-viewport-header [data-slot="card-title"] {
-  color: var(--signal-text);
-}
-
-.fistula-kicker,
-.fistula-axis-notes,
-.fistula-trace-footer {
-  color: var(--signal-muted);
-  font-size: 0.75rem;
-  line-height: 1.5;
-}
-
-.fistula-kicker {
-  font-weight: 650;
-  letter-spacing: 0.09em;
-}
-
-.fistula-axis-notes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 1rem;
-  font-family: var(--font-measurement);
-  font-size: 0.6875rem;
-}
-
-.fistula-waveform-chart {
-  height: 420px !important;
-  overflow: hidden;
-  border: 1px solid var(--signal-line);
-  border-radius: 0.5rem;
-  background: var(--signal-panel);
-}
-
-.fistula-cursor-readout {
-  display: flex;
-  min-height: 2.25rem;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.375rem 0.125rem 0;
-  color: var(--muted-foreground);
-  font-size: 0.75rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.fistula-cursor-readout output {
-  color: var(--foreground);
-  text-align: right;
-}
-
-.fistula-cursor-readout output b {
-  color: var(--muted-foreground);
-  font-weight: 400;
-}
-
-.fistula-cursor-readout output small {
-  color: var(--muted-foreground);
-  font-family: var(--font-body);
-  font-size: 0.6875rem;
-}
-
-.fistula-cursor-hint {
-  text-align: right;
-}
-
-.fistula-source-locator {
-  display: grid;
-  gap: 0.375rem;
-  margin: 0 0 0.75rem;
-  padding: 0.25rem 0.125rem 0;
-  color: var(--signal-muted);
-  font-family: var(--font-measurement);
-  font-size: 0.6875rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.fistula-source-locator-heading,
-.fistula-source-track-labels {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.fistula-source-locator-heading > span:first-child {
-  color: var(--signal-text);
-  font-family: var(--font-body);
-  font-size: 0.625rem;
-  font-weight: 650;
-  letter-spacing: 0.09em;
-}
-
-.fistula-source-track {
-  position: relative;
-  height: 0.375rem;
-  overflow: hidden;
-  border: 1px solid var(--signal-line);
-  border-radius: 9999px;
-  background: #0d1421;
-}
-
-.fistula-source-track-selection {
-  position: absolute;
-  inset-block: 0;
-  min-width: 3px;
-  border-radius: inherit;
-  background: #57d1bd;
-  box-shadow: 0 0 0 1px #101624;
-}
-
-.fistula-source-track-labels > span:nth-child(2) {
-  color: var(--signal-text);
-  text-align: center;
-}
-
-.fistula-source-fingerprint {
-  display: block;
-  max-width: min(20rem, 100%);
-  overflow: hidden;
-  color: var(--muted-foreground);
-  font-family: var(--font-measurement);
-  font-size: 0.625rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.fistula-waveform-chart .signal-trace-uplot {
+/* uPlot owns its canvas and sizing through generated internal elements. Keep
+   these targeted rules scoped to the waveform only. Page layout lives in
+   Tailwind classes in FistulaViewer.tsx. */
+.signal-trace-uplot {
   padding: 0.25rem 0.5rem;
 }
 
@@ -185,69 +14,23 @@
   color: var(--signal-text);
 }
 
-.fistula-trace-footer {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.5rem 1rem;
-  padding-top: 0.625rem;
-}
-
-.fistula-trace-footer > span:first-child {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.fistula-trace-footer i {
-  width: 0.5rem;
-  height: 0.5rem;
-  flex: 0 0 auto;
-  border-radius: 9999px;
+/* The shared signal chart defaults to 238px with !important; set the plot's
+   internal height to match this page's responsive Tailwind viewport. */
+.fistula-waveform-chart .signal-trace-uplot,
+.fistula-waveform-chart .signal-trace-uplot > .uplot {
+  height: 420px !important;
 }
 
 @media (max-width: 640px) {
-  .fistula-control-strip {
-    top: 56px;
-  }
-
-  .fistula-waveform-chart {
+  .fistula-waveform-chart .signal-trace-uplot,
+  .fistula-waveform-chart .signal-trace-uplot > .uplot {
     height: 300px !important;
-  }
-
-  .fistula-source-locator-heading,
-  .fistula-source-track-labels {
-    flex-wrap: wrap;
-  }
-
-  .fistula-source-track-labels > span:nth-child(2) {
-    order: 3;
-    width: 100%;
-    text-align: left;
-  }
-
-  .fistula-trace-footer {
-    flex-direction: column;
-  }
-
-  .fistula-cursor-readout {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .fistula-cursor-readout output,
-  .fistula-cursor-hint {
-    text-align: left;
   }
 }
 
 @media (min-width: 641px) and (max-width: 1023px) {
-  .fistula-waveform-chart {
+  .fistula-waveform-chart .signal-trace-uplot,
+  .fistula-waveform-chart .signal-trace-uplot > .uplot {
     height: 360px !important;
-  }
-}
-
-@media (min-width: 1024px) {
-  .fistula-source-locator {
-    margin-bottom: 1rem;
   }
 }
