@@ -1,3 +1,4 @@
+import { mkdir } from 'node:fs/promises'
 import { expect, test } from '@playwright/test'
 
 const reviewedAt = '2026-10-10 13:09:38'
@@ -85,6 +86,11 @@ test('rubric history keeps same-second reviews separate and arrow-key inspectabl
   await page.getByRole('button', { name: 'Sign in as student' }).click()
   await expect(page.getByRole('heading', { name: 'First Evidence Investigation' })).toBeVisible()
 
+  const latestReview = page.getByRole('region', { name: 'Latest reviewed rubric result' })
+  await expect(latestReview).toContainText('91.7%')
+  await expect(latestReview).toContainText('55/60 points')
+  await expect(latestReview).toContainText('+5.0 percentage points')
+
   const chart = page.getByRole('application', { name: /Educator-reviewed rubric history.*Evidence use/ })
   await expect(chart).toBeVisible()
   const ticks = chart.locator('..').locator('.recharts-cartesian-axis-tick-value')
@@ -104,4 +110,21 @@ test('rubric history keeps same-second reviews separate and arrow-key inspectabl
   await page.keyboard.press('ArrowDown')
   await page.keyboard.press('Enter')
   await expect(page.getByRole('application', { name: /Educator-reviewed rubric history.*Limits and uncertainty/ })).toBeVisible()
+  await expect(latestReview).toContainText('95.0%')
+  await expect(latestReview).toContainText('38/40 points')
+
+  const screenshotDir = '.local-review/ACADEMY-LATEST-SCORE'
+  await mkdir(screenshotDir, { recursive: true })
+  for (const viewport of [
+    { width: 1440, height: 1000, name: 'desktop' },
+    { width: 768, height: 1024, name: 'tablet' },
+    { width: 390, height: 844, name: 'phone' },
+  ]) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height })
+    const dimensions = await page.evaluate(() => ({ width: innerWidth, scrollWidth: document.documentElement.scrollWidth }))
+    expect(dimensions.scrollWidth).toBe(dimensions.width)
+    await latestReview.evaluate(element => element.scrollIntoView({ block: 'center' }))
+    await latestReview.screenshot({ path: `${screenshotDir}/latest-review-${viewport.name}.png`, animations: 'disabled' })
+    await page.screenshot({ path: `${screenshotDir}/rubric-history-${viewport.name}.png`, fullPage: true, animations: 'disabled' })
+  }
 })
