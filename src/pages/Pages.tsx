@@ -1668,6 +1668,7 @@ export function Experiments() {
     [selectedRun, setSelectedRun] = useState<DoseTwinRunRecord | null>(null),
     [report, setReport] = useState<EvidenceReport | null>(null),
     [reportBusy, setReportBusy] = useState(false),
+    [reportError, setReportError] = useState(""),
     [runError, setRunError] = useState(""),
     [activeView, setActiveView] = useState<"configure" | "history">(requestedRunId ? "history" : "configure"),
     [error, setError] = useState("");
@@ -1708,6 +1709,7 @@ export function Experiments() {
     setBusy(true);
     setError("");
     setRunError("");
+    setReportError("");
     setReport(null);
     try {
       const record = await api.createRun(caseId);
@@ -1730,6 +1732,7 @@ export function Experiments() {
   const saveReport = async (runId: string) => {
     setBusy(true);
     setReportBusy(true);
+    setReportError("");
     setError("");
     try {
       const viewer = selectedRun
@@ -1738,11 +1741,9 @@ export function Experiments() {
       const saved = await api.createReport(runId, viewer);
       setReport(saved);
     } catch (e) {
-      setError(
-        e instanceof Error
-          ? e.message
-          : "The evidence report could not be saved",
-      );
+      const message = e instanceof Error ? e.message : "The evidence report could not be saved";
+      setReportError(message);
+      setError(message);
     } finally {
       setReportBusy(false);
       setBusy(false);
@@ -1821,6 +1822,10 @@ export function Experiments() {
                 runError={runError}
                 report={report}
                 reportBusy={reportBusy}
+                reportError={reportError}
+                onRun={startRun}
+                onSaveReport={saveReport}
+                onViewMetrics={() => setActiveView("history")}
               />
               <Card className="border-border bg-card shadow-none">
                 <CardHeader className="gap-3 px-4 pt-4 sm:px-5">
@@ -1835,9 +1840,9 @@ export function Experiments() {
                 </CardHeader>
                 <CardContent className="flex min-w-0 flex-col items-stretch justify-between gap-4 border-t border-border pt-4 sm:flex-row sm:items-end">
                   <div className="min-w-0 flex-1 sm:max-w-xl">
-                    <ResearchCasePicker id="run-case-select" label="Source case" cases={cases} value={caseId} onValueChange={(value) => { setSelectedCase(value); setRunError(""); }} placeholder="Choose an installed case" />
+                    <ResearchCasePicker id="run-case-select" label="Source case" cases={cases} value={caseId} onValueChange={(value) => { setSelectedCase(value); setRunError(""); setReportError(""); }} placeholder="Choose an installed case" />
                   </div>
-                  <Button type="button" onClick={startRun} disabled={busy}>
+                  <Button type="button" onClick={startRun} disabled={busy || selectedCaseRecord?.status !== "ready"}>
                     {busy ? <LoaderCircle data-icon="inline-start" /> : <FlaskConical data-icon="inline-start" />}
                     Run case summary
                   </Button>
@@ -2558,7 +2563,10 @@ export function Mission() {
   const [busy, setBusy] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [offlineNotice, setOfflineNotice] = useState("");
+  const [offlineNotice, setOfflineNotice] = useState<{
+    kind: "draft-restored" | "submission-queued";
+    message: string;
+  } | null>(null);
   useEffect(() => {
     if (!attempt || attempt.state !== "started") return;
     const timer = window.setTimeout(() => { void saveDraft(offlineStore(), attempt.attempt_id, answers).catch(() => undefined); }, 600);
@@ -2591,7 +2599,7 @@ export function Mission() {
       setActiveMissionStep(value.state !== "started" ? 4 : savedStep ?? (value.viewer_evidence ? 2 : hasSavedAnswers ? 3 : 0));
       // Degraded mode: restore answers typed on this device that never reached the server.
       if (value.state === "started") void loadDraft(offlineStore(), value.attempt_id).then(draft => {
-        if (live && draft) { setAnswers({ ...serverAnswers, ...Object.fromEntries(Object.entries(draft.answers).filter(([, text]) => text.trim())) }); setOfflineNotice("Restored unsaved answers from this device."); }
+        if (live && draft) { setAnswers({ ...serverAnswers, ...Object.fromEntries(Object.entries(draft.answers).filter(([, text]) => text.trim())) }); setOfflineNotice({ kind: "draft-restored", message: "Unsaved answers from this device were restored. Save the draft to sync them to your educator account." }); }
       }).catch(() => undefined);
       setViewerEvidence(value.viewer_evidence);
       if (value.state === "started") {
@@ -2624,6 +2632,7 @@ export function Mission() {
       const updated = await api.saveStudentAttempt(attempt.attempt_id, attempt.revision, Object.entries(answers).map(([block_id, response]) => ({ block_id, response })), viewerEvidence);
       setAttempt(updated);
       setViewerEvidence(updated.viewer_evidence);
+      if (offlineNotice?.kind === "draft-restored") setOfflineNotice(null);
       return updated;
     } catch (e) { setError(e instanceof Error ? e.message : "Answers could not be saved"); return null; }
     finally { setSaving(false); }
@@ -2634,7 +2643,7 @@ export function Mission() {
     const queue = async () => {
       // Offline: keep the submit with its key; it is replayed automatically when the connection returns.
       await enqueueSubmit(offlineStore(), { attemptId: attempt.attempt_id, revision: attempt.revision, idempotencyKey, answers, viewerEvidence });
-      setError(""); setOfflineNotice("You are offline. Your submission is queued on this device and will be sent automatically.");
+      setError(""); setOfflineNotice({ kind: "submission-queued", message: "You are offline. This submission is stored on this device and will be sent automatically when a connection returns." });
     };
     if (!navigator.onLine) { await queue(); return; }
     setSaving(true); setError("");
@@ -2643,7 +2652,7 @@ export function Mission() {
       setAttempt(updated);
       await api.submitStudentAttempt(updated.attempt_id, updated.revision, idempotencyKey);
       await clearDraft(offlineStore(), updated.attempt_id).catch(() => undefined);
-      setOfflineNotice("");
+      setOfflineNotice(null);
       setAttempt(await api.studentAttempt(updated.attempt_id));
     } catch (e) {
       if (isNetworkError(e)) await queue();
@@ -2707,7 +2716,7 @@ export function Mission() {
       {!locked && selfCheckIds.some(id => !committedSelfChecks[id]) && <p className="text-sm text-muted-foreground">Commit your CVS self-check before submitting.</p>}
       <StudentMissionStepper progress={missionProgress} activeStep={activeStep} onStepChange={navigateMissionStep}/>
       {error && <Alert variant="destructive"><CircleAlert/><AlertTitle>Action could not be completed</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
-      {offlineNotice && <Alert role="status"><CircleAlert/><AlertTitle>Saved on this device</AlertTitle><AlertDescription>{offlineNotice}</AlertDescription></Alert>}
+      {offlineNotice && <Alert role="status"><CircleAlert/><AlertTitle>{offlineNotice.kind === "draft-restored" ? "Draft restored from this device" : "Submission queued on this device"}</AlertTitle><AlertDescription>{offlineNotice.message}</AlertDescription>{offlineNotice.kind === "draft-restored" && <AlertAction><Button type="button" variant="outline" size="sm" disabled={saving} onClick={() => void save()}>{saving ? "Saving…" : "Save draft"}</Button></AlertAction>}</Alert>}
       <section id="mission-explore" className="scroll-mt-20" hidden={activeStep !== 1} aria-labelledby="mission-explore-title">
         <Card className="mb-4"><CardHeader><div className="eyebrow">Explore evidence · {attempt.challenge.module}</div><CardTitle id="mission-explore-title">Inspect the assigned source</CardTitle><CardDescription>The scientific viewer is limited to the case attached to this assignment. Reference labels {debrief?.reference_evidence ? "are now available after educator review." : "remain hidden until educator review."}</CardDescription></CardHeader><CardContent><Suspense fallback={<Skeleton className="h-72"/>}>{attempt.challenge.module === "dosetwin" ? <DoseViewer key={attempt.challenge.case_id} caseId={attempt.challenge.case_id} guided onEvidenceChange={setViewerEvidence} viewerEvidence={viewerEvidence?.kind === "dosetwin" ? viewerEvidence : null} locked={locked}/> : attempt.challenge.module === "surgivision" ? <SurgiViewer key={attempt.challenge.case_id} frameId={attempt.challenge.case_id} availableFrameIds={[attempt.challenge.case_id]} guided releasedReference={debrief?.reference_evidence} viewerEvidence={viewerEvidence} onEvidenceChange={setViewerEvidence} locked={locked}/> : <FistulaViewer key={sourceId} recordId={sourceId} availableRecordIds={[sourceId]} guided viewerEvidence={viewerEvidence?.kind === "fistulaguard" ? viewerEvidence : null} onEvidenceChange={setViewerEvidence} locked={locked}/>}</Suspense></CardContent></Card>
         {stageControls(2, "Review selected evidence", Boolean(viewerEvidence))}

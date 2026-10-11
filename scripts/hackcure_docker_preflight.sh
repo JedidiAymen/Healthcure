@@ -73,5 +73,32 @@ if [ "$missing_images" -ne 0 ]; then
 fi
 printf 'HackCure no-pull image readiness: PASS\n'
 
+# A same-machine cold start needs the images above. A second-machine/offline
+# rehearsal also needs an image bundle built from this exact checkout. Surface
+# that separate gate here so an old but checksum-valid archive cannot be
+# mistaken for a transferable build of the current source.
+bundle_dir="$ROOT/data/hackcure-docker/backups/images"
+bundle=""
+if [ -d "$bundle_dir" ]; then
+  bundle="$(python3 -c 'import glob, os, sys; paths = glob.glob(os.path.join(sys.argv[1], "hackcure-images-*.tar.gz")); print(max(paths, key=os.path.getmtime) if paths else "")' "$bundle_dir")"
+fi
+bundle_ready=1
+if [ -z "$bundle" ]; then
+  printf 'HackCure current-source image bundle: FAIL (none found; prepare before second-machine/offline rehearsal)\n' >&2
+  bundle_ready=0
+elif python3 "$ROOT/scripts/hackcure_verify_image_bundle.py" "$bundle" --expected-source-commit "$(git -C "$ROOT" rev-parse HEAD)"; then
+  printf 'HackCure current-source image bundle: PASS\n'
+else
+  printf 'HackCure current-source image bundle: FAIL (stale or invalid; rebuild after selecting the release commit)\n' >&2
+  bundle_ready=0
+fi
+
 cd "$ROOT"
-npm run doctor -- --hackcure-preflight
+doctor_ready=0
+if npm run doctor -- --hackcure-preflight; then
+  doctor_ready=1
+fi
+
+if [ "$bundle_ready" -ne 1 ] || [ "$doctor_ready" -ne 1 ]; then
+  exit 1
+fi
