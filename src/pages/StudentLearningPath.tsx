@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight, Activity, BookOpenCheck, CalendarClock, Check, CircleDot, Clock3, Database, Microscope, Radio, Stethoscope } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
@@ -9,6 +10,7 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api, type StudentLearningPath as LearningPath, type StudentLearningPathLesson } from "@/lib/api";
+import { isAssignmentStartClosed } from "@/lib/academy-assignment-state";
 import { queryKeys } from "@/lib/query-client";
 import "./academy.css";
 
@@ -26,7 +28,17 @@ const statePresentation = {
 };
 
 function LessonRow({ lesson, index, hasNext }: { lesson: StudentLearningPathLesson; index: number; hasNext: boolean }) {
-  const status = statePresentation[lesson.state];
+  const initiallyClosed = isAssignmentStartClosed(lesson.state, lesson.due_at);
+  const [deadlinePassed, setDeadlinePassed] = useState<string | null>(() => initiallyClosed ? lesson.due_at : null);
+  useEffect(() => {
+    if (lesson.state !== "not_started" || !lesson.due_at || isAssignmentStartClosed(lesson.state, lesson.due_at)) return;
+    const deadline = Date.parse(lesson.due_at);
+    if (!Number.isFinite(deadline)) return;
+    const timer = window.setTimeout(() => setDeadlinePassed(lesson.due_at), Math.max(0, deadline - Date.now() + 1));
+    return () => window.clearTimeout(timer);
+  }, [lesson.due_at, lesson.state]);
+  const isClosed = lesson.state === "not_started" && (initiallyClosed || deadlinePassed === lesson.due_at);
+  const status = isClosed ? { label: "Closed", variant: "outline" as const, Icon: CalendarClock } : statePresentation[lesson.state];
   const StatusIcon = status.Icon;
   return (
     <li className="relative grid grid-cols-[2.5rem_minmax(0,1fr)] gap-3 pb-4 last:pb-0 sm:grid-cols-[3rem_minmax(0,1fr)] sm:gap-4">
@@ -42,7 +54,14 @@ function LessonRow({ lesson, index, hasNext }: { lesson: StudentLearningPathLess
             <h3 className="m-0 break-words text-base font-semibold leading-snug">{lesson.title}</h3>
             <p className="mb-0 mt-1.5 break-words text-sm leading-5 text-muted-foreground">{lesson.case_label} <span aria-hidden="true">·</span> Lesson version {lesson.version}{lesson.due_at && <> <span aria-hidden="true">·</span> Due {new Date(lesson.due_at).toLocaleDateString()}</>}</p>
           </div>
-          <Button render={<Link to={`/academy/missions/${encodeURIComponent(lesson.assignment_id)}`}/>} nativeButton={false} variant={lesson.state === "in_progress" ? "default" : "outline"} className="min-h-11 w-full justify-between sm:w-auto">{lesson.state === "in_progress" ? "Continue investigation" : lesson.state === "submitted" ? "Check submission status" : lesson.state === "reviewed" ? "View educator feedback" : "Start investigation"}<ArrowRight data-icon="inline-end"/></Button>
+          <div className="grid gap-1.5">
+            {isClosed ? (
+              <Button type="button" disabled variant="outline" className="min-h-11 w-full justify-between sm:w-auto">Assignment closed</Button>
+            ) : (
+              <Button render={<Link to={`/academy/missions/${encodeURIComponent(lesson.assignment_id)}`}/>} nativeButton={false} variant={lesson.state === "in_progress" ? "default" : "outline"} className="min-h-11 w-full justify-between sm:w-auto">{lesson.state === "in_progress" ? "Continue investigation" : lesson.state === "submitted" ? "Check submission status" : lesson.state === "reviewed" ? "View educator feedback" : "Start investigation"}<ArrowRight data-icon="inline-end"/></Button>
+            )}
+            {isClosed && <p className="m-0 text-xs leading-5 text-muted-foreground">The due date passed. Ask your educator if this lesson should be reopened.</p>}
+          </div>
         </CardContent>
       </Card>
     </li>
