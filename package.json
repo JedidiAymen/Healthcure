@@ -17,6 +17,8 @@
     "contracts:generate": "node scripts/py.mjs scripts/export_openapi.py && openapi-typescript contracts/openapi-implemented.json -o packages/contracts/generated-api.ts",
     "contracts:check": "node scripts/py.mjs scripts/export_openapi.py && openapi-typescript contracts/openapi-implemented.json --check -o packages/contracts/generated-api.ts",
     "doctor": "node scripts/py.mjs scripts/doctor.py",
+    "hackcure:preflight:docker": "bash scripts/hackcure_docker_preflight.sh",
+    "hackcure:start:docker": "bash scripts/start_hackcure_docker.sh",
     "audit:endoscapes-cvs": "node scripts/py.mjs scripts/audit_endoscapes_cvs_coverage.py",
     "smoke:local": "node scripts/py.mjs scripts/smoke_local.py",
     "preview": "vite preview --host 127.0.0.1"
