@@ -110,6 +110,7 @@ import { offlineStore, replayQueuedSubmits } from "@/lib/mission-offline";
 import { clearDraft, enqueueSubmit, isNetworkError, loadDraft, queuedSubmits, saveDraft } from "@/lib/offline-queue";
 import { CvsSelfCheck, CvsSelfCheckSummary } from "@/features/surgivision/CvsSelfCheck";
 import clinicalTeamImage from "../assets/clinical-team.jpg";
+import radiologyTeamImage from "../assets/radiology-team.jpg";
 
 const specialtyData = {
   surgivision: {
@@ -312,19 +313,37 @@ export function Home() {
   );
   return (
     <main className="home-page grid gap-5 pb-8">
-      <section className="home-hero grid min-w-0 gap-3">
-        <div className="flex min-w-0 flex-col justify-center gap-3 py-1">
-          <Badge variant="outline" className="w-fit gap-2 rounded-md border-primary/25 bg-card px-3 py-1.5 font-medium text-primary">
-            <Stethoscope data-icon="inline-start" /> MEDFORGE · evidence-centered workspaces
+      <section aria-labelledby="home-title" className="grid min-w-0 overflow-hidden rounded-2xl border border-primary/20 bg-card lg:grid-cols-[minmax(0,1.08fr)_minmax(0,.92fr)]">
+        <div role="group" aria-label="Representative photographs of clinical work settings" className="relative min-h-[250px] overflow-hidden bg-[#111a34] sm:min-h-[320px] lg:order-2 lg:min-h-[360px]">
+          <img src={radiologyTeamImage} alt="A clinician reviews chest x-rays with colleagues in a radiology room" className="absolute inset-0 size-full object-cover object-center" />
+          <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-[#101624]/85 via-[#101624]/10 to-[#101624]/25" />
+          <Badge variant="secondary" className="absolute left-4 top-4 border border-white/30 bg-white/95 text-[#18233a] shadow-sm sm:left-6 sm:top-6">
+            Representative clinical imagery
           </Badge>
-          <div className="max-w-[760px] space-y-1.5">
-            <h1 className="home-title text-3xl leading-[1.06] font-semibold tracking-[-0.045em] text-foreground sm:text-4xl">
-              Clinical research, grounded in evidence.
+          <div className="absolute bottom-4 left-4 max-w-[52%] text-xs leading-5 text-white/90 sm:bottom-6 sm:left-6 sm:text-sm">
+            Radiology review setting · illustrative context
+          </div>
+          <figure className="absolute bottom-4 right-4 m-0 w-[34%] min-w-[118px] max-w-[190px] overflow-hidden rounded-lg border-2 border-white/90 bg-white shadow-xl sm:bottom-6 sm:right-6">
+            <img src={clinicalTeamImage} alt="A surgical team working in an operating room" className="aspect-[1.35] w-full object-cover object-center" />
+            <figcaption className="px-2 py-1.5 text-[10px] font-medium leading-4 text-[#18233a] sm:text-xs">Surgical team · illustrative</figcaption>
+          </figure>
+          <p className="sr-only">Both photographs are representative context only; they do not show MEDFORGE staff, research participants, or dataset evidence.</p>
+        </div>
+        <div className="flex min-w-0 flex-col justify-center gap-4 p-5 sm:p-8 lg:order-1 lg:p-10">
+          <Badge variant="outline" className="w-fit gap-2 rounded-md border-primary/25 bg-background px-3 py-1.5 font-medium text-primary">
+            <Stethoscope data-icon="inline-start" /> MEDFORGE · clinical research workspaces
+          </Badge>
+          <div className="max-w-[560px] space-y-3">
+            <h1 id="home-title" className="home-title text-3xl leading-[1.06] font-semibold tracking-[-0.045em] text-foreground sm:text-4xl xl:text-[2.75rem]">
+              Clinical teams, working from evidence.
             </h1>
-            <p className="max-w-[680px] text-sm leading-5 text-muted-foreground sm:text-base sm:leading-6">
-              Choose a source-backed scientific viewer, a guided learner investigation, or an evidence-based lesson workspace.
+            <p className="max-w-[52ch] text-sm leading-6 text-muted-foreground sm:text-base">
+              For surgeons and surgical educators, radiotherapy researchers, and vascular-access teams. Inspect each research source in its own scientific workspace.
             </p>
           </div>
+          <p className="m-0 max-w-[58ch] border-l-2 border-primary/35 pl-3 text-xs leading-5 text-muted-foreground">
+            These photographs are representative clinical settings. They do not depict MEDFORGE staff or research participants, and are not scientific evidence.
+          </p>
         </div>
       </section>
 
