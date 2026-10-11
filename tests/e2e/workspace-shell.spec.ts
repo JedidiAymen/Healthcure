@@ -282,7 +282,109 @@ test('educator lesson editor loads as a real route and switches its phone panes'
   await page.getByRole('button', { name: /Rubric/ }).click()
   await expect(page.getByRole('complementary', { name: 'Learner preview and rubric inspector' })).toContainText('Private educator guidance')
   await page.screenshot({ path: '.local-review/FIX-01/educator-builder-fixture-390x844.png', fullPage: true })
+
   expect(errors).toEqual([])
+})
+
+test('educator preview cannot publish after its saved lesson revision changes', async ({ page }) => {
+  const draftId = 'preview-revision-fixture'
+  let revision = 0
+  let draft: { title: string; case_id: string; content: { rubric: string; rubric_criteria: Array<{ id: string; title: string; description: string; max_points: number }>; blocks: Array<{ id: string; type: string; title: string; content: string }> } } | null = null
+  const responseDraft = () => ({
+    id: draftId,
+    title: draft?.title ?? 'Untitled evidence lesson',
+    case_id: draft?.case_id ?? 'fisav:pat001',
+    module: 'fistulaguard',
+    revision,
+    updated_at: '2026-10-11T12:00:00Z',
+    content: draft?.content,
+  })
+
+  await page.route('**/api/v1/auth/local-login', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ access_token: 'preview-test-session', user: { id: 'preview-test-educator', display_name: 'Preview educator', role: 'educator' } }),
+  }))
+  await page.route('**/api/v1/cases', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify([{ id: 'fisav:pat001', module: 'fistulaguard', dataset_id: 'FiSaV', source_case_id: 'pat001', reference_kind: 'research', status: 'ready', label: 'FiSaV · pat001' }]),
+  }))
+  await page.route('**/api/v1/educator/**', route => route.fulfill({ status: 200, json: [] }))
+  await page.route('**/api/v1/educator/drafts', async route => {
+    if (route.request().method() === 'POST') {
+      draft = route.request().postDataJSON() as typeof draft
+      revision = 1
+      await route.fulfill({ status: 201, json: responseDraft() })
+      return
+    }
+    await route.fulfill({ status: 200, json: [] })
+  })
+  await page.route(`**/api/v1/educator/drafts/${draftId}`, async route => {
+    if (route.request().method() === 'PUT') {
+      const body = route.request().postDataJSON() as NonNullable<typeof draft>
+      draft = { title: body.title, case_id: body.case_id, content: body.content }
+      revision += 1
+      await route.fulfill({ status: 200, json: responseDraft() })
+      return
+    }
+    await route.fulfill({ status: draft ? 200 : 404, json: draft ? responseDraft() : { detail: 'Fixture draft not found.' } })
+  })
+  await page.route(`**/api/v1/educator/drafts/${draftId}/preview`, route => route.fulfill({
+    status: 200,
+    json: {
+      title: draft?.title ?? 'Untitled evidence lesson', module: 'fistulaguard', case_id: draft?.case_id ?? 'fisav:pat001',
+      case_label: 'FiSaV · pat001', dataset_id: 'FiSaV', reference_kind: 'research', source_license: 'Fixture terms',
+      publication_review: 'required', blocks: draft?.content.blocks.filter(block => block.type !== 'Reveal') ?? [],
+    },
+  }))
+
+  await page.goto('/educator/cases/new/edit')
+  await page.getByLabel('Username').fill('preview-educator')
+  await page.getByLabel('Password').fill('test-only')
+  await page.getByRole('button', { name: 'Sign in as educator' }).click()
+  await expect(page.getByRole('heading', { name: 'Compose an evidence lesson' })).toBeVisible()
+  await page.getByRole('combobox', { name: 'Research source' }).click()
+  await page.getByRole('option', { name: /FiSaV.*pat001/ }).click()
+
+  const createDraft = page.waitForResponse(response => response.request().method() === 'POST' && new URL(response.url()).pathname === '/api/v1/educator/drafts')
+  await page.getByRole('button', { name: 'Save draft' }).click()
+  expect((await createDraft).status()).toBe(201)
+  await expect(page).toHaveURL(new RegExp(`${draftId}/edit$`))
+
+  const firstPreview = page.waitForResponse(response => response.request().method() === 'GET' && new URL(response.url()).pathname === `/api/v1/educator/drafts/${draftId}/preview`)
+  await page.getByRole('button', { name: 'Preview publication' }).click()
+  expect((await firstPreview).ok()).toBeTruthy()
+  await expect(page.getByText('Student-safe preview', { exact: true })).toBeVisible()
+  const publish = page.getByRole('button', { name: 'Publish immutable version' })
+  await page.getByRole('textbox', { name: 'Instruction title' }).fill('Updated after preview')
+  await expect(page.getByRole('status').filter({ hasText: 'This preview is out of date' })).toBeVisible()
+  await expect(publish).toBeDisabled()
+  const captureDir = '.local-review/UX-61-educator-stale-preview'
+  await mkdir(captureDir, { recursive: true })
+  const previewCard = page.getByText('Student-safe preview', { exact: true }).locator('xpath=ancestor::div[@data-slot="card"][1]')
+  for (const viewport of [
+    { name: 'desktop', width: 1440, height: 900 },
+    { name: 'tablet', width: 768, height: 1024 },
+    { name: 'phone', width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height })
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    await previewCard.screenshot({ path: `${captureDir}/stale-preview-${viewport.name}.png`, animations: 'disabled' })
+  }
+  await page.setViewportSize({ width: 1440, height: 900 })
+
+  const saveRevision = page.waitForResponse(response => response.request().method() === 'PUT' && new URL(response.url()).pathname === `/api/v1/educator/drafts/${draftId}`)
+  await page.getByRole('button', { name: 'Save draft' }).click()
+  expect((await saveRevision).ok()).toBeTruthy()
+  await expect(page.getByRole('status').filter({ hasText: 'This preview is out of date' })).toBeVisible()
+  await expect(publish).toBeDisabled()
+
+  const freshPreview = page.waitForResponse(response => response.request().method() === 'GET' && new URL(response.url()).pathname === `/api/v1/educator/drafts/${draftId}/preview`)
+  await page.getByRole('button', { name: 'Preview publication' }).click()
+  expect((await freshPreview).ok()).toBeTruthy()
+  await expect(page.getByRole('status').filter({ hasText: 'This preview is out of date' })).toHaveCount(0)
+  await expect(publish).toBeDisabled() // publication still requires the educator's source review
 })
 
 test('educator teaching desk shows real work and opens the selected assignment review', async ({ page }) => {
@@ -663,6 +765,10 @@ test('DoseTwin keeps one Gy scale, linked ROI overlays and voxel mapping under z
   await expect(voxelSample).toContainText('0.5000')
   await expect(voxelSample).toContainText('40.0000')
   await expect(voxelSample).toContainText('Brainstem: inside mask')
+  const primaryScale = page.getByRole('group', { name: 'Primary dose color scale' })
+  await expect(primaryScale).toBeVisible()
+  await expect(primaryScale).toContainText('OpenKBP reference dose · fixed case scale')
+  await expect(primaryScale).toContainText('40.0 Gy')
   await dock.getByRole('tab', { name: 'Comparison' }).click()
   await expect(page.getByText('No compatible second array is installed.')).toBeVisible()
   await expect(page.getByText('Preparation access required')).toBeVisible()

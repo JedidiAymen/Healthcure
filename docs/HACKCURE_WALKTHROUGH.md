@@ -10,12 +10,14 @@ The home screen now presents this walkthrough before the research collection mon
 
 ## Keep the two local rehearsal databases separate
 
-The normal development app and the HackCure Docker profile use different SQLite databases. A green source-import check against one database does not mean the other is ready. On 2026-10-11, the default `data/local.sqlite3` passed the authentic `pt_241` prediction-import and saved-report checks; the reviewer profile and optional Academy lesson were absent. The exact HackCure Docker preflight selected `data/hackcure-docker/medforge.sqlite3`: the source manifest and loopback configuration passed, while its imported prediction, saved report, reviewer profile and optional Academy lesson were absent. Both checks are read-only.
+The normal development app and the HackCure Docker profile use different SQLite databases. A green source-import check against one database does not mean the other is ready. On 2026-10-11, the default `data/local.sqlite3` passed the authentic `pt_241` prediction-import and saved-report checks; no credentialed reviewer profile or optional Academy lesson was present. The exact HackCure Docker preflight selected `data/hackcure-docker/medforge.sqlite3`: its source manifest and loopback configuration passed, while the imported prediction, saved report, reviewer profile and optional Academy lesson were absent. A separate read-only inventory found no credentialed role grants in the default, HackCure Docker, or isolated `pt_241` databases; `data/jury-demo.sqlite3` was absent. No passwords are available in the repository. These checks do not look up or disclose passwords.
 
 | Local profile | Database | `pt_241` import/report | Reviewer | Academy lesson |
 |---|---|---|---|---|
 | Default development app | `data/local.sqlite3` | Present and source-matched | Not provisioned | Not published/assigned |
 | HackCure Docker profile | `data/hackcure-docker/medforge.sqlite3` | Missing | Not provisioned | Not published/assigned |
+
+For this Docker profile, the username/password forms appear at `/educator` and `/academy`; DoseTwin shows a sign-in dialog when a protected import/report or reviewer action is selected. There is no standalone `/login` route. The profile has no pre-provisioned event username or password. The `jury-educator`, `jury-reviewer`, and optional `jury-student` strings in the setup instructions are operator-selected example usernames only; each password is entered privately at account creation and is not supplied by this repository. Do not use credentials from another SQLite profile.
 
 ### What is ready, and what still needs event-owner setup
 
