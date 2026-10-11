@@ -33,7 +33,26 @@ The product flow and its API controls are implemented: source-pair validation, r
 
 The current blocker is therefore event-profile state and rehearsal, not an absent reviewer feature. Do not copy the default development DB to the Docker profile as a shortcut: prepare and recheck the exact profile that will be presented.
 
-Run `npm run doctor -- --hackcure-preflight` to inspect the database selected by `MEDFORGE_DB_PATH` (the default is `data/local.sqlite3`). Run `bash scripts/hackcure_docker_preflight.sh` to inspect the separate Docker database. For the currently prepared same-machine DoseTwin comparison, start the default local app as documented in [`RUN_LOCAL.md`](../RUN_LOCAL.md); do not describe that as a ready Docker or second-machine rehearsal. The reviewer step still needs a private, operator-provisioned account in whichever database is used for the review.
+### Operator setup sequence for the Docker rehearsal
+
+These steps prepare only the local, private Docker profile. They are deliberately separate from this repository-side readiness check; no account, import, report, assignment, or password is created by the commands in this document. Confirm the project owner has approved the installed files for this local research demonstration before proceeding.
+
+1. Start the already-built local stack and confirm source/network/database readiness:
+
+   ```sh
+   npm run hackcure:start:docker
+   npm run hackcure:preflight:docker
+   ```
+
+   The first preflight will remain nonzero until the comparison, report, and reviewer are prepared. It does not seed or alter those records.
+
+2. In a private terminal, provision the operator-approved educator and reviewer profiles in the Docker database. Each command asks for a password interactively; choose unique credentials, store them outside the repository, and do not paste them into chat or screenshots. The exact commands and account-role boundaries are in [`LOCAL_ACCESS_AND_PROFILES.md`](LOCAL_ACCESS_AND_PROFILES.md#hackcure-docker-profile). Do not provision an Academy student unless the event includes the optional learning segment.
+
+3. Sign in as the provisioned educator at `https://localhost:8443/studio/dosetwin/cases/openkbp%3Apt_241`. Expand **Compare a real dose prediction**, select the installed `data/openkbp-opt/pt_241/prediction-set_1.csv`, enter model revision `OpenKBP-Opt archived set_1` and source revision `16fbe0dbc64c94ed4b7e8378a090b47c6596bbd7`, record the locally approved research-use basis, confirm local use, and choose **Validate and add prediction**. Inspect the resulting matched reference/prediction, then choose **Save comparison report**. These are source validation and report-persistence steps; the archived output is not a MEDFORGE model result.
+
+4. Sign out, sign in as the reviewer, and complete the rationale-bound research review described in [Jury walkthrough order](#jury-walkthrough-order). Finally rerun `npm run hackcure:preflight:docker`; the imported comparison, matching report, and reviewer checks should pass. Academy remains optional and informational.
+
+For the currently prepared same-machine DoseTwin comparison in the default local profile, use `npm run doctor -- --hackcure-preflight` and the launcher documented in [`RUN_LOCAL.md`](../RUN_LOCAL.md); do not describe that separate profile as a ready Docker or second-machine rehearsal. The Docker and development databases are intentionally not copied between profiles.
 
 ## Proposal priorities against the current branch
 

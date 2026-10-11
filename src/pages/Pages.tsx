@@ -1446,6 +1446,14 @@ export function Models() {
     [data, moduleFilter, readinessFilter, operationFilter, licenseFilter, searchText],
   );
   const selectedModel = visibleModels.find((model) => model.id === selectedModelId) ?? visibleModels[0];
+  const hasCatalogFilters = searchText.trim() !== "" || readinessFilter !== "all" || operationFilter !== "all" || licenseFilter !== "all" || moduleFilter !== "all";
+  const clearCatalogFilters = () => {
+    setSearchText("");
+    setReadinessFilter("all");
+    setOperationFilter("all");
+    setLicenseFilter("all");
+    setModuleFilter("all");
+  };
   const readyCount = data.filter((model) => model.readiness === "ready").length;
   const gatedCount = data.length - readyCount;
   const modelWorkspace = selectedModel ? `/studio/${selectedModel.module}/cases/current` : "/studio/cases";
@@ -1550,7 +1558,16 @@ export function Models() {
                       </TableRow>;
                     })}
                     {loading && <TableRow><TableCell colSpan={5}><div className="grid gap-2 py-2"><Skeleton className="h-8 w-full"/><Skeleton className="h-8 w-full"/><Skeleton className="h-8 w-full"/></div></TableCell></TableRow>}
-                    {!loading && visibleModels.length === 0 && <TableRow><TableCell colSpan={5} className="h-24 whitespace-normal text-center text-sm text-muted-foreground">{searchText || readinessFilter !== "all" || operationFilter !== "all" || licenseFilter !== "all" ? "No registered methods match this search and filter." : "No methods are registered for this workspace."}</TableCell></TableRow>}
+                    {!loading && visibleModels.length === 0 && <TableRow><TableCell colSpan={5} className="whitespace-normal p-0">
+                      {hasCatalogFilters ? <Empty className="gap-2 rounded-none border-0 px-4 py-8">
+                        <EmptyHeader>
+                          <EmptyMedia variant="icon"><Search aria-hidden="true" /></EmptyMedia>
+                          <EmptyTitle>No registered methods match this search and filter.</EmptyTitle>
+                          <EmptyDescription>Clear the catalog filters to see all {data.length} registered methods.</EmptyDescription>
+                        </EmptyHeader>
+                        <Button variant="outline" size="sm" onClick={clearCatalogFilters}>Clear all filters</Button>
+                      </Empty> : <div className="px-4 py-8 text-center text-sm text-muted-foreground">No methods are registered for this workspace.</div>}
+                    </TableCell></TableRow>}
                   </TableBody>
                 </Table>
               </CardContent>
