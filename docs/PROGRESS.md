@@ -76,7 +76,7 @@ Baseline branch `upgrade/hackcure-compliance`; its recorded Windows-demo results
 ## Known failures and gaps
 
 - The 2 failing browser tests (DoseTwin case picker, SurgiVision sidebar at tablet width) also fail on upstream `main` at `2e64fbd`. They were not introduced by this branch.
-- Upstream `main` moved to `64bc4d6` (4 commits: Model Lab registry, case registry preview, chart docs, Academy paths). **Not merged into this branch yet.** Merge it, regenerate contracts (`npm run contracts:check`), and rerun the suite.
+- Historical checkpoint note: this merge status was superseded. The current shared `main` and latest local integration are recorded at the top of [`STATUS.md`](STATUS.md); do not use this old checkpoint as the current branch state.
 - In Docker, SurgiVision shows "requires setup": the Endoscapes download is partial (about 3.4 GB on disk) and `MEDFORGE_ENDOSCAPES_ROOT` is not set in compose. Resume `scripts/acquire_endoscapes_full_release.py`.
 - The offline queue now has a production-shell browser E2E. The API suite passes in an isolated Python 3.12 validation environment: 143 passed, 2 skipped. The attached Python 3.14 environment remains without SciPy; CI uses Python 3.13 and installs the locked API requirements.
 - The original Windows handoff did not include a browser e2e for the DoseTwin research-review panel; the current local integration now has the source-backed check described above (API behavior remains covered by `test_research_review.py`).

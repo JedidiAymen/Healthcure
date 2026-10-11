@@ -2,6 +2,14 @@
 
 Updated: 2026-10-11
 
+## Latest shared checkpoint (2026-10-11)
+
+- `main` is pushed at `3ac15b1` (`Connect workflow actions and gate stale demo bundles`). CI for the previous checkpoint `54bf505` passed; CI for this new commit is pending.
+- The Experiments graph now calls the existing OpenKBP case-summary operation, links returned metrics to run history, and saves a provenance-linked evidence report. It reflects real pending/error/result states and disables run actions for sources that are not ready. No run or report was created during this update.
+- The Student Academy now distinguishes a restored local draft from a queued offline submission. Learners can explicitly save a restored draft to sync it to the server; queued submissions keep their existing idempotent replay behavior.
+- The read-only HackCure Docker preflight checks that the newest local image archive is valid for the checked-out source commit. It reports the existing archive as stale (`e2a8d8a`, behind current `main`), so second-machine/offline rehearsal remains blocked until a bundle is prepared from the selected release commit. It also reports the separate missing imported comparison/report/reviewer state and absent optional Academy assignment. No Docker image was rebuilt and no profile data, credentials, or permissions were changed.
+- Lightweight validation for this checkpoint: `npm run typecheck`, `npm run lint`, `git diff --check`, and `bash -n scripts/hackcure_docker_preflight.sh` passed. No broad local suite was run. Preview is available at `http://127.0.0.1:5173/studio/experiments` while its local server remains running.
+
 ## Latest local integration (2026-10-11)
 
 - **HackCure flagship walkthrough surfaced on Home:** adds a shadcn card that links to the installed `pt_241` DoseTwin case or the case registry, outlines evidence → comparison → rationale-bound research review, and states the archived-prediction and Track 2/3 boundaries. The Docker event database still needs the matching comparison/report and a privately provisioned reviewer before the full path is ready. See [`HACKCURE_WALKTHROUGH.md`](HACKCURE_WALKTHROUGH.md).
