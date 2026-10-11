@@ -2692,7 +2692,7 @@ export function Mission() {
   const evidenceSummary = viewerEvidence?.kind === "dosetwin"
     ? `OpenKBP voxel x ${viewerEvidence.voxel[0]} · y ${viewerEvidence.voxel[1]} · z ${viewerEvidence.voxel[2]} · ${viewerEvidence.roi}`
     : viewerEvidence?.kind === "surgivision"
-      ? `Endoscapes frame ${viewerEvidence.frame_id} · source pixel x ${viewerEvidence.selection_x_px}, y ${viewerEvidence.selection_y_px}`
+      ? `Endoscapes frame ${viewerEvidence.case_id} · source pixel x ${viewerEvidence.selection_x_px}, y ${viewerEvidence.selection_y_px}`
       : viewerEvidence?.kind === "fistulaguard"
         ? `FiSaV ${viewerEvidence.record_id} · ${viewerEvidence.channel} · ${viewerEvidence.start_sec.toFixed(1)}–${(viewerEvidence.start_sec + viewerEvidence.duration_sec).toFixed(1)} s`
         : "No source selection yet";

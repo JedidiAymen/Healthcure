@@ -27,7 +27,7 @@ export function EducatorEvidencePreview({ attempt }: { attempt: EducatorAttemptR
         return true;
       }
       if (evidence.kind === "surgivision") {
-        const frame = await api.surgicalFrame(evidence.frame_id);
+        const frame = await api.surgicalFrame(evidence.case_id);
         if (frame.id !== evidence.case_id || !/^[a-f\d]{64}$/i.test(frame.image_sha256) || !/^[a-f\d]{64}$/i.test(frame.annotation_sha256)) {
           throw new Error("EVIDENCE_MISMATCH: The Endoscapes frame identity or source checksums do not match.");
         }
@@ -79,7 +79,7 @@ export function EducatorEvidencePreview({ attempt }: { attempt: EducatorAttemptR
           <div className="min-w-0 overflow-hidden" data-testid="assigned-evidence-viewer">
             <Suspense fallback={<Skeleton className="h-72"/>}>
               {assessment.evidence.kind === "dosetwin" && <DoseViewer key={`${assessment.evidence.case_id}:${attempt.attempt_id}`} caseId={assessment.evidence.case_id} viewerEvidence={assessment.evidence} guided locked/>}
-              {assessment.evidence.kind === "surgivision" && <SurgiViewer key={`${assessment.evidence.frame_id}:${attempt.attempt_id}`} frameId={assessment.evidence.frame_id} availableFrameIds={[assessment.evidence.frame_id]} viewerEvidence={assessment.evidence} guided locked/>}
+              {assessment.evidence.kind === "surgivision" && <SurgiViewer key={`${assessment.evidence.case_id}:${attempt.attempt_id}`} frameId={assessment.evidence.case_id} availableFrameIds={[assessment.evidence.case_id]} viewerEvidence={assessment.evidence} guided locked/>}
               {assessment.evidence.kind === "fistulaguard" && <FistulaViewer key={`${assessment.evidence.record_id}:${attempt.attempt_id}`} recordId={assessment.evidence.record_id} availableRecordIds={[assessment.evidence.record_id]} viewerEvidence={assessment.evidence} guided locked/>}
             </Suspense>
           </div>

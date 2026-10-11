@@ -16,7 +16,8 @@ export function assessEducatorEvidencePreview(
   if (assigned.module !== evidence.kind || assigned.case_id !== evidence.case_id) {
     return { state: "mismatch", message: "The submitted evidence does not match the source case assigned to this lesson." };
   }
-  if (evidence.kind === "surgivision" && evidence.frame_id !== assigned.case_id) {
+  // frame_id is the bare Endoscapes frame (for example 164_1950); the case ID carries the split prefix.
+  if (evidence.kind === "surgivision" && evidence.frame_id !== assigned.case_id && evidence.frame_id !== assigned.case_id.split(":").at(-1)) {
     return { state: "mismatch", message: "The submitted frame does not match the assigned Endoscapes frame." };
   }
   if (evidence.kind === "fistulaguard" && assigned.case_id !== `fisav:${evidence.record_id}`) {

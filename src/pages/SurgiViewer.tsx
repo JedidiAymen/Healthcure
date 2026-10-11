@@ -279,7 +279,7 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
     const y=Math.max(0,Math.min(frame.height-1,Math.round((event.clientY-bounds.top)/bounds.height*frame.height)))
     setEvidencePoint({x,y})
     setCoordinateDraft({x:String(x),y:String(y)})
-    onEvidenceChange({kind:'surgivision',case_id:frame.id,frame_id:frame.id,selection_x_px:x,selection_y_px:y})
+    onEvidenceChange({kind:'surgivision',case_id:frame.id,frame_id:frame.id.split(':').at(-1)??frame.id,selection_x_px:x,selection_y_px:y})
   }
   const updateCoordinateDraft=(axis:'x'|'y',value:string)=>{
     const next={...coordinateDraft,[axis]:value}
@@ -289,7 +289,7 @@ export function SurgiViewer({frameId,availableFrameIds,guided=false,releasedRefe
     if(!Number.isInteger(x)||!Number.isInteger(y)||x<0||x>=frame.width||y<0||y>=frame.height)return
     const point={x,y}
     setEvidencePoint(point)
-    onEvidenceChange({kind:'surgivision',case_id:frame.id,frame_id:frame.id,selection_x_px:x,selection_y_px:y})
+    onEvidenceChange({kind:'surgivision',case_id:frame.id,frame_id:frame.id.split(':').at(-1)??frame.id,selection_x_px:x,selection_y_px:y})
   }
   if(loading)return <div className="my-6 grid min-h-40 content-center gap-3"><Skeleton className="h-24 w-full"/><p className="text-sm text-muted-foreground">Loading verified image and annotation record…</p></div>
   if(error||!frame)return <Alert variant="destructive" className="my-6 min-h-36 items-center"><AlertCircle/><AlertDescription><strong className="block font-semibold">Endoscapes sample is unavailable</strong>{error||'No validated frame record was returned.'}</AlertDescription></Alert>
