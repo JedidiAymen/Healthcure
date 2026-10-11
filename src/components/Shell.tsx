@@ -259,8 +259,14 @@ export function Shell() {
         </div>
       </CommandDialog>
       <OfflineBanner />
-      <div className={`medforge-content mx-auto flex w-full flex-1 flex-col px-4 py-5 pb-12 sm:px-6 lg:px-8 ${workspace === 'professional' ? 'max-w-none' : 'max-w-[1160px]'} xl:py-7`}><Suspense fallback={<div className="grid gap-4" role="status" aria-label="Loading workspace"><Skeleton className="h-4 w-28"/><Skeleton className="h-9 w-64"/><Skeleton className="h-4 w-96 max-w-full"/><div className="mt-4 grid gap-3 md:grid-cols-3"><Skeleton className="h-40"/><Skeleton className="h-40"/><Skeleton className="h-40"/></div></div>}><Outlet /></Suspense></div>
-      <footer className="flex flex-wrap items-center gap-2 border-t border-sidebar-border px-4 py-3 text-xs leading-5 text-muted-foreground sm:px-6 lg:px-8"><ShieldCheck aria-hidden="true" className="size-4 text-primary"/> MEDFORGE is for research and education. It is not for patient diagnosis or treatment decisions.</footer>
+      <div className={`medforge-content mx-auto flex w-full flex-1 flex-col px-4 py-5 pb-12 sm:px-6 lg:px-8 ${workspace === 'professional' ? 'max-w-none' : 'max-w-[1160px]'} ${workspace === 'academy' ? 'academy-mobile-content' : ''} xl:py-7`}><Suspense fallback={<div className="grid gap-4" role="status" aria-label="Loading workspace"><Skeleton className="h-4 w-28"/><Skeleton className="h-9 w-64"/><Skeleton className="h-4 w-96 max-w-full"/><div className="mt-4 grid gap-3 md:grid-cols-3"><Skeleton className="h-40"/><Skeleton className="h-40"/><Skeleton className="h-40"/></div></div>}><Outlet /></Suspense></div>
+      {workspace === 'academy' && <nav className="academy-mobile-nav" aria-label="Student Academy">
+        {learning.map(({ label, to, icon: Icon, active }) => <NavLink key={to} to={to} aria-current={active ? 'page' : undefined} className={`academy-mobile-nav-link${active ? ' is-active' : ''}`}>
+          <Icon aria-hidden="true"/>
+          <span>{label === 'Continue learning' ? 'Learn' : label === 'Progress & awards' ? 'Progress' : label}</span>
+        </NavLink>)}
+      </nav>}
+      <footer className={`flex flex-wrap items-center gap-2 border-t border-sidebar-border px-4 py-3 text-xs leading-5 text-muted-foreground sm:px-6 lg:px-8 ${workspace === 'academy' ? 'academy-mobile-footer' : ''}`}><ShieldCheck aria-hidden="true" className="size-4 text-primary"/> MEDFORGE is for research and education. It is not for patient diagnosis or treatment decisions.</footer>
     </SidebarInset>
   </SidebarProvider>
 }
