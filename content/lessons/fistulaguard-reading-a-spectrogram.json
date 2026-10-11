@@ -1,29 +1,30 @@
 {
   "id": "fistulaguard-reading-a-spectrogram",
-  "title": "DRAFT: Reading a PSD and a spectrogram from a measured fistula signal",
+  "title": "DRAFT: Compare a measured signal across time and frequency",
   "module": "fistulaguard",
   "preferred_case_id": "fisav:pat021",
   "review_status": "DRAFT pending review by a domain expert",
   "learning_objectives": [
-    "Explain what a power spectral density (PSD) shows and what it hides.",
-    "Read a spectrogram as power over time and frequency.",
-    "Describe how a filter changes what you see without changing the source data.",
-    "State why amplitudes from uncalibrated sensors must not be compared across recordings."
+    "Explain what a Welch power spectral density (PSD) shows and what it hides.",
+    "Read a spectrogram as relative power over time and frequency.",
+    "Compare the source waveform with independently filtered views of the same window.",
+    "State why uncalibrated signal values and one recording cannot establish a clinical finding."
   ],
-  "rubric": "DRAFT rubric pending review by a domain expert. Score what the learner can show from the measured window, not clinical interpretation.",
+  "rubric": "DRAFT rubric pending review by a domain expert. Score evidence description and method awareness only; do not score clinical interpretation.",
   "rubric_criteria": [
-    {"id": "reading", "title": "Reading the plots", "description": "Correctly describes where power sits in frequency and how it changes over time in the chosen window.", "max_points": 50},
-    {"id": "method", "title": "Method awareness", "description": "Explains the effect of window length or a filter on what is shown.", "max_points": 30},
-    {"id": "limits", "title": "Limits", "description": "States that sensor units are uncalibrated and that the plots are not a diagnosis.", "max_points": 20}
+    {"id": "reading", "title": "Reading the plots", "description": "Describes a visible frequency range or time-varying pattern and distinguishes what the waveform, PSD and spectrogram each show.", "max_points": 45},
+    {"id": "method", "title": "Method awareness", "description": "Explains how independent filters or the stated windowing and display reduction affect the view.", "max_points": 30},
+    {"id": "limits", "title": "Limits and provenance", "description": "Identifies the uncalibrated units, source and processing, and avoids diagnosis or comparisons across recordings.", "max_points": 25}
   ],
   "blocks": [
-    {"id": "objectives", "type": "Instruction", "title": "Learning objectives", "content": "By the end you should be able to: explain what a PSD shows and hides; read a spectrogram as power over time and frequency; describe how a filter changes what you see; and say why amplitudes from uncalibrated sensors are not compared across recordings."},
-    {"id": "context", "type": "Instruction", "title": "What you are looking at", "content": "This is a measured FiSaV recording from a radio-cephalic arteriovenous fistula, captured by force sensors on the skin with a concurrent ECG lead. Sensor units are uncalibrated, so compare shapes, timing and frequency content within this recording only."},
-    {"id": "evidence", "type": "Evidence view", "title": "Open the signal window", "content": "Choose a PZT channel and a 5 second window. Look at the waveform, then the Welch PSD, then the spectrogram tab."},
-    {"id": "psd", "type": "Question", "title": "Read the PSD", "content": "Where is most of the power in this window (which frequency range)? What does the PSD not tell you about when that power occurred?"},
-    {"id": "spectrogram", "type": "Question", "title": "Read the spectrogram", "content": "Describe one pattern in the spectrogram that repeats over time. How does it relate to the heartbeat you can see in the ECG?"},
-    {"id": "filter", "type": "Observation", "title": "Try a filter", "content": "In Signal processing tools, apply a band-pass filter and then a 50 Hz notch. Note what changed in the trace and what stayed the same."},
-    {"id": "limits", "type": "Question", "title": "State a limit", "content": "Give one reason why this window cannot tell you whether the fistula has a stenosis."},
-    {"id": "reveal", "type": "Reveal", "title": "Educator debrief", "content": "A PSD averages power over the whole window, so it loses timing; the spectrogram trades frequency detail for time detail. Filters only change the displayed copy. None of these plots is a diagnostic test."}
+    {"id": "objectives", "type": "Instruction", "title": "What you will investigate", "content": "Use one measured FiSaV window to compare its time trace, Welch PSD and time-frequency view. Describe only patterns visible in this recording, explain how the display method shapes them, and name what the evidence cannot establish."},
+    {"id": "source", "type": "Instruction", "title": "Source and attribution", "content": "Source: FiSaV Dataset, OSF, DOI 10.17605/OSF.IO/HYPFR (https://osf.io/hypfr/), licensed CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Dataset descriptor: Centracchio et al., “A dataset of multichannel broadband recordings of sounds and vibrations acquired from arteriovenous fistulas via a novel force sensor array,” Scientific Data (2026), DOI 10.1038/s41597-026-08242-8 (https://doi.org/10.1038/s41597-026-08242-8). MEDFORGE leaves source samples unchanged and calculates the displayed waveform, PSD and spectrogram from the selected source window; the spectrogram is reduced for display. This draft is not approved for student or external release until source review, domain review and applicable privacy/publicity checks are complete."},
+    {"id": "context", "type": "Instruction", "title": "What the recording contains", "content": "FiSaV contains measured force-sensor signals from radio-cephalic arteriovenous fistulas and a concurrently recorded ECG channel. Choose one PZT channel at a time. Signal units are not physically calibrated in this viewer, so do not compare amplitudes between people or recordings. The source's occlusion marker is not a stenosis outcome."},
+    {"id": "evidence", "type": "Evidence view", "title": "Choose one source window", "content": "Open FiSaV pat021, select a raw PZT channel and a 5-second time window, then inspect the waveform, Welch PSD and time-frequency tab for the same channel and window. The viewer shows one channel at a time; to compare ECG timing, select ECG and inspect the same time range before returning to the PZT channel."},
+    {"id": "psd", "type": "Question", "title": "Describe the PSD", "content": "Which frequency range appears strongest in your selected window? The PSD averages overlapping 1-second Hann windows with 50% overlap and mean detrending. What timing detail is lost when power is averaged across the full window? Record the visible range rather than inferring a clinical meaning."},
+    {"id": "spectrogram", "type": "Question", "title": "Compare the time-frequency view", "content": "Describe one visible change or repeated pattern across time and frequency. This view uses 100-millisecond Hann windows with 50-millisecond hops; frequency bins are averaged into at most 128 bands, and at most 160 time frames are shown. Color is relative to the strongest displayed power bin, not calibrated sound pressure or a threshold. Compare the same timestamp with ECG by switching the selected channel; do not describe the traces as a simultaneous overlay."},
+    {"id": "filter", "type": "Observation", "title": "Compare independent filter views", "content": "In Signal processing tools, apply a band-pass filter to the selected window and compare its filtered trace with the raw trace. Then choose the notch filter separately and compare that result with raw. Each request filters the original source window; the filters are not chained. A 50 Hz notch is only a comparison to investigate when a 50 Hz component is visible or relevant, and it may also remove genuine signal content. State the settings you used and what changed in the displayed copy; the source data remain unchanged."},
+    {"id": "limits", "type": "Question", "title": "Name the limits", "content": "Give two reasons this selected signal window cannot tell you whether the fistula has stenosis. Include the uncalibrated units and the difference between describing a signal and validating a clinical measure or diagnostic method."},
+    {"id": "reveal", "type": "Reveal", "title": "Educator debrief · pending expert review", "content": "A PSD summarizes average power across a window and therefore does not show when a component occurred. A spectrogram retains coarse timing while trading away detail through short windows and display reduction. Its colors are relative to the strongest displayed bin. Filters create a derived display for comparison; they do not change source samples, and a filter can suppress meaningful content along with interference. ECG is a separate selectable channel, so any proposed physiological relationship needs domain-expert review. Uncalibrated values from one recording do not establish a diagnosis, stenosis status, or clinical threshold. Review the source citation and applicable privacy/publicity rights before release."}
   ]
 }
