@@ -109,6 +109,7 @@ import { canSubmitMission, getMissionProgress } from "@/lib/academy-mission-prog
 import { offlineStore, replayQueuedSubmits } from "@/lib/mission-offline";
 import { clearDraft, enqueueSubmit, isNetworkError, loadDraft, queuedSubmits, saveDraft } from "@/lib/offline-queue";
 import { CvsSelfCheck, CvsSelfCheckSummary } from "@/features/surgivision/CvsSelfCheck";
+import { CaseSummaryWorkflow } from "@/features/dosetwin/CaseSummaryWorkflow";
 import clinicalTeamImage from "../assets/clinical-team.jpg";
 import radiologyTeamImage from "../assets/radiology-team.jpg";
 
@@ -1666,6 +1667,8 @@ export function Experiments() {
     [selectedCase, setSelectedCase] = useState(""),
     [selectedRun, setSelectedRun] = useState<DoseTwinRunRecord | null>(null),
     [report, setReport] = useState<EvidenceReport | null>(null),
+    [reportBusy, setReportBusy] = useState(false),
+    [runError, setRunError] = useState(""),
     [activeView, setActiveView] = useState<"configure" | "history">(requestedRunId ? "history" : "configure"),
     [error, setError] = useState("");
   useEffect(() => {
@@ -1699,10 +1702,12 @@ export function Experiments() {
     };
   }, [requestedRunId]);
   const caseId = selectedCase || cases[0]?.id || "";
+  const selectedCaseRecord = cases.find((item) => item.id === caseId);
   const startRun = async () => {
     if (!caseId) return;
     setBusy(true);
     setError("");
+    setRunError("");
     setReport(null);
     try {
       const record = await api.createRun(caseId);
@@ -1713,8 +1718,10 @@ export function Experiments() {
         ...current.filter((item) => item.id !== record.id),
       ]);
     } catch (e) {
+      const message = e instanceof Error ? e.message : "The analysis could not be saved";
+      setRunError(message);
       setError(
-        e instanceof Error ? e.message : "The analysis could not be saved",
+        message,
       );
     } finally {
       setBusy(false);
@@ -1722,6 +1729,7 @@ export function Experiments() {
   };
   const saveReport = async (runId: string) => {
     setBusy(true);
+    setReportBusy(true);
     setError("");
     try {
       const viewer = selectedRun
@@ -1736,6 +1744,7 @@ export function Experiments() {
           : "The evidence report could not be saved",
       );
     } finally {
+      setReportBusy(false);
       setBusy(false);
     }
   };
@@ -1804,6 +1813,15 @@ export function Experiments() {
                   the same input. It does not run a prediction model.
                 </AlertDescription>
               </Alert>
+              <CaseSummaryWorkflow
+                selectedCase={selectedCaseRecord}
+                selectedCaseId={caseId}
+                run={selectedRun}
+                runBusy={busy && !reportBusy}
+                runError={runError}
+                report={report}
+                reportBusy={reportBusy}
+              />
               <Card className="border-border bg-card shadow-none">
                 <CardHeader className="gap-3 px-4 pt-4 sm:px-5">
                   <div className="flex flex-wrap items-start justify-between gap-3">
@@ -1817,7 +1835,7 @@ export function Experiments() {
                 </CardHeader>
                 <CardContent className="flex min-w-0 flex-col items-stretch justify-between gap-4 border-t border-border pt-4 sm:flex-row sm:items-end">
                   <div className="min-w-0 flex-1 sm:max-w-xl">
-                    <ResearchCasePicker id="run-case-select" label="Source case" cases={cases} value={caseId} onValueChange={setSelectedCase} placeholder="Choose an installed case" />
+                    <ResearchCasePicker id="run-case-select" label="Source case" cases={cases} value={caseId} onValueChange={(value) => { setSelectedCase(value); setRunError(""); }} placeholder="Choose an installed case" />
                   </div>
                   <Button type="button" onClick={startRun} disabled={busy}>
                     {busy ? <LoaderCircle data-icon="inline-start" /> : <FlaskConical data-icon="inline-start" />}
