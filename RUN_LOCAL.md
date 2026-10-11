@@ -38,6 +38,8 @@ apps/api/.venv/bin/python scripts/seed_demo.py
 
 Keep `MEDFORGE_DB_PATH` set to this same path when launching. To create only custom accounts instead, use `scripts/create_local_learning_user.py`; it prompts for each password and does not seed a cohort or lesson drafts. Supported local roles include `student`, `educator`, `clinical_reviewer`, and `admin`. The Clinical Reviewer designation is operator-assigned for DoseTwin research review only and does not verify credentials or permit patient-care decisions.
 
+These are setup instructions, **not published or pre-provisioned demo credentials**. There is no default username/password in the source tree. When `seed_demo.py` creates new accounts, the usernames are `demo-educator` and `demo-student`; it prints each newly generated password once. It does not create a Clinical Reviewer account. If accounts already exist, their passwords are not recoverable or printed again. Do not guess credentials from example usernames in the profile guide.
+
 Do not use these sample names on a shared or production service. The API has no general research-route RBAC or production identity system.
 
 ## Offline demo launch
@@ -52,6 +54,19 @@ export MEDFORGE_WEB_PORT=15174
 ./scripts/start_local.sh
 ```
 
+### Sign-in and credential quick guide
+
+| Workspace | Sign-in path | Credential status in this checkout (read-only snapshot, 2026-10-11) |
+| --- | --- | --- |
+| Professional Studio `/studio` | No sign-in for browsing; DoseTwin protected actions request the role they need | No account is needed to browse. No default credentials are published. |
+| Educator Studio `/educator` | Username/password form on that page | No credentialed roles were present in `data/local.sqlite3`. The optional `data/jury-demo.sqlite3` profile was absent. |
+| Student Academy `/academy` | Username/password form on that page | No credentialed roles were present in `data/local.sqlite3`. Running the optional seed command for `data/jury-demo.sqlite3` creates `demo-student` (and `demo-educator`) only if missing; the newly generated passwords print once. |
+| DoseTwin research review | Use **Sign in to review** in the review panel; choose Clinical Reviewer/admin | No pre-provisioned reviewer was present in the local databases inspected. Passwords are not embedded in this project. |
+| Isolated DoseTwin `pt_241` profile | Separate launcher, normally at `http://127.0.0.1:15176` | `data/openkbp-opt/pt_241/local.sqlite3` had no credentialed role grants in the snapshot. Accounts from the default app do not carry over. |
+| HackCure Docker | Same workspace forms at `https://localhost:8443`; no separate `/login` page | No credentialed roles were present in `data/hackcure-docker/medforge.sqlite3`. The operator must provision accounts in this profile; usernames/passwords from other profiles do not carry over. |
+
+To use an account, first select and launch the same SQLite profile in which it was created. `MEDFORGE_DB_PATH` selects the default local app database; the HackCure Docker overlay fixes its own separate path. Setup commands create accounts only when an operator explicitly runs them. There is no default/shared password, and this repository cannot recover a password that was printed once and not saved. The profile-by-profile database paths and private provisioning steps are in [`docs/LOCAL_ACCESS_AND_PROFILES.md`](docs/LOCAL_ACCESS_AND_PROFILES.md).
+
 During the demo, open these local routes:
 
 - Workspace: <http://127.0.0.1:15174/studio>
@@ -63,6 +78,8 @@ During the demo, open these local routes:
 - Academy: <http://127.0.0.1:15174/academy>
 
 The selected walkthrough is **DoseTwin `pt_241`**, as described in [`docs/FLAGSHIP_DECISION.md`](docs/FLAGSHIP_DECISION.md) and [`docs/HACKCURE_COMPLIANCE.md`](docs/HACKCURE_COMPLIANCE.md). Do not begin at `/cases/current` or substitute `pt_201`: that route opens the default benchmark case. Before presenting, follow [`docs/LOCAL_ACCESS_AND_PROFILES.md`](docs/LOCAL_ACCESS_AND_PROFILES.md) to confirm the `pt_241` archived prediction and saved comparison report in this same local database, and provision a `clinical_reviewer` account there. Account passwords are not seeded for this role; the account-creation script prompts for one. Save credentials outside the repository. If you also plan to show Academy, create student and educator accounts, then use the educator profile to review, publish, and assign a lesson draft before signing in as the student. None of these local records or credentials are included in a branch push.
+
+Sign-in is through the protected workspace UI: `/educator` and `/academy` show their username/password forms, while DoseTwin opens a role-specific sign-in dialog when a protected save or review action is selected. There is no standalone `/login` URL. Which database is active is determined by `MEDFORGE_DB_PATH`; the UI cannot switch accounts or records between databases.
 
 The viewer paths read installed local files and call the local API. They do not require a third-party token, hosted model, remote inference service or external API. Source and publication links inside the interface require internet access if opened. Keep both services on `127.0.0.1`; do not expose the API to a LAN or the public internet. Press Ctrl+C in the launcher terminal to stop both services.
 
@@ -91,6 +108,8 @@ npm run hackcure:preflight:docker
 ```
 
 The first run is expected to report missing imported comparison state and reviewer credentials. It does not create them. The Docker preflight checks the rendered Compose host ports and the source/database profile; its doctor output also reports the development launcher's loopback setting. A passing preflight still does not replace an interactive Docker rehearsal. `start_hackcure_docker.sh` independently checks the rendered Compose config and refuses to start if any host-published port is not bound to `127.0.0.1`.
+
+No username or password is pre-provisioned for this profile. Sign in at the same `/educator` and `/academy` paths or through the DoseTwin role dialog only after the event operator has created accounts in this Docker database. The Docker database is separate from `data/local.sqlite3` and any `jury-demo.sqlite3`; accounts created in another profile will not work here.
 
 Once the Docker profile database contains the prepared walkthrough state, use [`docs/HACKCURE_BACKUP_RESTORE.md`](docs/HACKCURE_BACKUP_RESTORE.md) to create a local-only archive and verify it in a disposable directory. That check never overwrites the active database and does not replace the offline second-machine rehearsal.
 
