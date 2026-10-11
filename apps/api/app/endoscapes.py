@@ -1,6 +1,7 @@
 """Validated access to locally installed Endoscapes research frames."""
 from __future__ import annotations
 
+import copy
 from functools import lru_cache
 import hashlib
 import json
@@ -410,8 +411,7 @@ def _record(entry: dict[str, Any]) -> SurgicalFrameRecord | None:
     )
 
 
-def installed_frames() -> list[SurgicalFrameRecord]:
-    """Return fully validated annotated frames for callers that need their labels."""
+def _installed_frames_uncached() -> list[SurgicalFrameRecord]:
     index = _index()
     if index is None:
         return []
@@ -424,8 +424,7 @@ def installed_frames() -> list[SurgicalFrameRecord]:
     return sorted(result, key=lambda frame: (frame.video_id, frame.frame_number))
 
 
-def cvs_label_coverage() -> dict[str, Any] | None:
-    """Summarize checksum-verified Endoscapes-BBox201 image-level CVS labels."""
+def _cvs_label_coverage_uncached() -> dict[str, Any] | None:
     index = _index()
     if index is None:
         return None
@@ -549,46 +548,77 @@ def installed_frame(frame_id: str | None = None) -> SurgicalFrameRecord | None:
     return None
 
 
-# Listing re-stats every image, which is slow on Docker Desktop bind mounts (about 10 s for 1,933
-# frames). The list is cached per manifest signature and served immediately; once older than the
-# TTL it is refreshed in the background. Opening a frame still re-verifies its path, size and
-# SHA-256 through _record().
+# Listing and summarising re-stat every image, which is slow on Docker Desktop bind mounts (about
+# 10 to 20 s for 1,933 frames). Results are cached per manifest signature and served immediately;
+# once older than the TTL they are refreshed in the background. Opening a single frame still
+# re-verifies its path, size and SHA-256 through _record().
 CASE_LIST_TTL_SECONDS = 300.0
-_case_list_cache: tuple[Any, float, list[Case]] | None = None
-_case_list_lock = threading.Lock()
-_case_list_refreshing = threading.Event()
+_swr_cache: dict[str, tuple[Any, float, Any]] = {}
+_swr_lock = threading.Lock()
+_swr_refreshing: set[str] = set()
 
 
-def _refresh_case_list(signature: tuple[Any, ...]) -> list[Case]:
-    global _case_list_cache
-    result = _list_cases_uncached()
-    with _case_list_lock:
-        _case_list_cache = (signature, time.monotonic(), result)
-    return result
+def _current_signature() -> tuple[Any, ...] | None:
+    root = root_dir()
+    return _manifest_signature(root) if root is not None else None
 
 
-def _background_refresh(signature: tuple[Any, ...]) -> None:
+def _refresh(name: str, build, signature: tuple[Any, ...], background: bool) -> Any:
     try:
-        _refresh_case_list(signature)
+        value = build()
+        with _swr_lock:
+            _swr_cache[name] = (signature, time.monotonic(), value)
+        return value
     finally:
-        _case_list_refreshing.clear()
+        if background:
+            with _swr_lock:
+                _swr_refreshing.discard(name)
+
+
+def _cached(name: str, build, empty: Any) -> Any:
+    signature = _current_signature()
+    if signature is None:
+        return empty
+    with _swr_lock:
+        cached = _swr_cache.get(name)
+        fresh_signature = cached is not None and cached[0] == signature
+        start_refresh = (fresh_signature and time.monotonic() - cached[1] >= CASE_LIST_TTL_SECONDS
+                         and name not in _swr_refreshing)
+        if start_refresh:
+            _swr_refreshing.add(name)
+    if fresh_signature:
+        if start_refresh:
+            threading.Thread(target=_refresh, args=(name, build, signature, True), name=f"endoscapes-{name}-refresh", daemon=True).start()
+        return cached[2]
+    # Cold start or a changed manifest: build now.
+    return _refresh(name, build, signature, False)
+
+
+def clear_caches() -> None:
+    with _swr_lock:
+        _swr_cache.clear()
+
+
+def warm_caches() -> None:
+    installed_cases()
+    installed_frames()
+    cvs_label_coverage()
 
 
 def installed_cases() -> list[Case]:
     """List case metadata without rebuilding annotation records for each row."""
-    root = root_dir()
-    signature = _manifest_signature(root) if root is not None else None
-    if signature is None:
-        return []
-    with _case_list_lock:
-        cached = _case_list_cache
-    if cached and cached[0] == signature:
-        if time.monotonic() - cached[1] >= CASE_LIST_TTL_SECONDS and not _case_list_refreshing.is_set():
-            _case_list_refreshing.set()
-            threading.Thread(target=_background_refresh, args=(signature,), name="endoscapes-case-list-refresh", daemon=True).start()
-        return list(cached[2])
-    # Cold start or a changed manifest: build the list now.
-    return list(_refresh_case_list(signature))
+    return list(_cached("cases", _list_cases_uncached, []))
+
+
+def installed_frames() -> list[SurgicalFrameRecord]:
+    """Return fully validated annotated frames for callers that need their labels."""
+    return list(_cached("frames", _installed_frames_uncached, []))
+
+
+def cvs_label_coverage() -> dict[str, Any] | None:
+    """Summarize checksum-verified Endoscapes-BBox201 image-level CVS labels."""
+    value = _cached("coverage", _cvs_label_coverage_uncached, None)
+    return copy.deepcopy(value) if value is not None else None
 
 
 def _list_cases_uncached() -> list[Case]:

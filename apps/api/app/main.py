@@ -395,8 +395,8 @@ def create_app() -> FastAPI:
     app.add_middleware(CORSMiddleware,allow_origin_regex=r'^https?://(127\.0\.0\.1|localhost)(:\d+)?$',
         allow_credentials=False,allow_methods=['GET','POST','PATCH','PUT','DELETE'],allow_headers=['Content-Type','Authorization','Idempotency-Key','X-Dose-Array-Shape','X-Dose-Checkpoint-SHA256','X-Dose-File-SHA256','X-Dose-Index-Convention','X-Dose-Model-Revision','X-Dose-Origin','X-Dose-Rights-Basis','X-Dose-Rights-Confirmed','X-Dose-Source-Case','X-Dose-Source-Revision','X-Dose-Spacing-MM','X-Dose-Unit'])
     init_db()
-    # Warm the Endoscapes case list in the background so the first page load is not slow.
-    threading.Thread(target=_endoscapes_cases, name='endoscapes-case-list-warmup', daemon=True).start()
+    # Warm the Endoscapes listings in the background so the first page loads are not slow.
+    threading.Thread(target=_endoscapes.warm_caches, name='endoscapes-warmup', daemon=True).start()
 
     def _student_has_assigned_case(user_id:str,case_id:str)->bool:
         with _db() as conn:

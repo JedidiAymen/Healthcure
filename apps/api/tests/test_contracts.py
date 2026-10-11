@@ -1018,7 +1018,7 @@ def test_endoscapes_manifest_exposes_only_verified_sampled_frames(monkeypatch,tm
     # Opening a frame re-verifies it at once; the cached case list catches up when its TTL expires.
     assert client.get('/api/v1/surgivision/frames/4_26200').status_code==404
     import app.endoscapes as endoscapes_module
-    endoscapes_module._case_list_cache=None
+    endoscapes_module.clear_caches()
     cases=client.get('/api/v1/cases').json()
     assert len(cases)==1 and cases[0]['id']=='endoscapes:train:13_46850'
 
